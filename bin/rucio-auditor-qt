@@ -17,3 +17,40 @@
 The auditor daemon is the one responsible for the detection of inconsistencies
 on storage, i.e.: dark data discovery.
 """
+
+import argparse
+import signal
+
+#from rucio.daemons.rsedecommissioner.rse_decommissioner import run,stop
+from rucio.daemons.auditorqt.auditor_qt import run,stop
+#import rucio.daemons.auditorqt.auditor_qt as auditor_qt
+
+print("Hello world 1")
+#print (dir(auditor_qt))
+
+def get_parser() -> argparse.ArgumentParser:
+    """Construct and return the argparse parser."""
+
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog="",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument('--run-once', dest='run_once', action='store_true',
+                        help='One iteration only.')
+    parser.add_argument('--sleep-time', dest='sleep_time', action='store',
+                        default=86400, type=int,
+                        help='Concurrency control: thread sleep time after each'
+                        ' chunk of work')
+    return parser
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, stop)
+    args = get_parser().parse_args() 
+    try:
+        print("Hello world 3")
+        #run(once=args.run_once, sleep_time=args.sleep_time)
+    except KeyboardInterrupt:
+        stop()
