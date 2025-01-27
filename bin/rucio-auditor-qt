@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+# Copyright European Organization for Nuclear Research (CERN) since 2012
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+The auditor daemon is the one responsible for the detection of inconsistencies
+on storage, i.e.: dark data discovery.
+"""
+
+import argparse
+import signal
+
+from rucio.daemons.auditorqt.auditor_qt import run,stop
+
+
+def get_parser() -> argparse.ArgumentParser:
+    """Construct and return the argparse parser."""
+
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog="""
+        examples:
+            # Check all RSEs using only 1 subprocess
+            %(prog)s
+
+            # Check all SCRATCHDISKs with 4 subprocesses
+            %(prog)s --nprocs 4 --rses "type=SCRATCHDISK"
+
+            # Check all Tier 2 DATADISKs, except "BLUE_DATADISK" and "RED_DATADISK"
+            %(prog)s --rses "tier=2&type=DATADISK\(BLUE_DATADISK|RED_DATADISK)"
+            """,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument('--nprocs', default=1, type=int,
+                       help='Number of subprocesses, each subprocess checks a fraction of the DDM '
+                       'Endpoints in sequence (default: 1).')
+    parser.add_argument('--rses', default=None, type=str,
+                        help='RSEs to check, specified as an RSE expression '
+                        '(default: check all RSEs).')
+    parser.add_argument('--keep-dumps',action='store_true',
+                        help='Keep RSE and Rucio Replica Dumps on cache '
+                         '(default: False).')
+    parser.add_argument('--delta', default=3, type=int,
+                        help='How many days older/newer than the RSE dump must the Rucio replica dumps be '
+                        '(default: 3).')
+    parser.add_argument('--profile', default="atlas", type=str,
+                        help='Which profile to use '
+                        '(default: atlas).')
+    parser.add_argument('--run-once', dest='run_once', action='store_true',
+                        help='One iteration only.')
+    parser.add_argument('--sleep-time', dest='sleep_time', action='store',
+                        default=86400, type=int,
+                        help='Concurrency control: thread sleep time after each'
+                        ' chunk of work')
+    return parser
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, stop)
+    args = get_parser().parse_args()
+    try:
+        run(nprocs=args.nprocs,
+        rses=args.rses,
+        keep_dumps=args.keep_dumps,
+        delta=args.delta,
+        profile=args.profile,
+        once=args.run_once,
+        sleep_time=args.sleep_time)
+    except KeyboardInterrupt:
+        stop()
