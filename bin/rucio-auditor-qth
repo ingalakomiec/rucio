@@ -24,12 +24,14 @@ import signal
 from rucio.daemons.auditorqt.auditor_qt import run,stop
 
 
+#print (dir(auditor_qt)) # just for info
+
 def get_parser() -> argparse.ArgumentParser:
     """Construct and return the argparse parser."""
 
     parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog="""
+        epilog="""\
         examples:
             # Check all RSEs using only 1 subprocess
             %(prog)s
@@ -38,7 +40,7 @@ def get_parser() -> argparse.ArgumentParser:
             %(prog)s --nprocs 4 --rses "type=SCRATCHDISK"
 
             # Check all Tier 2 DATADISKs, except "BLUE_DATADISK" and "RED_DATADISK"
-            %(prog)s --rses "tier=2&type=DATADISK\(BLUE_DATADISK|RED_DATADISK)"
+            %(prog)s --rses "tier=1&type=DATADISK\(BLUE_DATADISK|RED_DATADISK)"
             """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -49,18 +51,6 @@ def get_parser() -> argparse.ArgumentParser:
                         default=86400, type=int,
                         help='Concurrency control: thread sleep time after each'
                         ' chunk of work')
-    parser.add_argument('--nprocs', default=1, type=int,
-                       help='Number subprocess, each subprocess check a fraction of the DDM '
-                       'Endpoints in sequence (default: 1).')
-    parser.add_argument('--rses', default=None, type=str,
-                        help='RSEs to check specified as a RSE expression, defaults to check '
-                        'all the RSEs known to Rucio (default: check all RSEs).')
-    parser.add_argument('--keep-dumps',action='store_true',
-                        help='Keep RSE and Rucio Replica Dumps on cache '
-                         '(default: False).')
-    parser.add_argument('--delta', default=3, type=int,
-                        help='How many days older/newer than the RSE dump must the Rucio replica dumps be '
-                        '(default: 3).')
     return parser
 
 
@@ -69,7 +59,5 @@ if __name__ == '__main__':
     args = get_parser().parse_args() 
     try:
         run(once=args.run_once, sleep_time=args.sleep_time)
-#        run(once=args.run_once, sleep_time=args.sleep_time, nprocs=args.nprocs,
-#        rses=args.rses, keep_dumps=args.keep_dumps, delta=args.delta)
     except KeyboardInterrupt:
         stop()
