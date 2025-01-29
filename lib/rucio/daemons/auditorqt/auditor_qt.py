@@ -36,12 +36,12 @@ if TYPE_CHECKING:
     from rucio.daemon.common import HeartbeatHandler
 
 def auditor_qt(
-    once: bool,
-    sleep_time: int,
     nprocs: int,
     rses: str,
     keep_dumps: bool,
-    delta: int
+    delta: int,
+    once: bool,
+    sleep_time: int
 ) -> None:
     """Daemon runner.
 
@@ -132,9 +132,12 @@ def run_once_tmp() -> bool:
     return True
 
 def run(
+    nprocs: int,
+    rses: str,
+    keep_dumps: bool = False,
+    delta: int = 3,
     once: bool = False,
     sleep_time: int = 86400
-   # nprocs: int = nprocs
 ) -> None:
     """
     Starts up the threads.
@@ -155,12 +158,12 @@ def run(
         threading.Thread(
             target=auditor_qt,
             kwargs={
+                'nprocs': nprocs,
+                'rses': rses,
+                'keep_dumps': keep_dumps,
+                'delta': delta,
                 'sleep_time': sleep_time,
                 'once': once
-#                'nprocs': nprocs,
-#                'rses': rses,
-#                'keep_dumps': keep_dumps,
-#                'delta': delta
             },
         )
     ]
