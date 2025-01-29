@@ -43,12 +43,6 @@ def get_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
-    parser.add_argument('--run-once', dest='run_once', action='store_true',
-                        help='One iteration only.')
-    parser.add_argument('--sleep-time', dest='sleep_time', action='store',
-                        default=86400, type=int,
-                        help='Concurrency control: thread sleep time after each'
-                        ' chunk of work')
     parser.add_argument('--nprocs', default=1, type=int,
                        help='Number subprocess, each subprocess check a fraction of the DDM '
                        'Endpoints in sequence (default: 1).')
@@ -61,6 +55,12 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--delta', default=3, type=int,
                         help='How many days older/newer than the RSE dump must the Rucio replica dumps be '
                         '(default: 3).')
+    parser.add_argument('--run-once', dest='run_once', action='store_true',
+                        help='One iteration only.')
+    parser.add_argument('--sleep-time', dest='sleep_time', action='store',
+                        default=86400, type=int,
+                        help='Concurrency control: thread sleep time after each'
+                        ' chunk of work')
     return parser
 
 
@@ -68,7 +68,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, stop)
     args = get_parser().parse_args() 
     try:
-        run(once=args.run_once, sleep_time=args.sleep_time)
+        run(nprocs=args.nprocs, rses=args.rses, keep_dumps=args.keep_dumps,
+        delta=args.delta, once=args.run_once, sleep_time=args.sleep_time)
 #        run(once=args.run_once, sleep_time=args.sleep_time, nprocs=args.nprocs,
 #        rses=args.rses, keep_dumps=args.keep_dumps, delta=args.delta)
     except KeyboardInterrupt:
