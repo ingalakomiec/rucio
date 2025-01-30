@@ -45,7 +45,15 @@ def auditor_qt(
 ) -> None:
     """Daemon runner.
 
-    :param once: Whether to execute once and exit.
+    :param nprocs:     Number of subprocesses, each subprocess checks a fraction of the DDM.
+                       Endpoints in sequence (default: 1).
+    :param rses:       RSEs to check specified as an RSE expression 
+                       (default: check all RSEs).
+    :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache 
+                       (default: False).
+    :param delta:      How many days older/newer than the RSE dump
+                       must the Rucio replica dumps be (default: 3).
+    :param once:       Whether to execute once and exit.
     :param sleep_time: Number of seconds to sleep before restarting.
     """
 #    run_daemon(
@@ -148,9 +156,17 @@ def run(
     sleep_time: int = 86400
 ) -> None:
     """
-    Starts up the threads.
+    Starts up the auditor-qt threads.
 
-    :param once: Whether to execute once and exit.
+    :param nprocs:     Number of subprocesses, each subprocess checks a fraction of the DDM.
+                       Endpoints in sequence (default: 1).
+    :param rses:       RSEs to check specified as an RSE expression 
+                       (default: check all RSEs).
+    :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache 
+                       (default: False).
+    :param delta:      How many days older/newer than the RSE dump
+                       must the Rucio replica dumps be (default: 3).
+    :param once:       Whether to execute once and exit.
     :param sleep_time: Number of seconds to sleep before restarting.
     """
 
