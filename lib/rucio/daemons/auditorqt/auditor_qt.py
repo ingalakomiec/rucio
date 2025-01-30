@@ -56,7 +56,7 @@ def auditor_qt(
 #        sleep_time=sleep_time,
 #        run_once_fnc=run_once
 #    )
-    run_once_tmp()
+    run_once_tmp(nprocs, rses, keep_dumps, delta)
 
 def run_once(
     *,
@@ -73,7 +73,7 @@ def run_once(
     :param activity: Activity to work on.
     :returns: A boolean flag indicating whether the daemon should go to sleep.
     """
-#    worker_number, _, logger = heartbeat_handler.live()
+    worker_number, _, logger = heartbeat_handler.live()
 
 #    if worker_number != 0:
 #        logger(logging.INFO, 'RSE decommissioner thread id is not 0, will sleep.'
@@ -121,11 +121,19 @@ def run_once(
 
     return True
 
-def run_once_tmp() -> bool:
+def run_once_tmp(
+    nprocs: int,
+    rses: str,
+    keep_dumps: bool,
+    delta: int
+) -> bool:
 
     #print Hello world
     print("Hello world")
-
+    print(nprocs)
+    print(rses)
+    print(keep_dumps)
+    print(delta)
     #fetch input
     fetch_input()
 
