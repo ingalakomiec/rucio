@@ -68,9 +68,11 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, stop)
     args = get_parser().parse_args() 
     try:
-        run(nprocs=args.nprocs, rses=args.rses, keep_dumps=args.keep_dumps,
-        delta=args.delta, once=args.run_once, sleep_time=args.sleep_time)
-#        run(once=args.run_once, sleep_time=args.sleep_time, nprocs=args.nprocs,
-#        rses=args.rses, keep_dumps=args.keep_dumps, delta=args.delta)
+        run(nprocs=args.nprocs,
+        rses=args.rses,
+        keep_dumps=args.keep_dumps,
+        delta=args.delta,
+        once=args.run_once,
+        sleep_time=args.sleep_time)
     except KeyboardInterrupt:
         stop()
