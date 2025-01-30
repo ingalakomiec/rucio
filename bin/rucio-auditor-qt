@@ -44,11 +44,11 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument('--nprocs', default=1, type=int,
-                       help='Number subprocess, each subprocess check a fraction of the DDM '
+                       help='Number of subprocesses, each subprocess checks a fraction of the DDM '
                        'Endpoints in sequence (default: 1).')
     parser.add_argument('--rses', default=None, type=str,
-                        help='RSEs to check specified as a RSE expression, defaults to check '
-                        'all the RSEs known to Rucio (default: check all RSEs).')
+                        help='RSEs to check, specified as an RSE expression '
+                        '(default: check all RSEs).')
     parser.add_argument('--keep-dumps',action='store_true',
                         help='Keep RSE and Rucio Replica Dumps on cache '
                          '(default: False).')
