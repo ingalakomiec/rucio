@@ -20,11 +20,13 @@ on storage, i.e.: dark data discovery.
 import logging
 import socket
 import threading
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from rucio.common.logging import setup_logging
 from rucio.core.heartbeat import sanity_check
 from rucio.daemons.common import run_daemon
+from rucio.client.rseclient import RSEClient
+
 
 GRACEFUL_STOP = threading.Event()
 DAEMON_NAME = 'auditorqt'
@@ -154,6 +156,9 @@ def run_once_tmp(
     print(rses)
     print(keep_dumps)
     print(delta)
+
+    get_rses_to_process(rses)
+
     #fetch input
     fetch_input()
 
@@ -217,6 +222,15 @@ def stop(
     Graceful exit.
     """
     GRACEFUL_STOP.set()
+
+def get_rses_to_process(
+    rses: Optional["Iterable[str]"]
+    ) -> Optional[list[dict[str, Any]]]:
+    print("getting rses to process")
+
+#    if rses is None:
+#        rses_to_process = RSEClient().list_rses()
+
 
 def fetch_input():
     print("fetching input")
