@@ -67,6 +67,10 @@ def auditor_qt(
     run_once_tmp(nprocs, rses, keep_dumps, delta)
 
 def run_once(
+    nprocs: int,
+    rses: str,
+    keep_dumps: bool,
+    delta: int,
     *,
     heartbeat_handler: 'HeartbeatHandler',
     activity: Optional[str]
@@ -77,9 +81,17 @@ def run_once(
 
     worker number - number of worker threads; worker_number == 0 --> only one worker thread 
     
+    :param nprocs:            Number of subprocesses, each subprocess checks a fraction of the DDM.
+                              Endpoints in sequence (default: 1).
+    :param rses:              RSEs to check specified as an RSE expression 
+                              (default: check all RSEs).
+    :param keep_dumps:        Keep RSE and Rucio Replica Dumps on cache 
+                              (default: False).
+    :param delta:             How many days older/newer than the RSE dump
+                              must the Rucio replica dumps be (default: 3).
     :param heartbeat_handler: A HeartbeatHandler instance.
-    :param activity: Activity to work on.
-    :returns: A boolean flag indicating whether the daemon should go to sleep.
+    :param activity:          Activity to work on.
+    :returns:                 A boolean flag indicating whether the daemon should go to sleep.
     """
     worker_number, _, logger = heartbeat_handler.live()
 
