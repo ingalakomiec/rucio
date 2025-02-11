@@ -26,7 +26,7 @@ from rucio.common.logging import setup_logging
 from rucio.core.heartbeat import sanity_check
 from rucio.daemons.common import run_daemon
 from rucio.client.rseclient import RSEClient
-
+from rucio.core.rse import list_rses
 
 GRACEFUL_STOP = threading.Event()
 DAEMON_NAME = 'auditorqt'
@@ -152,18 +152,31 @@ def run_once_tmp(
 
     #print Hello world
     print("Hello world")
-    print(nprocs)
-    print(rses)
-    print(keep_dumps)
-    print(delta)
+#    print(nprocs)
+#    print(rses)
+#    print(keep_dumps)
+#    print(delta)
 
     if nprocs < 1:
         raise RuntimeError("No Process to Run")
 
-    get_rses_to_process(rses)
+#    rses_to_process = get_rses_to_process(rses)
 
     #fetch input
-    fetch_input()
+    rse_dump = fetch_rse_dumps()
+    print('RSE dump:')
+    print(rse_dump)
+
+    print('Rucio dumps:')
+    rucio_dump_before, rucio_dump_after = fetch_rucio_dumps()
+
+    print('before')
+    print(rucio_dump_before)
+
+    print('after')
+    print(rucio_dump_after)
+    consistency_check('rucio_dump_before', 'rse_dump',
+    'rucio_dump_after', 'results')
 
     return True
 
@@ -234,10 +247,48 @@ def get_rses_to_process(
 #    if rses is None:
 #        rses_to_process = RSEClient().list_rses()
 
+#    rses_to_process = list_rses()
 
-def fetch_input():
-    print("fetching input")
+#    for rse in rses_to_process:
+#        print(rse)
+
+#    print(rses_to_process)
+
+#    return rses_to_process
+
+def fetch_rse_dumps():
+
+    print("fetching RSE dumps")
 # Collect all RSEs with the 'decommission' attribute
 #    rses = get_rses_with_attribute(RseAttr.DECOMMISSION)
 #    random.shuffle(rses)
 
+    file_rse_dump = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rse_dump', 'rt')
+    rse_dump = file_rse_dump.readlines()
+    file_rse_dump.close()
+
+    return rse_dump
+
+def fetch_rucio_dumps():
+
+    print("fetching Rucio dumps")
+
+    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_before', 'rt')
+    file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_after', 'rt')
+
+    rucio_dump_before = file_rucio_dump_before.readlines()
+    rucio_dump_after = file_rucio_dump_after.readlines()
+
+    file_rucio_dump_before.close()
+    file_rucio_dump_after.close()
+    return (rucio_dump_before, rucio_dump_after)
+
+def consistency_check(
+    rucio_dump_before,
+    rse_dump,
+    rucio_dump_after,
+    results):
+
+    print("consistency check")
+
+    return results
