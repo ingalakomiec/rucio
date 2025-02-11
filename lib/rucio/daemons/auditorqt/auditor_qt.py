@@ -147,7 +147,7 @@ def run_once_tmp(
     nprocs: int,
     rses: str,
     keep_dumps: bool,
-    delta: int
+    delta: int,
 ) -> bool:
 
     #print Hello world
@@ -156,6 +156,9 @@ def run_once_tmp(
     print(rses)
     print(keep_dumps)
     print(delta)
+
+    if nprocs < 1:
+        raise RuntimeError("No Process to Run")
 
     get_rses_to_process(rses)
 
