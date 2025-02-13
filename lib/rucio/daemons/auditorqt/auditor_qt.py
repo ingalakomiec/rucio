@@ -73,7 +73,6 @@ def auditor_qt(
             delta=delta,
         )
     )
-#    run_once_tmp(nprocs, rses, keep_dumps, delta)
 
 def run_once(
     nprocs: int,
@@ -104,62 +103,27 @@ def run_once(
     """
     worker_number, _, logger = heartbeat_handler.live()
 
-#    if worker_number != 0:
-#        logger(logging.INFO, 'RSE decommissioner thread id is not 0, will sleep.'
-#               ' Only thread 0 will work')
-#        return True
-
-    # Collect all RSEs with the 'decommission' attribute
-#    rses = get_rses_with_attribute(RseAttr.DECOMMISSION)
-#    random.shuffle(rses)
-
-#    for rse in rses:
-        # Get the decommission attribute (encodes the decommissioning config)
-#        attr = get_rse_attribute(rse['id'], RseAttr.DECOMMISSION)
-#        try:
-#            config = attr_to_config(attr)  # type: ignore (attr could be None)
-#        except InvalidStatusName:
-#            logger(logging.ERROR, 'RSE %s has an invalid decommissioning status',
-#                   rse['rse'])
-#            continue
-
-#        if config['status'] != DecommissioningStatus.PROCESSING:
-#            logger(logging.INFO, 'Skipping RSE %s which has decommissioning status "%s"',
-#                   config['status'])
-#            continue
-
-#        try:
-#            profile_maker = PROFILE_MAP[config['profile']]
-#        except KeyError:
-#            logger(logging.ERROR, 'Invalid decommissioning profile name %s used for %s',
-#                   config['profile'], rse['rse'])
-#            continue
-
-#        try:
-#            profile = profile_maker(rse, config)
-#        except RucioException:
-#            logger(logging.ERROR, 'Invalid configuration for profile %s', config['profile'])
-#            raise
-
-#        logger(logging.INFO, 'Decommissioning %s: %s', rse['rse'], attr)
-#        try:
-#            decommission_rse(rse, profile, logger=logger)
-#        except Exception as error:  # pylint: disable=broad-exception-caught
-#            logger(logging.ERROR, 'Unexpected error while decommissioning %s: %s',
-#                   rse['rse'], str(error), exc_info=True)
-
     #print Hello world
-    print("Hello world")
-    print(nprocs)
-    print(rses)
-    print(keep_dumps)
-    print(delta)
-
+    #print("Hello world")
+    # print parameters' values
+    #print(nprocs)
+    #print(rses)
+    #print(keep_dumps)
+    #print(delta)
 
     if nprocs < 1:
         raise RuntimeError("No Process to Run")
 
-#    rses_to_process = get_rses_to_process(rses)
+    rses_to_process = get_rses_to_process(rses)
+
+    print("RSEs to process")
+    print(rses_to_process)
+
+    print("in run_once")
+
+    for rse in rses_to_process:
+        print(rse)
+
 
     #fetch input
     rse_dump = fetch_rse_dumps()
@@ -180,42 +144,6 @@ def run_once(
 
     return True
 
-def run_once_tmp(
-    nprocs: int,
-    rses: str,
-    keep_dumps: bool,
-    delta: int,
-) -> bool:
-
-    #print Hello world
-    print("Hello world")
-#    print(nprocs)
-#    print(rses)
-#    print(keep_dumps)
-#    print(delta)
-
-    if nprocs < 1:
-        raise RuntimeError("No Process to Run")
-
-#    rses_to_process = get_rses_to_process(rses)
-
-    #fetch input
-    rse_dump = fetch_rse_dumps()
-    print('RSE dump:')
-    print(rse_dump)
-
-    print('Rucio dumps:')
-    rucio_dump_before, rucio_dump_after = fetch_rucio_dumps()
-
-    print('before')
-    print(rucio_dump_before)
-
-    print('after')
-    print(rucio_dump_after)
-    consistency_check('rucio_dump_before', 'rse_dump',
-    'rucio_dump_after', 'results')
-
-    return True
 
 def run(
     nprocs: int,
@@ -281,17 +209,20 @@ def get_rses_to_process(
     ) -> Optional[list[dict[str, Any]]]:
     print("getting rses to process")
 
-#    if rses is None:
-#        rses_to_process = RSEClient().list_rses()
+    if rses is None:
+        rses_to_process = RSEClient().list_rses()
+    else:
+        rses_to_process = RSEClient().list_rses(rses)
 
 #    rses_to_process = list_rses()
 
-#    for rse in rses_to_process:
-#        print(rse)
+    for rse in rses_to_process:
+        print(rse)
 
-#    print(rses_to_process)
+    print("in get_rses ...")
+    print(rses_to_process)
 
-#    return rses_to_process
+    return rses_to_process
 
 def fetch_rse_dumps():
 
