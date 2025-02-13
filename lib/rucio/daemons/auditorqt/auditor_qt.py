@@ -17,6 +17,7 @@ The auditor daemon is the one responsible for the detection of inconsistencies
 on storage, i.e.: dark data discovery.
 """
 
+import functools
 import logging
 import socket
 import threading
@@ -58,15 +59,21 @@ def auditor_qt(
     :param once:       Whether to execute once and exit.
     :param sleep_time: Number of seconds to sleep before restarting.
     """
-#    run_daemon(
-#        once=once,
-#        graceful_stop=GRACEFUL_STOP,
-#        executable=DAEMON_NAME,
-#        partition_wait_time=1,
-#        sleep_time=sleep_time,
-#        run_once_fnc=run_once
-#    )
-    run_once_tmp(nprocs, rses, keep_dumps, delta)
+    run_daemon(
+        once=once,
+        graceful_stop=GRACEFUL_STOP,
+        executable=DAEMON_NAME,
+        partition_wait_time=1,
+        sleep_time=sleep_time,
+        run_once_fnc=functools.partial(
+            run_once,
+            nprocs=nprocs,
+            rses=rses,
+            keep_dumps=keep_dumps,
+            delta=delta,
+        )
+    )
+#    run_once_tmp(nprocs, rses, keep_dumps, delta)
 
 def run_once(
     nprocs: int,
@@ -141,6 +148,36 @@ def run_once(
 #            logger(logging.ERROR, 'Unexpected error while decommissioning %s: %s',
 #                   rse['rse'], str(error), exc_info=True)
 
+    #print Hello world
+    print("Hello world")
+    print(nprocs)
+    print(rses)
+    print(keep_dumps)
+    print(delta)
+
+
+    if nprocs < 1:
+        raise RuntimeError("No Process to Run")
+
+#    rses_to_process = get_rses_to_process(rses)
+
+    #fetch input
+    rse_dump = fetch_rse_dumps()
+    print('RSE dump:')
+    print(rse_dump)
+
+    print('Rucio dumps:')
+    rucio_dump_before, rucio_dump_after = fetch_rucio_dumps()
+
+    print('before')
+    print(rucio_dump_before)
+
+    print('after')
+    print(rucio_dump_after)
+    consistency_check('rucio_dump_before', 'rse_dump',
+    'rucio_dump_after', 'results')
+
+
     return True
 
 def run_once_tmp(
@@ -205,7 +242,7 @@ def run(
 
     setup_logging(process_name=DAEMON_NAME)
     hostname = socket.gethostname()
-#    sanity_check(executable='rucio-auditorqt', hostname=hostname)
+    sanity_check(executable='rucio-auditorqt', hostname=hostname)
 
     logging.info('Auditor-QT starting 1 thread')
 
