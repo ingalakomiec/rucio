@@ -116,30 +116,30 @@ def run_once(
 
     rses_to_process = get_rses_to_process(rses)
 
-    print("RSEs to process")
-    print(rses_to_process)
+#    for rse in rses_to_process:
+#        print(rse)
 
-    print("in run_once")
-
-    for rse in rses_to_process:
-        print(rse)
-
+    rses_names = [entry['rse'] for entry in rses_to_process]
+    if len(rses_names) <= 0:
+#        raise RSENotFound("No RSEs found to audit")
+        raise RSENotFound(msg)
+    print(rses_names)
 
     #fetch input
     rse_dump = fetch_rse_dumps()
-    print('RSE dump:')
-    print(rse_dump)
+#    print('RSE dump:')
+#    print(rse_dump)
 
-    print('Rucio dumps:')
-    rucio_dump_before, rucio_dump_after = fetch_rucio_dumps()
+#    print('Rucio dumps:')
+#    rucio_dump_before, rucio_dump_after = fetch_rucio_dumps()
 
-    print('before')
-    print(rucio_dump_before)
+#    print('before')
+#    print(rucio_dump_before)
 
-    print('after')
-    print(rucio_dump_after)
-    consistency_check('rucio_dump_before', 'rse_dump',
-    'rucio_dump_after', 'results')
+#    print('after')
+#    print(rucio_dump_after)
+#    consistency_check('rucio_dump_before', 'rse_dump',
+#    'rucio_dump_after', 'results')
 
 
     return True
@@ -207,26 +207,22 @@ def stop(
 def get_rses_to_process(
     rses: Optional["Iterable[str]"]
     ) -> Optional[list[dict[str, Any]]]:
-    print("getting rses to process")
 
     if rses is None:
         rses_to_process = RSEClient().list_rses()
     else:
         rses_to_process = RSEClient().list_rses(rses)
 
-#    rses_to_process = list_rses()
-
-    for rse in rses_to_process:
-        print(rse)
-
-    print("in get_rses ...")
-    print(rses_to_process)
+# list_rses as in reaper
+#    rses_to_process_reaper = list_rses()
+#    print("RSEs to process REAPER VERSION")
+#    print(rses_to_process_reaper)
 
     return rses_to_process
 
 def fetch_rse_dumps():
 
-    print("fetching RSE dumps")
+#    print("fetching RSE dumps")
 # Collect all RSEs with the 'decommission' attribute
 #    rses = get_rses_with_attribute(RseAttr.DECOMMISSION)
 #    random.shuffle(rses)
@@ -239,7 +235,7 @@ def fetch_rse_dumps():
 
 def fetch_rucio_dumps():
 
-    print("fetching Rucio dumps")
+#    print("fetching Rucio dumps")
 
     file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_before', 'rt')
     file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_after', 'rt')
