@@ -27,7 +27,8 @@ from rucio.common.logging import setup_logging
 from rucio.core.heartbeat import sanity_check
 from rucio.daemons.common import run_daemon
 from rucio.client.rseclient import RSEClient
-from rucio.core.rse import list_rses
+#from rucio.core.rse import list_rses
+from rucio.common.exception import RSENotFound
 
 GRACEFUL_STOP = threading.Event()
 DAEMON_NAME = 'auditorqt'
@@ -113,16 +114,13 @@ def run_once(
 
     if nprocs < 1:
         raise RuntimeError("No Process to Run")
-
+    
     rses_to_process = get_rses_to_process(rses)
 
 #    for rse in rses_to_process:
 #        print(rse)
 
     rses_names = [entry['rse'] for entry in rses_to_process]
-    if len(rses_names) <= 0:
-#        raise RSENotFound("No RSEs found to audit")
-        raise RSENotFound(msg)
     print(rses_names)
 
     #fetch input
@@ -208,10 +206,10 @@ def get_rses_to_process(
     rses: Optional["Iterable[str]"]
     ) -> Optional[list[dict[str, Any]]]:
 
-    if rses is None:
-        rses_to_process = RSEClient().list_rses()
-    else:
+    if rses:
         rses_to_process = RSEClient().list_rses(rses)
+    else:
+        rses_to_process = RSEClient().list_rses()
 
 # list_rses as in reaper
 #    rses_to_process_reaper = list_rses()
