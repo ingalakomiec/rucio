@@ -110,7 +110,7 @@ def run_once(
     worker_number, _, logger = heartbeat_handler.live()
 
     #print Hello world
-    #print("Hello world")
+    print("Hello world")
     # print parameters' values
     #print(nprocs)
     #print(rses)
@@ -125,7 +125,7 @@ def run_once(
 #    for rse in rses_to_process:
 #        print(rse)
 
-#    rses_names = [entry['rse'] for entry in rses_to_process]
+    rses_names = [entry['rse'] for entry in rses_to_process]
 #    print(rses_names)
 
     if not config_has_section('auditor'):
@@ -134,8 +134,8 @@ def run_once(
     cache_dir = config_get('auditor', 'cache')
     results_dir = config_get('auditor', 'results')
 
-    for rse in rses_to_process:
-           
+    for rse in rses_names:
+
         try:
 #            profile_maker = PROFILE_MAP[config['profile']]
             profile_maker = PROFILE_MAP['atlas_download_rse_dump'] 
@@ -144,7 +144,7 @@ def run_once(
             continue
 
         try:
-            profile = profile_maker()
+            profile = profile_maker(rse, destdir=cache_dir)
         except RucioException:
             logger(logging.ERROR, 'Invalid configuration for profile profile_name')
             raise
