@@ -21,14 +21,19 @@ import functools
 import logging
 import socket
 import threading
+from configparser import NoSectionError
 from typing import TYPE_CHECKING, Any, Optional
 
 from rucio.common.logging import setup_logging
+from rucio.common.config import config_get, config_has_section
+from rucio.common.exception import RucioException
 from rucio.core.heartbeat import sanity_check
 from rucio.daemons.common import run_daemon
 from rucio.client.rseclient import RSEClient
 #from rucio.core.rse import list_rses
 from rucio.common.exception import RSENotFound
+
+from .profiles import PROFILE_MAP
 
 GRACEFUL_STOP = threading.Event()
 DAEMON_NAME = 'auditorqt'
@@ -120,8 +125,29 @@ def run_once(
 #    for rse in rses_to_process:
 #        print(rse)
 
-    rses_names = [entry['rse'] for entry in rses_to_process]
-    print(rses_names)
+#    rses_names = [entry['rse'] for entry in rses_to_process]
+#    print(rses_names)
+
+    if not config_has_section('auditor'):
+        raise NoSectionError("Auditor section required in config tu run te auditor daemon.")
+
+    cache_dir = config_get('auditor', 'cache')
+    results_dir = config_get('auditor', 'results')
+
+    for rse in rses_to_process:
+           
+        try:
+#            profile_maker = PROFILE_MAP[config['profile']]
+            profile_maker = PROFILE_MAP['atlas_download_rse_dump'] 
+        except KeyError:
+            logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
+            continue
+
+        try:
+            profile = profile_maker()
+        except RucioException:
+            logger(logging.ERROR, 'Invalid configuration for profile profile_name')
+            raise
 
     #fetch input
     rse_dump = fetch_rse_dumps()
