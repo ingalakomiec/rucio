@@ -14,10 +14,12 @@
 
 """ATLAS-specific auditor profiles."""
 
+import datetime
 #import logging
-#from typing import TYPE_CHECKING, Any
+from typing import Optional
 
 #from rucio.core.did import get_metadata
+from rucio.common.dumper import DUMPS_CACHE_DIR
 
 #from .generic import _call_for_attention, generic_move
 
@@ -27,10 +29,10 @@
 #    from .types import DecommissioningProfile
 
 def atlas_download_rse_dump(
-#        rse: str,
+        rse: str,
 #        configuration: RawConfigParser,
-#        date: Optional[datetime.datetime] = None,
-#        destdir: str = DUMPS_CACHE_DIR
+        date: Optional[datetime.datetime] = None,
+        destdir: str = DUMPS_CACHE_DIR
 #) -> tuple[str, datetime.datetime]:
 ):
     '''
@@ -51,7 +53,7 @@ def atlas_download_rse_dump(
     Return value: a tuple with the filename and a datetime instance with
     the date of the dump.
     '''
-    print("I am in atlas_download_rse_dump")
+    print(rse)
 
 #    logger = logging.getLogger('auditor.srmdumps')
 
@@ -151,3 +153,49 @@ def atlas_download_rse_dump(
 #) -> bool:
 #    """Check if the datatype metadata is 'log'."""
 #    return get_metadata(rule['scope'], rule['name'])['datatype'] == 'log'
+
+
+#def generate_url(
+#        rse: str,
+#        config: RawConfigParser
+#) -> tuple[str, str]:
+    '''
+    :param rse: Name of the endpoint.
+    :param config: RawConfigParser instance which may have configuration
+    related to the endpoint.
+    :returns: Tuple with the URL where the links can be queried to find new
+    dumps and the pattern used to parse the date of the dump of the files/directories
+    listed..
+    '''
+#    site = rse.split('_')[0]
+#    if site not in config.sections():
+#        base_url = ddmendpoint_url(rse) + 'dumps'
+#        url_pattern = 'dump_%Y%m%d'
+#    else:
+#        url_components = config.get(site, rse).split('/')
+        # The pattern may not be the last component
+#        pattern_index = next(idx for idx, comp in enumerate(url_components) if '%m' in comp)
+#        base_url = '/'.join(url_components[:pattern_index])
+#        url_pattern = '/'.join(url_components[pattern_index:])
+
+#    return base_url, url_pattern
+
+
+#def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
+    '''
+    Parses the configuration for the endpoints contained in `conf_dir`.
+    Returns a ConfParser.RawConfParser subclass instance.
+    '''
+#    conf_dirs = conf_dirs or __DUMPERCONFIGDIRS
+#    logger = logging.getLogger('auditor.srmdumps')
+#    if len(conf_dirs) == 0:
+#        logger.error('No configuration directory given to load SRM dumps paths')
+#        raise Exception('No configuration directory given to load SRM dumps paths')
+
+#    configuration = Parser({
+#        'disabled': False,
+#    })
+
+#    for conf_dir in conf_dirs:
+#        configuration.read(glob.glob(conf_dir + '/*.cfg'))
+#    return configuration
