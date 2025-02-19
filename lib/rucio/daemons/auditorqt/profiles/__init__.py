@@ -14,11 +14,11 @@
 
 """Auditor profile definitions."""
 
-from .atlas import atlas_download_rse_dump
+from .atlas import atlas_auditor
 #from .generic import generic_delete, generic_move
 
 PROFILE_MAP = {
 #    'generic_delete': generic_delete,
 #    'generic_move': generic_move,
-    'atlas_download_rse_dump': atlas_download_rse_dump
+    'atlas_auditor': atlas_auditor
 }
