@@ -28,10 +28,8 @@ from rucio.common.dumper import DUMPS_CACHE_DIR
 
 #    from .types import DecommissioningProfile
 
-def atlas_download_rse_dump(
+def atlas_auditor(
         rse: str,
-#        configuration: RawConfigParser,
-        date: Optional[datetime.datetime] = None,
         destdir: str = DUMPS_CACHE_DIR
 #) -> tuple[str, datetime.datetime]:
 ):
@@ -55,147 +53,71 @@ def atlas_download_rse_dump(
     '''
     print(rse)
 
-#    logger = logging.getLogger('auditor.srmdumps')
+    #fetch input
+    rse_dump = fetch_rse_dumps()
+    print('RSE dump:')
+    print(rse_dump)
 
-#    base_url, url_pattern = generate_url(rse, configuration)
+    print('Rucio dumps:')
+    rucio_dump_before, rucio_dump_after = fetch_rucio_dumps()
 
-#    if not os.path.isdir(destdir):
-#        os.mkdir(destdir)
+    print('before')
+    print(rucio_dump_before)
 
-    # check for objectstores, which need to be handled differently
-#    rse_id = get_rse_id(rse)
-#    rse_attr = list_rse_attributes(rse_id)
-#    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
-#        tries = 1
-#        if date is None:
-            # on objectstores, can't list dump files, so try the last N dates
-#            date = datetime.datetime.now()
-#            tries = OBJECTSTORE_NUM_TRIES
-#        path = ''
-#        while tries > 0:
-#            url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
+    print('after')
+    print(rucio_dump_after)
+    lost_files, dark_files = consistency_check('rucio_dump_before', 'rse_dump', 'rucio_dump_after')
 
-#            filename = '{0}_{1}_{2}_{3}'.format(
-#                'ddmendpoint',
-#                rse,
-#                date.strftime('%d-%m-%Y'),
-#                hashlib.sha1(url.encode()).hexdigest()
-#            )
-#            filename = re.sub(r'\W', '-', filename)
-#            path = os.path.join(destdir, filename)
-#            if not os.path.exists(path):
-#                logger.debug('Trying to download: "%s"', url)
-#                if RseAttr.SIGN_URL in rse_attr:
-#                    url = get_signed_url(rse_id, rse_attr[RseAttr.SIGN_URL], 'read', url)
-#                try:
-#                    with temp_file(destdir, final_name=filename) as (f, _):
-#                        download(url, f)
-#                    tries = 0
-#                except (HTTPDownloadFailed, gfal2.GError):
-#                    tries -= 1
-#                    date = date - datetime.timedelta(1)
-#    else:
-#        if date is None:
-#            logger.debug('Looking for site dumps in: "%s"', base_url)
-#            links = get_links(base_url)
-#            url, date = get_newest(base_url, url_pattern, links)
-#        else:
-#            url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
+    print(lost_files)
+    print(dark_files)
 
-#        filename = '{0}_{1}_{2}_{3}'.format(
-#            'ddmendpoint',
-#            rse,
-#            date.strftime('%d-%m-%Y'),
-#            hashlib.sha1(url.encode()).hexdigest()
-#        )
-#        filename = re.sub(r'\W', '-', filename)
-#        path = os.path.join(destdir, filename)
+    file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
+    file_lost_files.writelines(lost_files)
+    file_lost_files.close()
 
-#        if not os.path.exists(path):
-#            logger.debug('Trying to download: "%s"', url)
-#            with temp_file(destdir, final_name=filename) as (f, _):
-#                download(url, f)
+    file_dark_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/dark_files', 'w')
+    file_dark_files.writelines(dark_files)
+    file_dark_files.close()
 
-#    return (path, date)
+
     return True
 
+def fetch_rse_dumps():
 
+#    print("fetching RSE dumps")
+# Collect all RSEs with the 'decommission' attribute
+#    rses = get_rses_with_attribute(RseAttr.DECOMMISSION)
+#    random.shuffle(rses)
 
+    file_rse_dump = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rse_dump', 'rt')
+    rse_dump = file_rse_dump.readlines()
+    file_rse_dump.close()
 
-#def atlas_move(rse: dict[str, Any], config: dict[str, Any]) -> 'DecommissioningProfile':
-    """Return a profile for moving rules that satisfy conditions to a specific destination.
+    return rse_dump
 
-    The "ATLAS move" profile lists out all rules that are locking replicas
-    at the given RSE, and moves them to the specified destination if either
-    one of the following is true:
+def fetch_rucio_dumps():
 
-    - The RSE expression of the rule is trivial (the RSE name itself).
-    - There are no replicas locked by the rule that reside on another RSE.
-    - The datatype of the DID is not "log".
+#    print("fetching Rucio dumps")
 
-    :param rse: RSE to decommission.
-    :param config: Decommissioning configuration dictionary.
-    :returns: A decommissioning profile dictionary.
-    """
-#    profile = generic_move(rse, config)
-    # Insert before the trivial RSE expression handler
-#    idx = next(pos for pos, handler in enumerate(profile.handlers)
-#               if handler[0].__name__ == '_has_trivial_rse_expression')
-#    profile.handlers.insert(idx, (_is_log_file, _call_for_attention))
-#    return profile
+    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_before', 'rt')
+    file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_after', 'rt')
 
+    rucio_dump_before = file_rucio_dump_before.readlines()
+    rucio_dump_after = file_rucio_dump_after.readlines()
 
-#def _is_log_file(
-#    rule: dict[str, Any],
-#    rse: dict[str, Any],
-#    *,
-#    logger: "LoggerFunction" = logging.log
-#) -> bool:
-#    """Check if the datatype metadata is 'log'."""
-#    return get_metadata(rule['scope'], rule['name'])['datatype'] == 'log'
+    file_rucio_dump_before.close()
+    file_rucio_dump_after.close()
+    return (rucio_dump_before, rucio_dump_after)
 
+def consistency_check(
+    rucio_dump_before,
+    rse_dump,
+    rucio_dump_aftery):
 
-#def generate_url(
-#        rse: str,
-#        config: RawConfigParser
-#) -> tuple[str, str]:
-    '''
-    :param rse: Name of the endpoint.
-    :param config: RawConfigParser instance which may have configuration
-    related to the endpoint.
-    :returns: Tuple with the URL where the links can be queried to find new
-    dumps and the pattern used to parse the date of the dump of the files/directories
-    listed..
-    '''
-#    site = rse.split('_')[0]
-#    if site not in config.sections():
-#        base_url = ddmendpoint_url(rse) + 'dumps'
-#        url_pattern = 'dump_%Y%m%d'
-#    else:
-#        url_components = config.get(site, rse).split('/')
-        # The pattern may not be the last component
-#        pattern_index = next(idx for idx, comp in enumerate(url_components) if '%m' in comp)
-#        base_url = '/'.join(url_components[:pattern_index])
-#        url_pattern = '/'.join(url_components[pattern_index:])
+    print("consistency check")
 
-#    return base_url, url_pattern
+    lost_files = ['one_lost_file\n', 'another_lost_file\n']
+    dark_files = ['one_dark_file\n', 'another_dark_file\n']
+    results = (lost_files, dark_files)
 
-
-#def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
-    '''
-    Parses the configuration for the endpoints contained in `conf_dir`.
-    Returns a ConfParser.RawConfParser subclass instance.
-    '''
-#    conf_dirs = conf_dirs or __DUMPERCONFIGDIRS
-#    logger = logging.getLogger('auditor.srmdumps')
-#    if len(conf_dirs) == 0:
-#        logger.error('No configuration directory given to load SRM dumps paths')
-#        raise Exception('No configuration directory given to load SRM dumps paths')
-
-#    configuration = Parser({
-#        'disabled': False,
-#    })
-
-#    for conf_dir in conf_dirs:
-#        configuration.read(glob.glob(conf_dir + '/*.cfg'))
-#    return configuration
+    return results
