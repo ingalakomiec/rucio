@@ -132,6 +132,9 @@ def run_once(
     cache_dir = config_get('auditor', 'cache')
     results_dir = config_get('auditor', 'results')
 
+#    cache_dir = '/opt/rucio/auditor-cache'
+#    results_dir = '/opt/rucio/auditor-results'
+
     for rse in rses_names:
 
         try:
@@ -146,7 +149,6 @@ def run_once(
         except RucioException:
             logger(logging.ERROR, 'Invalid configuration for profile profile_name')
             raise
-
 
     return True
 
