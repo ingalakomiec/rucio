@@ -53,22 +53,18 @@ def atlas_auditor(
     '''
     print(rse)
 
-    #fetch input
+    #fetch RSE dump
     rse_dump = fetch_rse_dumps()
-    print('RSE dump:')
-    print(rse_dump)
 
-    print('Rucio dumps:')
+    #fetch two rucio dumps - before and after
     rucio_dump_before, rucio_dump_after = fetch_rucio_dumps()
 
-    print('before')
-    print(rucio_dump_before)
+    lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
 
-    print('after')
-    print(rucio_dump_after)
-    lost_files, dark_files = consistency_check('rucio_dump_before', 'rse_dump', 'rucio_dump_after')
-
+    print("\nlost files")
     print(lost_files)
+
+    print("\ndark files")
     print(dark_files)
 
     file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
@@ -78,7 +74,6 @@ def atlas_auditor(
     file_dark_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/dark_files', 'w')
     file_dark_files.writelines(dark_files)
     file_dark_files.close()
-
 
     return True
 
@@ -112,12 +107,42 @@ def fetch_rucio_dumps():
 def consistency_check(
     rucio_dump_before,
     rse_dump,
-    rucio_dump_aftery):
+    rucio_dump_after):
 
-    print("consistency check")
+    print("rucio_dump_before")
+    print(rucio_dump_before)
 
-    lost_files = ['one_lost_file\n', 'another_lost_file\n']
-    dark_files = ['one_dark_file\n', 'another_dark_file\n']
+    print("\nrse dump")
+    print(rse_dump)
+
+    print("\nrucio_dump_after")
+    print(rucio_dump_after)
+
+    out = dict()
+
+    for k in rucio_dump_before:
+        out[k]=1
+
+    for k in rse_dump:
+        if k in out:
+            out[k]+=2
+        else:
+            out[k]=2
+
+    for k in rucio_dump_after:
+        if k in out:
+            out[k]+=4
+        else:
+            out[k]=4
+
+    lost_files = [k for k in out if out[k]==5]
+    dark_files = [k for k in out if out[k]==2]
+
+    print("\nout")
+    print(out)
+#    print(lost_files)
+#    print(dark_files)
+
     results = (lost_files, dark_files)
 
     return results
