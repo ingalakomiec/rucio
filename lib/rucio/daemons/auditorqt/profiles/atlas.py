@@ -52,7 +52,6 @@ def atlas_auditor(
     the date of the dump.
     '''
     print(rse)
-
     #fetch RSE dump
     rse_dump = fetch_rse_dumps()
 
