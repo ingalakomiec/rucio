@@ -90,16 +90,16 @@ def run_once(
     activity: Optional[str]
 ) -> bool:
     """Add - what is auditor-QT doing?
-    
+
     Auditor-QT - add a description
 
-    worker number - number of worker threads; worker_number == 0 --> only one worker thread 
-    
+    worker number - number of worker threads; worker_number == 0 --> only one worker thread
+
     :param nprocs:            Number of subprocesses, each subprocess checks a fraction of the DDM.
                               Endpoints in sequence (default: 1).
-    :param rses:              RSEs to check specified as an RSE expression 
+    :param rses:              RSEs to check specified as an RSE expression
                               (default: check all RSEs).
-    :param keep_dumps:        Keep RSE and Rucio Replica Dumps on cache 
+    :param keep_dumps:        Keep RSE and Rucio Replica Dumps on cache
                               (default: False).
     :param delta:             How many days older/newer than the RSE dump
                               must the Rucio replica dumps be (default: 3).
@@ -166,9 +166,9 @@ def run(
 
     :param nprocs:     Number of subprocesses, each subprocess checks a fraction of the DDM.
                        Endpoints in sequence (default: 1).
-    :param rses:       RSEs to check specified as an RSE expression 
+    :param rses:       RSEs to check specified as an RSE expression
                        (default: check all RSEs).
-    :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache 
+    :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache
                        (default: False).
     :param delta:      How many days older/newer than the RSE dump
                        must the Rucio replica dumps be (default: 3).
