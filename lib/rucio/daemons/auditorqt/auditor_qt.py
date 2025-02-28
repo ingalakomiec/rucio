@@ -117,7 +117,7 @@ def run_once(
 
     if nprocs < 1:
         raise RuntimeError("No Process to Run")
-    
+
     rses_to_process = get_rses_to_process(rses)
 
 #    for rse in rses_to_process:
@@ -135,20 +135,37 @@ def run_once(
 #    cache_dir = '/opt/rucio/auditor-cache'
 #    results_dir = '/opt/rucio/auditor-results'
 
-    for rse in rses_names:
+#loop over all rses
+#    for rse in rses_names:
 
-        try:
+#        try:
 #            profile_maker = PROFILE_MAP[config['profile']]
-            profile_maker = PROFILE_MAP['atlas_auditor'] 
-        except KeyError:
-            logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
-            continue
+#            profile_maker = PROFILE_MAP['atlas_auditor'] 
+#        except KeyError:
+#            logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
+#            continue
 
-        try:
-            profile = profile_maker(rse, destdir=cache_dir)
-        except RucioException:
-            logger(logging.ERROR, 'Invalid configuration for profile profile_name')
-            raise
+#        try:
+#            profile = profile_maker(rse, destdir=cache_dir)
+#        except RucioException:
+#            logger(logging.ERROR, 'Invalid configuration for profile profile_name')
+#            raise
+
+#without an rse loop - just for tests
+    rse='AMAZON_BOTO'
+    try:
+#        profile_maker = PROFILE_MAP[config['profile']]
+        profile_maker = PROFILE_MAP['atlas_auditor'] 
+    except KeyError:
+        logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
+
+    try:
+       profile = profile_maker(rse, destdir=cache_dir)
+
+    except RucioException:
+        logger(logging.ERROR, 'Invalid configuration for profile profile_name')
+        raise
+
 
     return True
 
