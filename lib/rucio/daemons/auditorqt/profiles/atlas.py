@@ -95,18 +95,19 @@ def fetch_rucio_dumps():
 #    print("fetching Rucio dumps")
 
     #file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_before', 'rt')
-#    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24', 'rt')
+    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24', 'rt')
 
     file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_after', 'rt')
 
 #    rucio_dump_before = file_rucio_dump_before.readlines()
-    rucio_dump_before = []
-    with open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24', 'rt') as file_rucio_dump_before:
-        rucio_dump_before_tmp = file_rucio_dump_before.readlines()
+#    rucio_dump_before = []
+#    with open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24', 'rt') as file_rucio_dump_before:
+#        rucio_dump_before_tmp = file_rucio_dump_before.readlines()
 
-        for line in rucio_dump_before_tmp:
-            rucio_dump_before.append(line.strip().split()[7])
+#        for line in rucio_dump_before_tmp:
+#            rucio_dump_before.append(line.strip().split()[7])
 
+    rucio_dump_before = file_rucio_dump_before.readlines()
     rucio_dump_after = file_rucio_dump_after.readlines()
 
     file_rucio_dump_before.close()
