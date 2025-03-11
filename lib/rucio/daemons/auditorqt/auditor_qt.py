@@ -140,7 +140,7 @@ def run_once(
 
 #        try:
 #            profile_maker = PROFILE_MAP[config['profile']]
-#            profile_maker = PROFILE_MAP['atlas_auditor'] 
+#            profile_maker = PROFILE_MAP['atlas_auditor']
 #        except KeyError:
 #            logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
 #            continue
@@ -155,7 +155,7 @@ def run_once(
     rse='AMAZON_BOTO'
     try:
 #        profile_maker = PROFILE_MAP[config['profile']]
-        profile_maker = PROFILE_MAP['atlas_auditor'] 
+        profile_maker = PROFILE_MAP['atlas_auditor']
     except KeyError:
         logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
 
