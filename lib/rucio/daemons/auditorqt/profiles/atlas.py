@@ -62,8 +62,8 @@ def atlas_auditor(
 
     dest_dir = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files'
 
-    prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av4')
-    prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av4')
+#    prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av4')
+#    prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av4')
 
     #fetch two rucio dumps - before and after
     rucio_dump_before = fetch_rucio_dump_before()
@@ -73,7 +73,9 @@ def atlas_auditor(
 #    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av4')
 
 
-    lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
+#    lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
+
+    consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
 
     print("\nlost files")
 #    print(lost_files)
@@ -81,13 +83,13 @@ def atlas_auditor(
     print("\ndark files")
 #    print(dark_files)
 
-    file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
-    file_lost_files.writelines(lost_files)
-    file_lost_files.close()
+#    file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
+#    file_lost_files.writelines(lost_files)
+#    file_lost_files.close()
 
-    file_dark_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/dark_files', 'w')
-    file_dark_files.writelines(dark_files)
-    file_dark_files.close()
+#    file_dark_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/dark_files', 'w')
+#    file_dark_files.writelines(dark_files)
+#    file_dark_files.close()
 
     return True
 
@@ -126,8 +128,9 @@ def fetch_rucio_dump_before():
 
 #    rucio_dump_before = [[],[]]
 
-    rucio_dump_before = {}
+#    rucio_dump_before = {}
 
+    rucio_dump_before = dict()
     with open(rucio_dump_before_path, 'rt') as file_rucio_dump:
 
         for line in file_rucio_dump:
@@ -163,7 +166,8 @@ def fetch_rucio_dump_after():
 
 #    rucio_dump_after = file_rucio_dump_after.readlines()
 
-    rucio_dump_after = {}
+#    rucio_dump_after = {}
+    rucio_dump_after = dict()
 
     with open(rucio_dump_after_path, 'rt') as file_rucio_dump:
 
@@ -222,29 +226,35 @@ def consistency_check(
 
     out = dict()
 
-    for k in rucio_dump_before:
-        out[k]=16
+#    for k in rse_dump:
+#        rse_dump[k]=16
 
-    for k in rse_dump:
-        if k in out:
-            out[k]+=8
-        else:
-            out[k]=8
+#    for k in rucio_dump_before:
+#        print(k, rucio_dump_before[key])
 
-    for k in rucio_dump_after:
-        if k in out:
-            out[k]+=4
-        else:
-            out[k]=4
+#    for k in rucio_dump_before:
+#        out[k]=16
 
-    lost_files = [k for k in out if out[k]==20]
-    dark_files = [k for k in out if out[k]==8]
+#    for k in rse_dump:
+#        if k in out:
+#            out[k]+=8
+#        else:
+#            out[k]=8
+
+#    for k in rucio_dump_after:
+#        if k in out:
+#            out[k]+=4
+#        else:
+#            out[k]=4
+
+#    lost_files = [k for k in out if out[k]==20]
+#    dark_files = [k for k in out if out[k]==8]
 
     print("\nout")
 #    print(out)
 #    print(lost_files)
 #    print(dark_files)
 
-    results = (lost_files, dark_files)
+#    results = (lost_files, dark_files)
 
-    return results
+#    return results
