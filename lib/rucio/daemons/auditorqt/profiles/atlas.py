@@ -69,8 +69,8 @@ def atlas_auditor(
 #    rucio_dump_before = fetch_rucio_dump_before()
 #    rucio_dump_after = fetch_rucio_dump_after()
 
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av6')
-    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av6')
+    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
+    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
 
 
     lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
@@ -185,9 +185,7 @@ def fetch_rucio_dump_after():
     return rucio_dump_after
 
 def prepare_rucio_dump(
-    dump_path: str,
-    destdir: str,
-    file_name: str
+    dump_path: str
 ):
 
     rucio_dump = [[],[]]
