@@ -62,8 +62,8 @@ def atlas_auditor(
 
     dest_dir = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files'
 
-#    prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av4')
-#    prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av4')
+    prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av5')
+    prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av5')
 
     #fetch two rucio dumps - before and after
     rucio_dump_before = fetch_rucio_dump_before()
@@ -117,7 +117,7 @@ def fetch_rucio_dump_before():
 #    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24', 'rt')
 #    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_before', 'rt')
 
-    rucio_dump_before_path = "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files/dump_before_av4"
+    rucio_dump_before_path = "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files/dump_before_av5"
 
 #    rucio_dump_before = []
 #    with open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24', 'rt') as file_rucio_dump_before:
@@ -155,7 +155,7 @@ def fetch_rucio_dump_after():
 #    file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.D>
 #    file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_after', 'rt')
 
-    rucio_dump_after_path = "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files/dump_after_av4"
+    rucio_dump_after_path = "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files/dump_after_av5"
 
 
 
