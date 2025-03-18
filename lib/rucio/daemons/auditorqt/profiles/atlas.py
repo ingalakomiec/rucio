@@ -62,15 +62,15 @@ def atlas_auditor(
 
     dest_dir = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files'
 
-    prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av5')
-    prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av5')
+#    prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av5')
+#    prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av5')
 
     #fetch two rucio dumps - before and after
-    rucio_dump_before = fetch_rucio_dump_before()
-    rucio_dump_after = fetch_rucio_dump_after()
+#    rucio_dump_before = fetch_rucio_dump_before()
+#    rucio_dump_after = fetch_rucio_dump_after()
 
-#    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av4')
-#    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av4')
+    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av6')
+    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av6')
 
 
     lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
@@ -190,8 +190,8 @@ def prepare_rucio_dump(
     file_name: str
 ):
 
-#    rucio_dump = [[],[]]
-    rucio_dump = []
+    rucio_dump = [[],[]]
+##    rucio_dump = []
 
 
     with open(dump_path, 'rt') as file_rucio_dump:
@@ -199,21 +199,25 @@ def prepare_rucio_dump(
         for line in file_rucio_dump:
 #            rucio_dump.append(line.split()[7])
 #            if line.split()[10]=="A":
-            rucio_dump.append(line.split()[7])
-            rucio_dump.append(" "+line.split()[10])
-            rucio_dump.append('\n')
+##            rucio_dump.append(line.split()[7])
+##            rucio_dump.append(" "+line.split()[10])
+##            rucio_dump.append('\n')
            # rucio_dump[1].append(line.split()[10])
            # rucio_dump[1].append('\n')
+
+            rucio_dump[0].append(line.split()[7]+'\n')
+            rucio_dump[1].append(line.split()[10])
+
 
         file_rucio_dump.close()
 
 
-    file_dump = open(destdir+'/'+file_name, 'w')
-    file_dump.writelines(rucio_dump)
-    file_dump.close()
+##    file_dump = open(destdir+'/'+file_name, 'w')
+##    file_dump.writelines(rucio_dump)
+##    file_dump.close()
 
 
-    return True
+    return rucio_dump
 
 def consistency_check(
     rucio_dump_before,
@@ -238,6 +242,8 @@ def consistency_check(
 #    print("rucio_dump_before")
 #    print(rucio_dump_before[1][0])
 
+#    if rucio_dump_before[1][0] == 'A':
+#        print("zgadza sie")
 
 #    print("rucio_dump_after")
 #    print(rucio_dump_after[1][0])
