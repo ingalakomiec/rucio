@@ -73,9 +73,11 @@ def atlas_auditor(
 #    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av4')
 
 
-#    lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
+    lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
 
-    consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
+#    consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
+#    consistency_check(rucio_dump_before,rse_dump)
+
 
     print("\nlost files")
 #    print(lost_files)
@@ -83,13 +85,13 @@ def atlas_auditor(
     print("\ndark files")
 #    print(dark_files)
 
-#    file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
-#    file_lost_files.writelines(lost_files)
-#    file_lost_files.close()
+    file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
+    file_lost_files.writelines(lost_files)
+    file_lost_files.close()
 
-#    file_dark_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/dark_files', 'w')
-#    file_dark_files.writelines(dark_files)
-#    file_dark_files.close()
+    file_dark_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/dark_files', 'w')
+    file_dark_files.writelines(dark_files)
+    file_dark_files.close()
 
     return True
 
@@ -126,19 +128,19 @@ def fetch_rucio_dump_before():
 
 #    rucio_dump_before = file_rucio_dump_before.readlines()
 
-#    rucio_dump_before = [[],[]]
+    rucio_dump_before = [[],[]]
 
 #    rucio_dump_before = {}
 
-    rucio_dump_before = dict()
+#    rucio_dump_before = dict()
     with open(rucio_dump_before_path, 'rt') as file_rucio_dump:
 
         for line in file_rucio_dump:
 #            rucio_dump.append(line.split()[7])
 #            if line.split()[10]=="A":
-#            rucio_dump_before[0].append(line.split()[0])
-#            rucio_dump_before[0].append('\n')
-            rucio_dump_before[line.split()[0]+"\n"] = line.split()[1]
+            rucio_dump_before[0].append(line.split()[0]+'\n')
+            rucio_dump_before[1].append(line.split()[1])
+#            rucio_dump_before[line.split()[0]+"\n"] = line.split()[1]
 
     file_rucio_dump.close()
 
@@ -167,12 +169,15 @@ def fetch_rucio_dump_after():
 #    rucio_dump_after = file_rucio_dump_after.readlines()
 
 #    rucio_dump_after = {}
-    rucio_dump_after = dict()
+#    rucio_dump_after = dict()
+    rucio_dump_after = [[],[]]
 
     with open(rucio_dump_after_path, 'rt') as file_rucio_dump:
 
         for line in file_rucio_dump:
-            rucio_dump_after[line.split()[0]+"\n"] = line.split()[1]
+#            rucio_dump_after[line.split()[0]+"\n"] = line.split()[1]
+            rucio_dump_after[0].append(line.split()[0]+'\n')
+            rucio_dump_after[1].append(line.split()[1])
 
 
     file_rucio_dump.close()
@@ -214,9 +219,10 @@ def consistency_check(
     rucio_dump_before,
     rse_dump,
     rucio_dump_after):
+#    rse_dump):
 
     print("rucio_dump_before")
-#    print(rucio_dump_before)
+#    print(rucio_dump_before[0])
 
     print("\nrse dump")
 #    print(rse_dump)
@@ -227,34 +233,50 @@ def consistency_check(
     out = dict()
 
 #    for k in rse_dump:
-#        rse_dump[k]=16
-
-#    for k in rucio_dump_before:
-#        print(k, rucio_dump_before[key])
-
-#    for k in rucio_dump_before:
 #        out[k]=16
 
-#    for k in rse_dump:
-#        if k in out:
-#            out[k]+=8
-#        else:
-#            out[k]=8
+#    print("rucio_dump_before")
+#    print(rucio_dump_before[1][0])
 
-#    for k in rucio_dump_after:
-#        if k in out:
-#            out[k]+=4
-#        else:
-#            out[k]=4
 
-#    lost_files = [k for k in out if out[k]==20]
-#    dark_files = [k for k in out if out[k]==8]
+#    print("rucio_dump_after")
+#    print(rucio_dump_after[1][0])
+
+
+    i = 0
+
+    for k in rucio_dump_before[0]:
+        out[k]=16
+        if rucio_dump_before[1][i]=='A':
+            out[k]+=2
+        i+=1
+
+    i = 0
+    for k in rse_dump:
+        if k in out:
+            out[k]+=8
+        else:
+            out[k]=8
+
+
+    for k in rucio_dump_after[0]:
+        if k in out:
+            out[k]+=4
+            if rucio_dump_after[1][i]=='A':
+                out[k]+=1
+        else:
+            out[k]=4
+        i+=1
+
+    lost_files = [k for k in out if out[k]==23]
+    dark_files = [k for k in out if out[k]==8]
 
     print("\nout")
 #    print(out)
 #    print(lost_files)
 #    print(dark_files)
 
-#    results = (lost_files, dark_files)
+    results = (lost_files, dark_files)
 
-#    return results
+    return results
+#    return True
