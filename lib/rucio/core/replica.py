@@ -42,7 +42,7 @@ from rucio.common import exception
 from rucio.common.cache import MemcacheRegion
 from rucio.common.config import config_get, config_get_bool
 from rucio.common.constants import RseAttr, SuspiciousAvailability
-from rucio.common.types import InternalAccount, InternalScope
+from rucio.common.types import InternalAccount, InternalScope, LFNDict, is_str_list
 from rucio.common.utils import add_url_query, chunks, clean_pfns, str_to_date
 from rucio.core.credential import get_signed_url
 from rucio.core.message import add_messages
@@ -306,7 +306,7 @@ def list_bad_replicas_status(
 
 @transactional_session
 def __declare_bad_file_replicas(
-    pfns: "Sequence[Union[str, dict[str, Any]]]",
+    pfns: list[Union[str, dict[str, Any]]],
     rse_id: str,
     reason: str,
     issuer: InternalAccount,
@@ -333,7 +333,7 @@ def __declare_bad_file_replicas(
     replicas: list[dict[str, Any]] = []
     path_pfn_dict: dict[str, str] = {}
 
-    if len(pfns) > 0 and type(pfns[0]) is str:
+    if len(pfns) > 0 and is_str_list(pfns):
         # If pfns is a list of PFNs, the scope and names need to be extracted from the path
         rse_info = rsemgr.get_rse_info(rse_id=rse_id, session=session)
         proto = rsemgr.create_protocol(rse_info, 'read', scheme=scheme)
@@ -953,9 +953,12 @@ def _build_list_replicas_pfn(
     If needed, sign the PFN url
     If relevant, add the server-side root proxy to the pfn url
     """
-    pfn: str = list(protocol.lfns2pfns(lfns={'scope': scope.external,
-                                             'name': name,
-                                             'path': path}).values())[0]
+    lfn: LFNDict = {
+        'scope': scope.external,  # type: ignore (scope.external might be None)
+        'name': name,
+        'path': path
+    }
+    pfn: str = list(protocol.lfns2pfns(lfns=lfn).values())[0]
 
     # do we need to sign the URLs?
     if sign_urls and protocol.attributes['scheme'] == 'https':
@@ -1109,7 +1112,7 @@ def _list_replicas(
                     try:
                         path = pfns_cache['%s:%s:%s' % (protocol.attributes['determinism_type'], t_scope.internal, t_name)]
                     except KeyError:  # No cache entry scope:name found for this protocol
-                        path = protocol._get_path(t_scope, t_name)
+                        path = protocol._get_path(t_scope, t_name)  # type: ignore (t_scope is InternalScope instead of str)
                         pfns_cache['%s:%s:%s' % (protocol.attributes['determinism_type'], t_scope.internal, t_name)] = path
 
                 try:

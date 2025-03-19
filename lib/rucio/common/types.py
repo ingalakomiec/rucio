@@ -17,10 +17,10 @@ from collections.abc import Callable
 from os import PathLike
 
 if sys.version_info < (3, 11):  # pragma: no cover
-    from typing_extensions import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, Union  # noqa: UP035
+    from typing_extensions import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, TypeGuard, Union  # noqa: UP035
     PathTypeAlias = Union[PathLike, str]
 else:
-    from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, Union
+    from typing import TYPE_CHECKING, Any, Literal, NotRequired, Optional, TypedDict, TypeGuard, Union
     PathTypeAlias = PathLike
 
 
@@ -182,6 +182,12 @@ class RSESettingsDict(TypedDict):
     domain: list[str]
     protocols: list[RSEProtocolDict]
 
+    # Compatibility with protocols that access protocol-specific data from rse_settings (e.g. RFIO)
+    protocol: RSEProtocolDict
+    prefix: str
+    scheme: str
+    hostname: str
+
 
 class RSEAccountCounterDict(TypedDict):
     account: InternalAccount
@@ -257,6 +263,16 @@ class DIDDict(TypedDict):
 class DIDStringDict(TypedDict):
     name: str
     scope: str
+
+
+class LFNDict(TypedDict):
+    name: str
+    scope: str
+    path: NotRequired[str]
+    filesize: NotRequired[int]
+    adler32: NotRequired[str]
+    md5: NotRequired[str]
+    filename: NotRequired[str]
 
 
 class DatasetDict(DIDStringDict):
@@ -459,3 +475,9 @@ class FilterDict(TypedDict):
     request_id: str
     older_than: 'datetime'
     activities: Union[list[str], str]
+
+
+def is_str_list(in_list: list[Any]) -> TypeGuard[list[str]]:
+    """Typeguard to narrow type of list to list[str].
+    For speed, assumes that all elements are str if the first element is str."""
+    return isinstance(next(iter(in_list), None), str)
