@@ -30,7 +30,6 @@ from rucio.common.exception import RucioException
 from rucio.core.heartbeat import sanity_check
 from rucio.daemons.common import run_daemon
 from rucio.client.rseclient import RSEClient
-#from rucio.core.rse import list_rses
 from rucio.common.exception import RSENotFound
 
 from .profiles import PROFILE_MAP
