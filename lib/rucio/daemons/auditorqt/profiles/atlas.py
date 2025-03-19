@@ -22,8 +22,7 @@ from rucio.common.dumper import DUMPS_CACHE_DIR
 def atlas_auditor(
         rse: str,
         destdir: str = DUMPS_CACHE_DIR
-#) -> tuple[str, datetime.datetime]:
-):
+) -> None:
     '''
     Downloads the dump for the given ddmendpoint. If this endpoint does not
     follow the standardized method to publish the dumps it should have an
@@ -49,8 +48,6 @@ def atlas_auditor(
 
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
-#    dest_dir = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files'
-
     rse_dump = fetch_rse_dump(rse_dump_path)
 
     rucio_dump_before = fetch_rucio_dump(rucio_dump_before_path)
@@ -70,7 +67,9 @@ def atlas_auditor(
 
 def fetch_rse_dump(
     dump_path: str
-):
+) -> []:
+
+    print("fetching rse dump")
 
     file_rse_dump = open(dump_path, 'rt')
     rse_dump = file_rse_dump.readlines()
@@ -81,7 +80,9 @@ def fetch_rse_dump(
 
 def fetch_rucio_dump(
     dump_path: str
-):
+) -> [[],[]]:
+
+    print("fetching rucio dump")
 
     rucio_dump = [[],[]]
 
@@ -97,9 +98,12 @@ def fetch_rucio_dump(
     return rucio_dump
 
 def consistency_check(
-    rucio_dump_before,
-    rse_dump,
-    rucio_dump_after):
+    rucio_dump_before: [[],[]],
+    rse_dump: [],
+    rucio_dump_after: [[],[]]
+) -> ([],[]):
+
+    print("consistency check")
 
     out = dict()
 
