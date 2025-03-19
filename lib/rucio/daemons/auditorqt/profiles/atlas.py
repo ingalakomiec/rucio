@@ -15,18 +15,9 @@
 """ATLAS-specific auditor profiles."""
 
 import datetime
-#import logging
 from typing import Optional
 
-#from rucio.core.did import get_metadata
 from rucio.common.dumper import DUMPS_CACHE_DIR
-
-#from .generic import _call_for_attention, generic_move
-
-#if TYPE_CHECKING:
-#    from rucio.common.types import LoggerFunction
-
-#    from .types import DecommissioningProfile
 
 def atlas_auditor(
         rse: str,
@@ -51,39 +42,21 @@ def atlas_auditor(
     Return value: a tuple with the filename and a datetime instance with
     the date of the dump.
     '''
-    print(rse)
-    #fetch RSE dump
-    rse_dump = fetch_rse_dump()
 
+    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
 
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
 
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
-    dest_dir = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files'
+#    dest_dir = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files'
 
-#    prepare_rucio_dump(rucio_dump_before_path, dest_dir, 'dump_before_av5')
-#    prepare_rucio_dump(rucio_dump_after_path, dest_dir, 'dump_after_av5')
+    rse_dump = fetch_rse_dump(rse_dump_path)
 
-    #fetch two rucio dumps - before and after
-#    rucio_dump_before = fetch_rucio_dump_before()
-#    rucio_dump_after = fetch_rucio_dump_after()
-
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
-    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
-
+    rucio_dump_before = fetch_rucio_dump(rucio_dump_before_path)
+    rucio_dump_after = fetch_rucio_dump(rucio_dump_after_path)
 
     lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
-
-#    consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
-#    consistency_check(rucio_dump_before,rse_dump)
-
-
-    print("\nlost files")
-#    print(lost_files)
-
-    print("\ndark files")
-#    print(dark_files)
 
     file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
     file_lost_files.writelines(lost_files)
@@ -95,124 +68,30 @@ def atlas_auditor(
 
     return True
 
-def fetch_rse_dump():
+def fetch_rse_dump(
+    dump_path: str
+):
 
-    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!! fetching RSE dump")
-# Collect all RSEs with the 'decommission' attribute
-#    rses = get_rses_with_attribute(RseAttr.DECOMMISSION)
-#    random.shuffle(rses)
-
-#    file_rse_dump = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rse_dump', 'rt')
-    file_rse_dump = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127', 'rt')
+    file_rse_dump = open(dump_path, 'rt')
     rse_dump = file_rse_dump.readlines()
     file_rse_dump.close()
 
     return rse_dump
 
-def fetch_rucio_dump_before():
 
-    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! fetching Rucio dump before")
-
-#    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files/dump_before_av4', 'rt')
-#    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24', 'rt')
-#    file_rucio_dump_before = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_before', 'rt')
-
-    rucio_dump_before_path = "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files/dump_before_av5"
-
-#    rucio_dump_before = []
-#    with open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24', 'rt') as file_rucio_dump_before:
-#        rucio_dump_before_tmp = file_rucio_dump_before.readlines()
-
-#        for line in rucio_dump_before_tmp:
-#            rucio_dump_before.append(line.strip().split()[7])
-
-#    rucio_dump_before = file_rucio_dump_before.readlines()
-
-    rucio_dump_before = [[],[]]
-
-#    rucio_dump_before = {}
-
-#    rucio_dump_before = dict()
-    with open(rucio_dump_before_path, 'rt') as file_rucio_dump:
-
-        for line in file_rucio_dump:
-#            rucio_dump.append(line.split()[7])
-#            if line.split()[10]=="A":
-            rucio_dump_before[0].append(line.split()[0]+'\n')
-            rucio_dump_before[1].append(line.split()[1])
-#            rucio_dump_before[line.split()[0]+"\n"] = line.split()[1]
-
-    file_rucio_dump.close()
-
-    return rucio_dump_before
-
-
-def fetch_rucio_dump_after():
-
-    print("!!!!!!!!!!!!!!!!!!!!!!!!! fetching Rucio dump after")
-
-#    file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files/dump_after_av3', 'rt')
-#    file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.D>
-#    file_rucio_dump_after = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/rucio_dump_after', 'rt')
-
-    rucio_dump_after_path = "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/prepared_dump_files/dump_after_av5"
-
-
-
-#    rucio_dump_after = []
-#    with open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30', 'rt') as file_rucio_dump_after:
-#        rucio_dump_after_tmp = file_rucio_dump_after.readlines()
-
-#        for line in rucio_dump_after_tmp:
-#            rucio_dump_after.append(line.strip().split()[7])
-
-#    rucio_dump_after = file_rucio_dump_after.readlines()
-
-#    rucio_dump_after = {}
-#    rucio_dump_after = dict()
-    rucio_dump_after = [[],[]]
-
-    with open(rucio_dump_after_path, 'rt') as file_rucio_dump:
-
-        for line in file_rucio_dump:
-#            rucio_dump_after[line.split()[0]+"\n"] = line.split()[1]
-            rucio_dump_after[0].append(line.split()[0]+'\n')
-            rucio_dump_after[1].append(line.split()[1])
-
-
-    file_rucio_dump.close()
-
-    return rucio_dump_after
-
-def prepare_rucio_dump(
+def fetch_rucio_dump(
     dump_path: str
 ):
 
     rucio_dump = [[],[]]
-##    rucio_dump = []
-
 
     with open(dump_path, 'rt') as file_rucio_dump:
 
         for line in file_rucio_dump:
-#            rucio_dump.append(line.split()[7])
-#            if line.split()[10]=="A":
-##            rucio_dump.append(line.split()[7])
-##            rucio_dump.append(" "+line.split()[10])
-##            rucio_dump.append('\n')
-           # rucio_dump[1].append(line.split()[10])
-           # rucio_dump[1].append('\n')
-
             rucio_dump[0].append(line.split()[7]+'\n')
             rucio_dump[1].append(line.split()[10])
 
-
         file_rucio_dump.close()
-
-
-##    file_dump = open(destdir+'/'+file_name, 'w')
-##    file_dump.writelines(rucio_dump)
-##    file_dump.close()
 
 
     return rucio_dump
@@ -221,31 +100,8 @@ def consistency_check(
     rucio_dump_before,
     rse_dump,
     rucio_dump_after):
-#    rse_dump):
-
-    print("rucio_dump_before")
-#    print(rucio_dump_before[0])
-
-    print("\nrse dump")
-#    print(rse_dump)
-
-    print("\nrucio_dump_after")
-#    print(rucio_dump_after)
 
     out = dict()
-
-#    for k in rse_dump:
-#        out[k]=16
-
-#    print("rucio_dump_before")
-#    print(rucio_dump_before[1][0])
-
-#    if rucio_dump_before[1][0] == 'A':
-#        print("zgadza sie")
-
-#    print("rucio_dump_after")
-#    print(rucio_dump_after[1][0])
-
 
     i = 0
 
@@ -275,12 +131,6 @@ def consistency_check(
     lost_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
 
-    print("\nout")
-#    print(out)
-#    print(lost_files)
-#    print(dark_files)
-
     results = (lost_files, dark_files)
 
     return results
-#    return True
