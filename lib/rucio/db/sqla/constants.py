@@ -199,3 +199,8 @@ class SubscriptionState(Enum):
 class TransferLimitDirection(Enum):
     SOURCE = 'S'
     DESTINATION = 'D'
+
+
+class DatabaseOperationType(Enum):
+    READ = 'read'
+    WRITE = 'write'
