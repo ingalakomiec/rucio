@@ -19,6 +19,8 @@ from configparser import NoOptionError, NoSectionError
 from os import environ
 from typing import TYPE_CHECKING, Any
 
+from jsonschema import ValidationError, validate
+
 from rucio.common import config, exception
 from rucio.common.plugins import check_policy_package_version
 
@@ -138,12 +140,18 @@ def load_schema_for_vo(vo: str) -> None:
 
 
 def validate_schema(name: str, obj: Any, vo: str = 'def') -> None:
-    if vo not in schema_modules:
-        load_schema_for_vo(vo)
-    if not hasattr(schema_modules[vo], 'validate_schema'):
-        _get_generic_schema_module().validate_schema(name, obj)
-        return
-    schema_modules[vo].validate_schema(name, obj)
+    if obj:
+        if vo not in schema_modules:
+            load_schema_for_vo(vo)
+        if hasattr(schema_modules[vo], 'SCHEMAS') and name in schema_modules[vo].SCHEMAS:
+            schema = schema_modules[vo].SCHEMAS.get(name, {})
+        else:
+            # if schema not available in VO module, fall back to generic module
+            schema = _get_generic_schema_module().SCHEMAS.get(name, {})
+        try:
+            validate(obj, schema)
+        except ValidationError as error:  # NOQA: F841
+            raise exception.InvalidObject(f'Problem validating {name}: {error}')
 
 
 def get_schema_value(key: str, vo: str = 'def') -> Any:
@@ -162,7 +170,7 @@ def get_scope_name_regexps() -> list[str]:
         from rucio.core.vo import list_vos
         vos = list_vos()
         for vo in vos:
-            if not vo['vo'] in schema_modules:
+            if vo['vo'] not in schema_modules:
                 load_schema_for_vo(vo['vo'])
             scope_name_regexp = schema_modules[vo['vo']].SCOPE_NAME_REGEXP
             if scope_name_regexp not in scope_name_regexps:
