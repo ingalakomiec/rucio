@@ -48,6 +48,7 @@ def auditor_qt(
     rses: str,
     keep_dumps: bool,
     delta: int,
+    profile: str,
     once: bool,
     sleep_time: int
 ) -> None:
@@ -61,6 +62,7 @@ def auditor_qt(
                        (default: False).
     :param delta:      How many days older/newer than the RSE dump
                        must the Rucio replica dumps be (default: 3).
+    :param profile:    Which profile to use (default: atlas).
     :param once:       Whether to execute once and exit.
     :param sleep_time: Number of seconds to sleep before restarting.
     """
@@ -76,6 +78,7 @@ def auditor_qt(
             rses=rses,
             keep_dumps=keep_dumps,
             delta=delta,
+            profile=profile
         )
     )
 
@@ -84,6 +87,7 @@ def run_once(
     rses: str,
     keep_dumps: bool,
     delta: int,
+    profile: str,
     *,
     heartbeat_handler: 'HeartbeatHandler',
     activity: Optional[str]
@@ -102,6 +106,7 @@ def run_once(
                               (default: False).
     :param delta:             How many days older/newer than the RSE dump
                               must the Rucio replica dumps be (default: 3).
+    :param profile:           Which profile to use (default: atlas).
     :param heartbeat_handler: A HeartbeatHandler instance.
     :param activity:          Activity to work on.
     :returns:                 A boolean flag indicating whether the daemon should go to sleep.
@@ -113,6 +118,7 @@ def run_once(
 #    print(rses)
 #    print(keep_dumps)
 #    print(delta)
+#    print(profile)
 
     if nprocs < 1:
         raise RuntimeError("No Process to Run")
@@ -154,7 +160,8 @@ def run_once(
     rse='AMAZON_BOTO'
     try:
 #        profile_maker = PROFILE_MAP[config['profile']]
-        profile_maker = PROFILE_MAP['atlas_auditor']
+#        profile_maker = PROFILE_MAP['atlas_auditor']
+        profile_maker = PROFILE_MAP[profile+'_auditor']
     except KeyError:
         logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
 
@@ -174,6 +181,7 @@ def run(
     rses: str,
     keep_dumps: bool = False,
     delta: int = 3,
+    profile: str = "atlas",
     once: bool = False,
     sleep_time: int = 86400
 ) -> None:
@@ -188,6 +196,7 @@ def run(
                        (default: False).
     :param delta:      How many days older/newer than the RSE dump
                        must the Rucio replica dumps be (default: 3).
+    :param profile:    Which profile to use (default: atlas).
     :param once:       Whether to execute once and exit.
     :param sleep_time: Number of seconds to sleep before restarting.
     """
@@ -208,6 +217,7 @@ def run(
                 'rses': rses,
                 'keep_dumps': keep_dumps,
                 'delta': delta,
+                'profile': profile,
                 'sleep_time': sleep_time,
                 'once': once
             },
