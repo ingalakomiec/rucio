@@ -56,7 +56,7 @@ def get_parser() -> argparse.ArgumentParser:
                         help='How many days older/newer than the RSE dump must the Rucio replica dumps be '
                         '(default: 3).')
     parser.add_argument('--profile', default="atlas", type=str,
-                        help='Which profile to used '
+                        help='Which profile to use '
                         '(default: atlas).')
     parser.add_argument('--run-once', dest='run_once', action='store_true',
                         help='One iteration only.')
@@ -69,7 +69,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, stop)
-    args = get_parser().parse_args() 
+    args = get_parser().parse_args()
     try:
         run(nprocs=args.nprocs,
         rses=args.rses,

@@ -20,7 +20,10 @@ from typing import Optional
 from rucio.common.dumper import DUMPS_CACHE_DIR
 
 def atlas_auditor(
+        nprocs: int,
         rse: str,
+        keep_dumps: bool,
+        delta: int,
         destdir: str = DUMPS_CACHE_DIR
 ) -> None:
     '''
@@ -42,6 +45,7 @@ def atlas_auditor(
     the date of the dump.
     '''
 
+#    print("atlas auditor new")
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
 
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
