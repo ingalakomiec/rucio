@@ -161,13 +161,13 @@ def run_once(
     try:
 #        profile_maker = PROFILE_MAP[config['profile']]
 #        profile_maker = PROFILE_MAP['atlas_auditor']
-        profile_maker = PROFILE_MAP[profile+'_auditor']
+        profile_maker = PROFILE_MAP[profile]
     except KeyError:
         logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
 
     try:
-       profile = profile_maker(rse, destdir=cache_dir)
-
+       profile = profile_maker(nprocs, rses, keep_dumps, delta, destdir=cache_dir)
+#        profile = profile_maker(rse, destdir=cache_dir)
     except RucioException:
         logger(logging.ERROR, 'Invalid configuration for profile profile_name')
         raise
