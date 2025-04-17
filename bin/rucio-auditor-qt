@@ -55,6 +55,9 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--delta', default=3, type=int,
                         help='How many days older/newer than the RSE dump must the Rucio replica dumps be '
                         '(default: 3).')
+    parser.add_argument('--profile', default="atlas", type=str,
+                        help='Which profile to used '
+                        '(default: atlas).')
     parser.add_argument('--run-once', dest='run_once', action='store_true',
                         help='One iteration only.')
     parser.add_argument('--sleep-time', dest='sleep_time', action='store',
@@ -72,6 +75,7 @@ if __name__ == '__main__':
         rses=args.rses,
         keep_dumps=args.keep_dumps,
         delta=args.delta,
+        profile=args.profile,
         once=args.run_once,
         sleep_time=args.sleep_time)
     except KeyboardInterrupt:
