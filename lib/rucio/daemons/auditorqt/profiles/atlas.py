@@ -17,14 +17,12 @@
 import datetime
 from typing import Optional
 
-from rucio.common.dumper import DUMPS_CACHE_DIR
-
 def atlas_auditor(
         nprocs: int,
         rse: str,
         keep_dumps: bool,
         delta: int,
-        destdir: str = DUMPS_CACHE_DIR
+        destdir: str
 ) -> None:
     '''
     Downloads the dump for the given ddmendpoint. If this endpoint does not
@@ -54,13 +52,22 @@ def atlas_auditor(
 
     lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
-    file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
+    file_lost_files = open(destdir+'/lost_files', 'w')
     file_lost_files.writelines(lost_files)
     file_lost_files.close()
 
-    file_dark_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/dark_files', 'w')
+    file_dark_files = open(destdir+'/dark_files', 'w')
     file_dark_files.writelines(dark_files)
     file_dark_files.close()
+
+    file_results = open(destdir+'/result.DESY-ZN_DATADISK_20250127', 'w')
+    for k in range(len(dark_files)):
+        file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
+
+    for k in range(len(lost_files)):
+        file_results.write('LOST'+(lost_files[k]).replace("/",",",1))
+
+    file_results.close()
 
     return True
 
