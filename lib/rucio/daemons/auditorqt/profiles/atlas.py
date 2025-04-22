@@ -52,12 +52,7 @@ def atlas_auditor(
 
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
-    rse_dump = fetch_rse_dump(rse_dump_path)
-
-    rucio_dump_before = fetch_rucio_dump(rucio_dump_before_path)
-    rucio_dump_after = fetch_rucio_dump(rucio_dump_after_path)
-
-    lost_files, dark_files = consistency_check(rucio_dump_before, rse_dump, rucio_dump_after)
+    lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
     file_lost_files = open('/opt/rucio/lib/rucio/daemons/auditorqt/tmp/lost_files', 'w')
     file_lost_files.writelines(lost_files)
@@ -102,12 +97,15 @@ def fetch_rucio_dump(
     return rucio_dump
 
 def consistency_check(
-    rucio_dump_before: [[],[]],
-    rse_dump: [],
-    rucio_dump_after: [[],[]]
+    rucio_dump_before_path: str,
+    rse_dump_path: str,
+    rucio_dump_after_path: str
 ) -> ([],[]):
 
     print("consistency check")
+
+    rucio_dump_before = fetch_rucio_dump(rucio_dump_before_path)
+
 
     out = dict()
 
@@ -119,6 +117,11 @@ def consistency_check(
             out[k]+=2
         i+=1
 
+    del rucio_dump_before
+
+    rse_dump = fetch_rse_dump(rse_dump_path)
+
+
     i = 0
     for k in rse_dump:
         if k in out:
@@ -126,6 +129,9 @@ def consistency_check(
         else:
             out[k]=8
 
+    del rse_dump
+
+    rucio_dump_after = fetch_rucio_dump(rucio_dump_after_path)
 
     for k in rucio_dump_after[0]:
         if k in out:
@@ -135,6 +141,8 @@ def consistency_check(
         else:
             out[k]=4
         i+=1
+
+    del rucio_dump_after
 
     lost_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
