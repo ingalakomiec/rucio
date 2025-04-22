@@ -166,7 +166,7 @@ def run_once(
         logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
 
     try:
-       profile = profile_maker(nprocs, rses, keep_dumps, delta, destdir=cache_dir)
+       profile = profile_maker(nprocs, rses, keep_dumps, delta, destdir=results_dir)
 #        profile = profile_maker(rse, destdir=cache_dir)
     except RucioException:
         logger(logging.ERROR, 'Invalid configuration for profile profile_name')
