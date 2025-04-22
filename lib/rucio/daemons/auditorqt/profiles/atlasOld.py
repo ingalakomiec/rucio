@@ -28,7 +28,7 @@ from multiprocessing import Event, Pipe, Process, Queue
 
 import rucio.common.config as config
 import rucio.common.dumper as dumper
-import rucio.daemons.auditor
+#import rucio.daemons.auditor
 from rucio.client.rseclient import RSEClient
 from rucio.common.exception import RSENotFound
 
@@ -55,6 +55,9 @@ def function(
     keep_dumps: bool,
     delta: int,
 ) -> None:
+
+    import rucio.daemons.auditor
+
 
 #    print(nprocs)
 #    print(rses)
