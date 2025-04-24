@@ -19,6 +19,7 @@ on storage, i.e.: dark data discovery.
 
 import functools
 import logging
+import os
 import socket
 import threading
 from configparser import NoSectionError
@@ -137,6 +138,13 @@ def run_once(
     cache_dir = config_get('auditor', 'cache')
     results_dir = config_get('auditor', 'results')
 
+    if not os.path.isdir(cache_dir):
+        os.mkdir(cache_dir)
+
+    if not os.path.isdir(results_dir):
+        os.mkdir(results_dir)
+
+
 #    cache_dir = '/opt/rucio/auditor-cache'
 #    results_dir = '/opt/rucio/auditor-results'
 
@@ -166,7 +174,7 @@ def run_once(
         logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
 
     try:
-       profile = profile_maker(nprocs, rses, keep_dumps, delta, destdir=results_dir)
+       profile = profile_maker(nprocs, rses, keep_dumps, delta, cache_dir, results_dir)
 #        profile = profile_maker(rse, destdir=cache_dir)
     except RucioException:
         logger(logging.ERROR, 'Invalid configuration for profile profile_name')
