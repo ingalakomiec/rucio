@@ -16,11 +16,12 @@
 
 from .atlas import atlas_auditor
 from .atlasOld import atlas_auditor_old
-#from .generic import generic_delete, generic_move
+from .generic import generic_auditor
 
 PROFILE_MAP = {
 #    'generic_delete': generic_delete,
 #    'generic_move': generic_move,
     'atlas': atlas_auditor,
-    'atlasOld': atlas_auditor_old
+    'atlasOld': atlas_auditor_old,
+    'generic': generic_auditor
 }

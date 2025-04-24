@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""ATLAS-specific auditor profiles."""
+"""ATLAS-specific auditor profile."""
 
 import datetime
 from typing import Optional
@@ -22,7 +22,8 @@ def atlas_auditor(
         rse: str,
         keep_dumps: bool,
         delta: int,
-        destdir: str
+        cache_dir: str,
+        results_dir: str
 ) -> None:
     '''
     Downloads the dump for the given ddmendpoint. If this endpoint does not
@@ -52,15 +53,15 @@ def atlas_auditor(
 
     lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
-    file_lost_files = open(destdir+'/lost_files', 'w')
+    file_lost_files = open(results_dir+'/lost_files', 'w')
     file_lost_files.writelines(lost_files)
     file_lost_files.close()
 
-    file_dark_files = open(destdir+'/dark_files', 'w')
+    file_dark_files = open(results_dir+'/dark_files', 'w')
     file_dark_files.writelines(dark_files)
     file_dark_files.close()
 
-    file_results = open(destdir+'/result.DESY-ZN_DATADISK_20250127', 'w')
+    file_results = open(results_dir+'/result.DESY-ZN_DATADISK_20250127', 'w')
     for k in range(len(dark_files)):
         file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
@@ -71,11 +72,11 @@ def atlas_auditor(
 
     return True
 
-def fetch_rse_dump(
+def prepare_rse_dump(
     dump_path: str
 ) -> []:
 
-    print("fetching rse dump")
+    print("preparing rse dump")
 
     file_rse_dump = open(dump_path, 'rt')
     rse_dump = file_rse_dump.readlines()
@@ -84,11 +85,11 @@ def fetch_rse_dump(
     return rse_dump
 
 
-def fetch_rucio_dump(
+def prepare_rucio_dump(
     dump_path: str
 ) -> [[],[]]:
 
-    print("fetching rucio dump")
+    print("preparing rucio dump")
 
     rucio_dump = [[],[]]
 
@@ -111,7 +112,7 @@ def consistency_check(
 
     print("consistency check")
 
-    rucio_dump_before = fetch_rucio_dump(rucio_dump_before_path)
+    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
 
     out = dict()
@@ -126,7 +127,7 @@ def consistency_check(
 
     del rucio_dump_before
 
-    rse_dump = fetch_rse_dump(rse_dump_path)
+    rse_dump = prepare_rse_dump(rse_dump_path)
 
 
     i = 0
@@ -138,7 +139,7 @@ def consistency_check(
 
     del rse_dump
 
-    rucio_dump_after = fetch_rucio_dump(rucio_dump_after_path)
+    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
 
     for k in rucio_dump_after[0]:
         if k in out:
