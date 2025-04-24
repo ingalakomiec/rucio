@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""ATLAS-specific OLD auditor profile."""
+
 import argparse
 import logging
 import logging.handlers
@@ -220,7 +222,8 @@ def atlas_auditor_old(
         rse: str,
         keep_dumps: bool,
         delta: int,
-        destdir: str = DUMPS_CACHE_DIR
+        cache_dir: str,
+        results_dir: str
 ) -> None:
 
     print("atlas auditor old")
