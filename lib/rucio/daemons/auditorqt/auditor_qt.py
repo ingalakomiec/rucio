@@ -144,42 +144,29 @@ def run_once(
     if not os.path.isdir(results_dir):
         os.mkdir(results_dir)
 
-
-#    cache_dir = '/opt/rucio/auditor-cache'
-#    results_dir = '/opt/rucio/auditor-results'
-
-#loop over all rses
-#    for rse in rses_names:
-
-#        try:
-#            profile_maker = PROFILE_MAP[config['profile']]
-#            profile_maker = PROFILE_MAP['atlas_auditor']
-#        except KeyError:
-#            logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
-#            continue
-
-#        try:
-#            profile = profile_maker(rse, destdir=cache_dir)
-#        except RucioException:
-#            logger(logging.ERROR, 'Invalid configuration for profile profile_name')
-#            raise
-
-#without an rse loop - just for tests
-    rse='AMAZON_BOTO'
     try:
-#        profile_maker = PROFILE_MAP[config['profile']]
-#        profile_maker = PROFILE_MAP['atlas']
         profile_maker = PROFILE_MAP[profile]
     except KeyError:
         logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
 
+# loop over all rses
+    """
+    for rse in rses_names:
+        try:
+            profile = profile_maker(nprocs, rse, keep_dumps, delta, cache_dir, results_dir)
+        except RucioException:
+            logger(logging.ERROR, 'Invalid configuration for profile profile_name')
+            raise
+    """
+#without an rse loop - just for tests
+
+    rse='AMAZON_BOTO'
+
     try:
-       profile = profile_maker(nprocs, rses, keep_dumps, delta, cache_dir, results_dir)
-#        profile = profile_maker(rse, destdir=cache_dir)
+       profile = profile_maker(nprocs, rse, keep_dumps, delta, cache_dir, results_dir)
     except RucioException:
         logger(logging.ERROR, 'Invalid configuration for profile profile_name')
         raise
-
 
     return True
 
