@@ -15,7 +15,10 @@
 """ATLAS-specific auditor profile."""
 
 import datetime
-from typing import Optional
+import requests
+from typing import Optional, Union
+
+BASE_URL = 'https://rucio-hadoop.cern.ch/'
 
 def atlas_auditor(
         nprocs: int,
@@ -51,7 +54,7 @@ def atlas_auditor(
 
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
-    fetch_rucio_dump(rse)
+    fetch_rucio_dump(rse, cache_dir)
 
     lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
@@ -81,11 +84,21 @@ def fetch_rse_dump(
     return True
 
 def fetch_rucio_dump(
-    rse: str
+    rse: str,
+    cache_dir: str,
+    date: Union[str, datetime.datetime] = 'latest',
 ) -> None:
 
-    print("fetching rucio dump")
-    print(rse)
+    print("fetching rucio dump for rse: "+rse)
+
+    if date == 'latest':
+        url = ''.join((BASE_URL, '?rse={0}'.format(rse)))
+
+    print('url:')
+    print(url)
+
+    response = requests.get(url, stream=True)
+
 # na razie nic nie zwraca, ale dobrze by bylo, gdyby zwracala sciezke do dumpa
     return True
 
