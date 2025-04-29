@@ -146,8 +146,9 @@ def run_once(
 
     try:
         profile_maker = PROFILE_MAP[profile]
+
     except KeyError:
-        logger(logging.ERROR, 'Invalid auditor profile name profile_name used for rse_name')
+        logger(logging.ERROR, 'Invalid auditor profile name \''+profile+'\'')
 
 # loop over all rses
     """
@@ -155,7 +156,7 @@ def run_once(
         try:
             profile = profile_maker(nprocs, rse, keep_dumps, delta, cache_dir, results_dir)
         except RucioException:
-            logger(logging.ERROR, 'Invalid configuration for profile profile_name')
+            logger(logging.ERROR, 'Invalid configuration for profile \''+profile+'\'')
             raise
     """
 #without an rse loop - just for tests
@@ -165,7 +166,7 @@ def run_once(
     try:
        profile = profile_maker(nprocs, rse, keep_dumps, delta, cache_dir, results_dir)
     except RucioException:
-        logger(logging.ERROR, 'Invalid configuration for profile profile_name')
+        logger(logging.ERROR, 'Invalid configuration for profile \''+profile+'\'')
         raise
 
     return True
