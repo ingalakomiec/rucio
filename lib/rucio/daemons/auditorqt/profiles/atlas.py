@@ -14,17 +14,22 @@
 
 """ATLAS-specific auditor profile."""
 
-import datetime
+import logging
+import os
+import re
 import requests
+
+from datetime import datetime, timedelta
 from typing import Optional, Union
 
-BASE_URL = 'https://rucio-hadoop.cern.ch/'
+BASE_URL = 'https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports'
+#BASE_URL = '/user/rucio01/reports/{0}/replicas_per_rse/{1}'
 
 def atlas_auditor(
         nprocs: int,
         rse: str,
         keep_dumps: bool,
-        delta: int,
+        delta: timedelta,
         cache_dir: str,
         results_dir: str
 ) -> None:
@@ -47,14 +52,17 @@ def atlas_auditor(
     the date of the dump.
     '''
 
-#    print("atlas auditor new")
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
 
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
 
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
-    fetch_rucio_dump(rse, cache_dir)
+    date = datetime.now()
+    delta = timedelta(delta)
+
+    rse_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
+#    rse_dump_after_path_tmp = fetch_rucio_dump(rse, date + delta, cache_dir)
 
     lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
@@ -85,22 +93,46 @@ def fetch_rse_dump(
 
 def fetch_rucio_dump(
     rse: str,
-    cache_dir: str,
-    date: Union[str, datetime.datetime] = 'latest',
-) -> None:
+    date: "datetime",
+    cache_dir: str
+) -> str:
 
+    logger = logging.getLogger('auditor.fetch_rucio_dump')
     print("fetching rucio dump for rse: "+rse)
 
-    if date == 'latest':
-        url = ''.join((BASE_URL, '?rse={0}'.format(rse)))
+    date = date.strftime('%d-%m-%Y')
 
-    print('url:')
-    print(url)
+#    url = BASE_URL.format(date,rse)
 
-    response = requests.get(url, stream=True)
 
-# na razie nic nie zwraca, ale dobrze by bylo, gdyby zwracala sciezke do dumpa
-    return True
+#    url = ''.join((BASE_URL, '?rse={0}&date={1}'.format(rse, date)))
+
+    url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
+
+    print('url:', url)
+
+    filename = '{0}_{1}'.format(
+        rse,
+        date
+    )
+
+    filename = re.sub(r'\W', '-', filename)
+    path = os.path.join(cache_dir, filename)
+
+    if os.path.exists(path):
+        logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
+        return path
+
+#    response = requests.get(url, stream=True)
+
+#    try:
+#        logging.debug('Trying to download: %s for %s', url, rse)
+
+#    response = requests.get(url, stream=True)
+
+#    file_name = wget.download(url, cache_dir)
+
+    return path
 
 def prepare_rse_dump(
     dump_path: str
