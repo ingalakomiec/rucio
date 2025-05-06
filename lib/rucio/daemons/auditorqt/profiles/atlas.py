@@ -16,13 +16,13 @@
 
 import logging
 import os
-import re
 import requests
+import urllib.request
 
 from datetime import datetime, timedelta
 from typing import Optional, Union
 
-BASE_URL = 'https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports'
+BASE_URL = 'https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{0}/replicas_per_rse/{1}*'
 #BASE_URL = '/user/rucio01/reports/{0}/replicas_per_rse/{1}'
 
 def atlas_auditor(
@@ -52,14 +52,14 @@ def atlas_auditor(
     the date of the dump.
     '''
 
+    date = datetime.now()
+    delta = timedelta(delta)
+
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
 
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
 
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
-
-    date = datetime.now()
-    delta = timedelta(delta)
 
     rse_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
 #    rse_dump_after_path_tmp = fetch_rucio_dump(rse, date + delta, cache_dir)
@@ -74,7 +74,15 @@ def atlas_auditor(
     file_dark_files.writelines(dark_files)
     file_dark_files.close()
 
-    file_results = open(results_dir+'/result.DESY-ZN_DATADISK_20250127', 'w')
+    result_file_name = 'result.{0}_{1}'.format(
+        rse,
+        date.strftime('%Y%m%d')
+    )
+
+    results_path = os.path.join(results_dir, result_file_name)
+
+    file_results = open(results_path, 'w')
+
     for k in range(len(dark_files)):
         file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
@@ -100,14 +108,16 @@ def fetch_rucio_dump(
     logger = logging.getLogger('auditor.fetch_rucio_dump')
     print("fetching rucio dump for rse: "+rse)
 
-    date = date.strftime('%d-%m-%Y')
+    date = date.strftime('%Y-%m-%d')
 
 #    url = BASE_URL.format(date,rse)
-
-
-#    url = ''.join((BASE_URL, '?rse={0}&date={1}'.format(rse, date)))
-
+#    url = ''.join((BASE_URL, '?date={0}&rse={1}'.format(date, rse)))
+#    url = BASE_URL.format(date, rse)
     url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
+
+#    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
+
+#    url = 'http://google.com/favicon.ico'
 
     print('url:', url)
 
@@ -116,21 +126,31 @@ def fetch_rucio_dump(
         date
     )
 
-    filename = re.sub(r'\W', '-', filename)
+#    filename = re.sub(r'\W', '-', filename)
     path = os.path.join(cache_dir, filename)
 
-    if os.path.exists(path):
-        logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
-        return path
 
-#    response = requests.get(url, stream=True)
+# te trzy linijki poten odkomentowac
+#    if os.path.exists(path):
+#        logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
+#        return path
 
-#    try:
-#        logging.debug('Trying to download: %s for %s', url, rse)
+    logging.debug('Trying to download: %s for %s', url, rse)
 
-#    response = requests.get(url, stream=True)
+#    response = requests.get(url, allow_redirects=True, stream=True)
 
-#    file_name = wget.download(url, cache_dir)
+#    response = requests.get(url, allow_redirects=True)
+
+#    if response.status_code != 200:
+#        logging.error(
+#        'Retrieving %s returned %d status code',
+#        url,
+#        response.status_code,
+#        )
+
+#    open('temporary.jpg', 'wb').write(response.content)
+
+    urllib.request.urlretrieve(url, "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/file_tmp.zip")
 
     return path
 
