@@ -161,7 +161,7 @@ def run_once(
     """
 #without an rse loop - just for tests
 
-    rse='AMAZON_BOTO'
+    rse='AMAZON-BOTO'
 
     try:
        profile = profile_maker(nprocs, rse, keep_dumps, delta, cache_dir, results_dir)
