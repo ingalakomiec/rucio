@@ -19,10 +19,14 @@ import os
 import requests
 import urllib.request
 
+from configparser import RawConfigParser
 from datetime import datetime, timedelta
 from typing import Optional, Union
 
-BASE_URL = 'https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{0}/replicas_per_rse/{1}*'
+
+from rucio.common.dumper import ddmendpoint_url
+
+BASE_URL_RUCIO = 'https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{0}/replicas_per_rse/{1}*'
 #BASE_URL = '/user/rucio01/reports/{0}/replicas_per_rse/{1}'
 
 def atlas_auditor(
@@ -61,18 +65,23 @@ def atlas_auditor(
 
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
-    rse_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
-#    rse_dump_after_path_tmp = fetch_rucio_dump(rse, date + delta, cache_dir)
+#    configuration = parse_configuration()
+#    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir)
+
+    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir)
+
+#    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
+#    rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
     lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
-    file_lost_files = open(results_dir+'/lost_files', 'w')
-    file_lost_files.writelines(lost_files)
-    file_lost_files.close()
+#    file_lost_files = open(results_dir+'/lost_files', 'w')
+#    file_lost_files.writelines(lost_files)
+#    file_lost_files.close()
 
-    file_dark_files = open(results_dir+'/dark_files', 'w')
-    file_dark_files.writelines(dark_files)
-    file_dark_files.close()
+#    file_dark_files = open(results_dir+'/dark_files', 'w')
+#    file_dark_files.writelines(dark_files)
+#    file_dark_files.close()
 
     result_file_name = 'result.{0}_{1}'.format(
         rse,
@@ -93,11 +102,61 @@ def atlas_auditor(
 
     return True
 
-def fetch_rse_dump(
-    rse: str
-) -> None:
+#def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
+def parse_configuration(conf_dirs: Optional[list[str]] = None) -> None:
 
+#    return configuration
     return True
+
+def generate_url(
+    rse: str
+#    config: RawConfigParser
+#) -> tuple[str, str]:
+) -> tuple[str, str]:
+
+    print("generating url for rse")
+
+    site = rse.split('_')[0]
+
+    print("site", site)
+
+#sprawdzic, czy to site jest w pliku configuracyjnym wyszczegolnione, czyli dodac if ...
+
+    base_url = ddmendpoint_url(rse) + 'dumps'
+#    base_url = 'base_url_dump'
+    url_pattern = 'dump_%Y%m%d'
+
+# dodac if else, jak juz bedzie gotowy parametr configuration
+
+    return base_url, url_pattern
+
+def fetch_rse_dump(
+    rse: str,
+    cache_dir: str
+) -> tuple[str, datetime]:
+
+    logger = logging.getLogger('auditor.fetch_rse_dump')
+
+
+    print("fetching rse dump")
+
+    date_rse_dump = datetime.now()
+
+    date_rse_dump = date_rse_dump.strftime('%Y-%m-%d')
+
+
+#    base_url, url_pattern = generate_url(rse, configuration)
+    base_url, url_pattern = generate_url(rse)
+
+
+    filename_rse_dump = '{0}_{1}'.format(
+        rse,
+        date_rse_dump
+    )
+
+    path_rse_dump = os.path.join(cache_dir, filename_rse_dump)
+
+    return (path_rse_dump, date_rse_dump)
 
 def fetch_rucio_dump(
     rse: str,
@@ -112,12 +171,10 @@ def fetch_rucio_dump(
 
 #    url = BASE_URL.format(date,rse)
 #    url = ''.join((BASE_URL, '?date={0}&rse={1}'.format(date, rse)))
-#    url = BASE_URL.format(date, rse)
-    url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
+    url = BASE_URL_RUCIO.format(date, rse)
+#    url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
 
 #    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
-
-#    url = 'http://google.com/favicon.ico'
 
     print('url:', url)
 
@@ -137,20 +194,18 @@ def fetch_rucio_dump(
 
     logging.debug('Trying to download: %s for %s', url, rse)
 
-#    response = requests.get(url, allow_redirects=True, stream=True)
+    response = requests.get(url, stream=True)
 
-#    response = requests.get(url, allow_redirects=True)
+    if response.status_code != 200:
+        logging.error(
+        'Retrieving %s returned %d status code',
+        url,
+        response.status_code,
+        )
 
-#    if response.status_code != 200:
-#        logging.error(
-#        'Retrieving %s returned %d status code',
-#        url,
-#        response.status_code,
-#        )
+    open(cache_dir+'/temporary.jpg', 'wb').write(response.content)
 
-#    open('temporary.jpg', 'wb').write(response.content)
-
-    urllib.request.urlretrieve(url, "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/file_tmp.zip")
+#    urllib.request.urlretrieve(url, "/opt/rucio/lib/rucio/daemons/auditorqt/tmp/file_tmp.zip")
 
     return path
 
