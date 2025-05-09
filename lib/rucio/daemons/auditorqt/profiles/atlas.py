@@ -14,6 +14,7 @@
 
 """ATLAS-specific auditor profile."""
 
+import gfal2
 import glob
 import hashlib
 import logging
@@ -23,12 +24,13 @@ import requests
 import urllib.request
 
 from configparser import RawConfigParser
+from html.parser import HTMLParser
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
 from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import ddmendpoint_url
+from rucio.common.dumper import ddmendpoint_url, gfal_download_to_file, http_download_to_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
@@ -46,6 +48,113 @@ _DUMPERCONFIGDIRS = list(
 )
 
 OBJECTSTORE_NUM_TRIES = 30
+
+def get_newest(
+        base_url: str,
+        url_pattern: str,
+        links: "Iterable[str]"
+) -> tuple[str, datetime]:
+    '''
+    Returns a tuple with the newest url in the `links` list matching the
+    pattern `url_pattern` and a datetime object representing the creation
+    date of the url.
+
+    The creation date is extracted from the url using datetime.strptime().
+    '''
+    logger = logging.getLogger('auditor.srmdumps')
+    times = []
+
+    pattern_components = url_pattern.split('/')
+
+    date_pattern = '{0}/{1}'.format(base_url, pattern_components[0])
+    if len(pattern_components) > 1:
+        postfix = '/' + '/'.join(pattern_components[1:])
+    else:
+        postfix = ''
+
+    for link in links:
+        try:
+            time = datetime.strptime(link, date_pattern)
+        except ValueError:
+            pass
+        else:
+            times.append((str(link) + postfix, time))
+
+    if not times:
+        msg = 'No links found matching the pattern {0} in {1}'.format(date_pattern, links)
+        logger.error(msg)
+        raise RuntimeError(msg)
+
+    return max(times, key=operator.itemgetter(1))
+
+
+def gfal_links(base_url: str) -> list[str]:
+    '''
+    Returns a list of the urls contained in `base_url`.
+    '''
+    ctxt = gfal2.creat_context()  # pylint: disable=no-member
+    return ['/'.join((base_url, f)) for f in ctxt.listdir(str(base_url))]
+
+class _LinkCollector(HTMLParser):
+    def __init__(self):
+        super(_LinkCollector, self).__init__()
+        self.links = []
+
+    def handle_starttag(
+            self, tag: str,
+            attrs: "Iterable[tuple[str, str]]"
+    ) -> None:
+        if tag == 'a':
+            self.links.append(
+                next(value for key, value in attrs if key == 'href')
+            )
+
+
+def http_links(base_url: str) -> list[str]:
+    '''
+    Returns a list of the urls contained in `base_url`.
+    '''
+    html = requests.get(base_url).text
+    link_collector = _LinkCollector()
+
+    link_collector.feed(html)
+    links = []
+    for link in link_collector.links:
+        if not link.startswith('http://') and not link.startswith('https://'):
+            links.append('{0}/{1}'.format(base_url, link))
+        else:
+            links.append(link)
+    return links
+
+
+protocol_funcs = {
+    'davs': {
+        'links': gfal_links,
+        'download': gfal_download_to_file,
+    },
+    'gsiftp': {
+        'links': gfal_links,
+        'download': gfal_download_to_file,
+    },
+    'root': {
+        'links': gfal_links,
+        'download': gfal_download_to_file,
+    },
+    'srm': {
+        'links': gfal_links,
+        'download': gfal_download_to_file,
+    },
+    'http': {
+        'links': http_links,
+        'download': http_download_to_file,
+    },
+    'https': {
+        'links': http_links,
+        'download': http_download_to_file,
+    },
+}
+
+
 
 class Parser(RawConfigParser):
     '''
@@ -180,6 +289,22 @@ def generate_url(
 
     return base_url, url_pattern
 
+def protocol(url: str) -> str:
+    '''
+    Given the URL `url` returns a string with the protocol part.
+    '''
+    proto = url.split('://')[0]
+    if proto not in protocol_funcs:
+        raise RuntimeError('Protocol {0} not supported'.format(proto))
+
+    return proto
+
+
+
+def get_links(base_url: str) -> list[str]:
+
+    return protocol_funcs[protocol(base_url)]['links'](base_url)
+
 def fetch_rse_dump(
     rse: str,
     configuration: RawConfigParser,
@@ -235,13 +360,28 @@ def fetch_rse_dump(
     if date is None:
         logger.debug('Looking for site dumps in: "%s"', base_url)
         links = get_links(base_url)
+        url, date =  get_newest(base_url, url_pattern, links)
+    else:
+        url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
 
-    filename_rse_dump = '{0}_{1}'.format(
+
+    filename = '{0}_{1}_{2}_{3}'.format(
+        'ddmendpoint',
         rse,
-        date
+        date.strftime('%d-%m-%Y'),
+        hashlib.sha1(url.encode()).hexdigest()
     )
+    filename = re.sub(r'\W', '-', filename)
 
-    path_rse_dump = os.path.join(cache_dir, filename_rse_dump)
+    path = os.path.join(cache_dir, filename)
+
+    if os.path.exists(path):
+        logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
+        return path
+
+    logging.debug('Trying to download: %s for %s', url, rse)
+
+    status_code = download (url, path)
 
     return (path_rse_dump, date)
 
