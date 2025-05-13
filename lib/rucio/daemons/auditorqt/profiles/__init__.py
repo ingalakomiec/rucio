@@ -14,7 +14,7 @@
 
 """Auditor profile definitions."""
 
-from .atlas import atlas_auditor
+from .atlas.atlas import atlas_auditor
 from .atlasOld import atlas_auditor_old
 from .generic import generic_auditor
 
