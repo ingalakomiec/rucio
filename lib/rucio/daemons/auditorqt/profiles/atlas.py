@@ -14,29 +14,23 @@
 
 """ATLAS-specific auditor profile."""
 
-import gfal2
 import glob
 import hashlib
 import logging
 import os
 import re
 import requests
-import urllib.request
 
-from configparser import RawConfigParser
-from html.parser import HTMLParser
+#from configparser import RawConfigParser
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
-from rucio.common.config import get_config_dirs
+#from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import ddmendpoint_url, gfal_download_to_file, http_download_to_file
-from rucio.core.credential import get_signed_url
+from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, get_links, get_newest, fetch_object_store
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
-
-BASE_URL_RUCIO = 'https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{0}/replicas_per_rse/{1}*'
-
+"""
 _DUMPERCONFIGDIRS = list(
     filter(
         os.path.exists,
@@ -44,116 +38,7 @@ _DUMPERCONFIGDIRS = list(
             os.path.join(confdir, 'auditor') for confdir in get_config_dirs()
         )
     )
-
 )
-
-OBJECTSTORE_NUM_TRIES = 30
-
-def get_newest(
-        base_url: str,
-        url_pattern: str,
-        links: "Iterable[str]"
-) -> tuple[str, datetime]:
-    '''
-    Returns a tuple with the newest url in the `links` list matching the
-    pattern `url_pattern` and a datetime object representing the creation
-    date of the url.
-
-    The creation date is extracted from the url using datetime.strptime().
-    '''
-    logger = logging.getLogger('auditor.srmdumps')
-    times = []
-
-    pattern_components = url_pattern.split('/')
-
-    date_pattern = '{0}/{1}'.format(base_url, pattern_components[0])
-    if len(pattern_components) > 1:
-        postfix = '/' + '/'.join(pattern_components[1:])
-    else:
-        postfix = ''
-
-    for link in links:
-        try:
-            time = datetime.strptime(link, date_pattern)
-        except ValueError:
-            pass
-        else:
-            times.append((str(link) + postfix, time))
-
-    if not times:
-        msg = 'No links found matching the pattern {0} in {1}'.format(date_pattern, links)
-        logger.error(msg)
-        raise RuntimeError(msg)
-
-    return max(times, key=operator.itemgetter(1))
-
-
-def gfal_links(base_url: str) -> list[str]:
-    '''
-    Returns a list of the urls contained in `base_url`.
-    '''
-    ctxt = gfal2.creat_context()  # pylint: disable=no-member
-    return ['/'.join((base_url, f)) for f in ctxt.listdir(str(base_url))]
-
-class _LinkCollector(HTMLParser):
-    def __init__(self):
-        super(_LinkCollector, self).__init__()
-        self.links = []
-
-    def handle_starttag(
-            self, tag: str,
-            attrs: "Iterable[tuple[str, str]]"
-    ) -> None:
-        if tag == 'a':
-            self.links.append(
-                next(value for key, value in attrs if key == 'href')
-            )
-
-
-def http_links(base_url: str) -> list[str]:
-    '''
-    Returns a list of the urls contained in `base_url`.
-    '''
-    html = requests.get(base_url).text
-    link_collector = _LinkCollector()
-
-    link_collector.feed(html)
-    links = []
-    for link in link_collector.links:
-        if not link.startswith('http://') and not link.startswith('https://'):
-            links.append('{0}/{1}'.format(base_url, link))
-        else:
-            links.append(link)
-    return links
-
-
-protocol_funcs = {
-    'davs': {
-        'links': gfal_links,
-        'download': gfal_download_to_file,
-    },
-    'gsiftp': {
-        'links': gfal_links,
-        'download': gfal_download_to_file,
-    },
-    'root': {
-        'links': gfal_links,
-        'download': gfal_download_to_file,
-    },
-    'srm': {
-        'links': gfal_links,
-        'download': gfal_download_to_file,
-    },
-    'http': {
-        'links': http_links,
-        'download': http_download_to_file,
-    },
-    'https': {
-        'links': http_links,
-        'download': http_download_to_file,
-    },
-}
-
 
 
 class Parser(RawConfigParser):
@@ -183,7 +68,7 @@ class Parser(RawConfigParser):
 
     def items(self, section):
         return [(name, self.get(section, name)) for name in self.options(section)]
-
+"""
 
 def atlas_auditor(
         nprocs: int,
@@ -212,30 +97,25 @@ def atlas_auditor(
     the date of the dump.
     '''
 
-    date = datetime.now()
+    date = datetime.today()
     delta = timedelta(delta)
 
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
-
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
-
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
-    configuration = parse_configuration()
+#    configuration = parse_configuration()
+#    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
 
-    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
+    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
-#    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
+#    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
 #    rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
     lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
-    result_file_name = 'result.{0}_{1}'.format(
-        rse,
-        date.strftime('%Y%m%d')
-    )
-
-    results_path = os.path.join(results_dir, result_file_name)
+    result_file_name = f"result.{rse}_{date:%Y%m%d}"
+    results_path = f"{results_dir}/{result_file_name}"
 
     file_results = open(results_path, 'w')
 
@@ -249,6 +129,7 @@ def atlas_auditor(
 
     return True
 
+"""
 def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
 
     conf_dirs = conf_dirs or _DUMPERCONFIGDIRS
@@ -267,123 +148,65 @@ def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
         configuration.read(glob.glob(conf_dir + '/*.cfg'))
 
     return configuration
-
-def generate_url(
-    rse: str,
-    config: RawConfigParser
-) -> tuple[str, str]:
-
-    print("generating url for rse")
-
-    site = rse.split('_')[0]
-
-    if site not in config.sections():
-        base_url = ddmendpoint_url(rse) + 'dumps'
-        url_pattern = 'dump_%Y%m%d'
-
-    else:
-        url_components = config.get(site, rse).split('/')
-        pattern_index = next(idx for idx, comp in enumerate(url_components) if '%m' in comp)
-        base_url = '/'.join(url_components[:pattern_index])
-        url_pattern = '/'.join(url_components[pattern_index:])
-
-    return base_url, url_pattern
-
-def protocol(url: str) -> str:
-    '''
-    Given the URL `url` returns a string with the protocol part.
-    '''
-    proto = url.split('://')[0]
-    if proto not in protocol_funcs:
-        raise RuntimeError('Protocol {0} not supported'.format(proto))
-
-    return proto
-
-
-
-def get_links(base_url: str) -> list[str]:
-
-    return protocol_funcs[protocol(base_url)]['links'](base_url)
+"""
 
 def fetch_rse_dump(
     rse: str,
-    configuration: RawConfigParser,
+#    configuration: RawConfigParser,
     cache_dir: str,
     date: Optional[datetime] = None,
 ) -> tuple[str, datetime]:
 
     logger = logging.getLogger('auditor.fetch_rse_dump')
 
-    print("fetching rse dump")
-
-    base_url, url_pattern = generate_url(rse, configuration)
+#    base_url, url_pattern = generate_url(rse, configuration)
+    base_url = generate_url(rse)
 
     print("base_url: ", base_url)
 
     rse_id = get_rse_id(rse)
     rse_attr = list_rse_attributes(rse_id)
-#    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
-    """
-    tries = 1
-    if date is None:
-        date = datetime.now()
-        tries = OBJECTSTORE_NUM_TRIES
-    path = ''
-    while tries > 0:
-        url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
 
-        filename = '{0}_{1}_{2}_{3}'.format(
-            'ddmendpoint',
-            rse,
-            date.strftime('%d-%m-%Y'),
-            hashlib.sha1(url.encode()).hexdigest()
-        )
-        filename = re.sub(r'\W', '-', filename)
-        path = os.path.join(cache_dir, filename)
-        if not os.path.exists(path):
-            logger.debug('Trying to download: "%s"', url)
-            if RseAttr.SIGN_URL in rse_attr:
-                url = get_signed_url(rse_id, rse_attr[RseAttr.SIGN_URL], 'read', url)
-                status_code = download (url, path)
-                if status_code != 200:
-                    tries -= 1
-                    date = date - timedelta(1)
-                else:
-                    tries = 0
-    """
+    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
+        fetch_object_store(rse, base_url, cache_dir, date)
 
-#                except
-#    url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
-#    print("url: ", url)
-
-
-    if date is None:
-        logger.debug('Looking for site dumps in: "%s"', base_url)
-        links = get_links(base_url)
-        url, date =  get_newest(base_url, url_pattern, links)
     else:
-        url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
+        #remove the line below: date = None; it's just for tests
+        date = None
+        if date is None:
+#            base_url = "root://xrd1:1094//rucio/test"
+            logger.debug('Looking for site dumps in: "%s"', base_url)
+            links = get_links(base_url)
+            print("links: ", links)
+            url, date =  get_newest(base_url, links)
+            print("url from get_newest: ", url)
+            print("date from get_newest: ", date)
+            #dwie ponizsze linijki tylko do testow. gorna linijka powinna zostac
+            date = datetime.now()
+            url = f"{base_url}/dump_{date:%Y%m%d}"
+        else:
+            url = f"{base_url}/dump_{date:%Y%m%d}"
+# add a comment ...
+        hash = hashlib.sha1(url.encode()).hexdigest()
+        filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
 
+        filename = re.sub(r'\W', '-', filename)
 
-    filename = '{0}_{1}_{2}_{3}'.format(
-        'ddmendpoint',
-        rse,
-        date.strftime('%d-%m-%Y'),
-        hashlib.sha1(url.encode()).hexdigest()
-    )
-    filename = re.sub(r'\W', '-', filename)
+        path = f"{cache_dir}/{filename}"
 
-    path = os.path.join(cache_dir, filename)
 
     if os.path.exists(path):
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
         return path
 
-    logging.debug('Trying to download: %s for %s', url, rse)
+        logging.debug('Trying to download: %s for %s', url, rse)
 
-    status_code = download (url, path)
+        try:
+            status_code = download(url, path)
+        except:
+            logging.debug('Dump for %s from %s not downloaded', rse, url)
 
-    return (path_rse_dump, date)
+    return (path, date)
 
 def fetch_rucio_dump(
     rse: str,
@@ -394,29 +217,26 @@ def fetch_rucio_dump(
     logger = logging.getLogger('auditor.fetch_rucio_dump')
     print("fetching rucio dump for rse: "+rse)
 
-    date = date.strftime('%Y-%m-%d')
-
-#    url = BASE_URL_RUCIO.format(date, rse)
 #    url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
+    url = get_rucio_dump_url(date, rse)
+#    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
 
-    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
+    hash = hashlib.sha1(url.encode()).hexdigest()
 
-    print('url:', url)
+    filename = f"{rse}_{date:%Y-%m-%d}_{hash}"
+    filename = re.sub(r'\W', '-', filename)
 
-    filename = '{0}_{1}'.format(
-        rse,
-        date
-    )
-
-    path = os.path.join(cache_dir, filename)
+    path = f"{cache_dir}/{filename}"
 
     if os.path.exists(path):
         logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
         return path
 
-    logging.debug('Trying to download: %s for %s', url, rse)
-
-    status_code = download (url, path)
+    try:
+        logging.debug('Trying to download: %s for %s', url, rse)
+        status_code = download(url, path)
+    except:
+        logging.debug('Dump for %s from %s not downloaded', rse, url)
 
     return path
 
@@ -426,6 +246,8 @@ def download(
     path: str
 ) -> int:
 
+#    url = 'root://xrd1:1094//rucio/test/80/25/file1'
+
     response = requests.get(url, stream=True)
 
     if response.status_code != 200:
@@ -434,11 +256,18 @@ def download(
         url,
         response.status_code,
         )
-
-    open(path, 'wb').write(response.content)
+    else:
+        open(path, 'wb').write(response.content)
 
     return response.status_code
 
+def get_rucio_dump_url(
+    date: datetime,
+    rse: str
+) -> str:
+
+    url  = f"https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{date:%Y-%m-%d}/replicas_per_rse/{rse}.replicas_per_rse.{date:%Y-%m-%d}.csv.bz2"
+    return url
 
 def prepare_rse_dump(
     dump_path: str

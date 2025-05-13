@@ -114,13 +114,6 @@ def run_once(
     """
     worker_number, _, logger = heartbeat_handler.live()
 
-    # print parameters' values
-#    print(nprocs)
-#    print(rses)
-#    print(keep_dumps)
-#    print(delta)
-#    print(profile)
-
     if nprocs < 1:
         raise RuntimeError("No Process to Run")
 
@@ -161,7 +154,13 @@ def run_once(
     """
 #without an rse loop - just for tests
 
-    rse='AMAZON-BOTO'
+#    rse='AMAZON-BOTO'
+#s3://s3.amazonaws.com:80rucio_bucketdumps/dump_20250515
+
+
+    rse='XRD1'
+#root://xrd1:1094//ruciodumps/dump_20250515
+
 
     try:
        profile = profile_maker(nprocs, rse, keep_dumps, delta, cache_dir, results_dir)
