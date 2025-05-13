@@ -12,16 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Auditor profile definitions."""
-
-from .atlas.atlas import atlas_auditor
-from .atlasOld import atlas_auditor_old
-from .generic import generic_auditor
-
-PROFILE_MAP = {
-#    'generic_delete': generic_delete,
-#    'generic_move': generic_move,
-    'atlas': atlas_auditor,
-    'atlasOld': atlas_auditor_old,
-    'generic': generic_auditor
-}
+"""fetching ATLAS-RSE dumps"""
