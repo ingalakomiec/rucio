@@ -66,18 +66,18 @@ protocol_funcs = {
         'links': gfal_links,
         'download': gfal_download_to_file,
     },
-    'gsiftp': {
-        'links': gfal_links,
-        'download': gfal_download_to_file,
-    },
+#    'gsiftp': {
+#        'links': gfal_links,
+#        'download': gfal_download_to_file,
+#    },
     'root': {
         'links': gfal_links,
         'download': gfal_download_to_file,
     },
-    'srm': {
-        'links': gfal_links,
-        'download': gfal_download_to_file,
-    },
+#    'srm': {
+#        'links': gfal_links,
+#        'download': gfal_download_to_file,
+#    },
     'http': {
         'links': http_links,
         'download': http_download_to_file,
