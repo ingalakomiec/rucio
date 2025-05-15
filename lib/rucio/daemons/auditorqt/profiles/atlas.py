@@ -108,7 +108,6 @@ def atlas_auditor(
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
 #    configuration = parse_configuration()
-
 #    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
 
     rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
@@ -119,10 +118,7 @@ def atlas_auditor(
     lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
     result_file_name = f"result.{rse}_{date:%Y%m%d}"
-
     results_path = f"{results_dir}/{result_file_name}"
-
-    print("results_path", results_path)
 
     file_results = open(results_path, 'w')
 
@@ -173,6 +169,7 @@ def fetch_rse_dump(
     base_url, url_pattern = generate_url(rse)
 
     print("base_url: ", base_url)
+    print("url_pattern: ", url_pattern)
 
     rse_id = get_rse_id(rse)
     rse_attr = list_rse_attributes(rse_id)
@@ -268,6 +265,8 @@ def download(
     url: str,
     path: str
 ) -> int:
+
+#    url = 'root://xrd1:1094//rucio/test/80/25/file1'
 
     response = requests.get(url, stream=True)
 
