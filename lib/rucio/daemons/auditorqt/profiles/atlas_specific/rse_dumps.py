@@ -90,23 +90,26 @@ protocol_funcs = {
 
 
 def generate_url(
-    rse: str,
-    config: RawConfigParser
+    rse: str
+#    config: RawConfigParser
 ) -> tuple[str, str]:
 
     print("generating url for rse")
 
     site = rse.split('_')[0]
 
-    if site not in config.sections():
-        base_url = ddmendpoint_url(rse) + 'dumps'
-        url_pattern = 'dump_%Y%m%d'
+#    if site not in config.sections():
 
+    base_url = ddmendpoint_url(rse) + 'dumps'
+    url_pattern = 'dump_%Y%m%d'
+    """
     else:
-        url_components = config.get(site, rse).split('/')
-        pattern_index = next(idx for idx, comp in enumerate(url_components) if '%m' in comp)
-        base_url = '/'.join(url_components[:pattern_index])
-        url_pattern = '/'.join(url_components[pattern_index:])
+
+    url_components = config.get(site, rse).split('/')
+    pattern_index = next(idx for idx, comp in enumerate(url_components) if '%m' in comp)
+    base_url = '/'.join(url_components[:pattern_index])
+    url_pattern = '/'.join(url_components[pattern_index:])
+    """
 
     return base_url, url_pattern
 

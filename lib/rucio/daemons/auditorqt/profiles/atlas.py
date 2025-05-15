@@ -21,19 +21,17 @@ import os
 import re
 import requests
 
-from configparser import RawConfigParser
+#from configparser import RawConfigParser
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
-from rucio.common.config import get_config_dirs
+#from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
 from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, get_links, get_newest
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
-
-BASE_URL_RUCIO = 'https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{0}/replicas_per_rse/{1}*'
-
+"""
 _DUMPERCONFIGDIRS = list(
     filter(
         os.path.exists,
@@ -42,9 +40,10 @@ _DUMPERCONFIGDIRS = list(
         )
     )
 )
-
+"""
 OBJECTSTORE_NUM_TRIES = 30
 
+"""
 class Parser(RawConfigParser):
     '''
     RawConfigParser subclass that doesn't modify the the name of the options
@@ -72,7 +71,7 @@ class Parser(RawConfigParser):
 
     def items(self, section):
         return [(name, self.get(section, name)) for name in self.options(section)]
-
+"""
 
 def atlas_auditor(
         nprocs: int,
@@ -101,30 +100,29 @@ def atlas_auditor(
     the date of the dump.
     '''
 
-    date = datetime.now()
+    date = datetime.today()
     delta = timedelta(delta)
 
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
-
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
-
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
-    configuration = parse_configuration()
+#    configuration = parse_configuration()
 
-    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
+#    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
 
-#    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
+    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
+
+#    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
 #    rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
     lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
-    result_file_name = 'result.{0}_{1}'.format(
-        rse,
-        date.strftime('%Y%m%d')
-    )
+    result_file_name = f"result.{rse}_{date:%Y%m%d}"
 
-    results_path = os.path.join(results_dir, result_file_name)
+    results_path = f"{results_dir}/{result_file_name}"
+
+    print("results_path", results_path)
 
     file_results = open(results_path, 'w')
 
@@ -138,6 +136,7 @@ def atlas_auditor(
 
     return True
 
+"""
 def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
 
     conf_dirs = conf_dirs or _DUMPERCONFIGDIRS
@@ -156,10 +155,11 @@ def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
         configuration.read(glob.glob(conf_dir + '/*.cfg'))
 
     return configuration
+"""
 
 def fetch_rse_dump(
     rse: str,
-    configuration: RawConfigParser,
+#    configuration: RawConfigParser,
     cache_dir: str,
     date: Optional[datetime] = None,
 ) -> tuple[str, datetime]:
@@ -168,7 +168,9 @@ def fetch_rse_dump(
 
     print("fetching rse dump")
 
-    base_url, url_pattern = generate_url(rse, configuration)
+#    base_url, url_pattern = generate_url(rse, configuration)
+
+    base_url, url_pattern = generate_url(rse)
 
     print("base_url: ", base_url)
 
@@ -245,29 +247,19 @@ def fetch_rucio_dump(
     logger = logging.getLogger('auditor.fetch_rucio_dump')
     print("fetching rucio dump for rse: "+rse)
 
-    date = date.strftime('%Y-%m-%d')
-
-#    url = BASE_URL_RUCIO.format(date, rse)
 #    url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
+    url = get_rucio_dump_url(date, rse)
+#    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
 
-    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
-
-    print('url:', url)
-
-    filename = '{0}_{1}'.format(
-        rse,
-        date
-    )
-
-    path = os.path.join(cache_dir, filename)
+    filename = f"{rse}_{date:%Y-%m-%d}"
+    path = f"{cache_dir}/{filename}"
 
     if os.path.exists(path):
         logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
         return path
 
     logging.debug('Trying to download: %s for %s', url, rse)
-
-    status_code = download (url, path)
+    status_code = download(url, path)
 
     return path
 
@@ -285,11 +277,18 @@ def download(
         url,
         response.status_code,
         )
-
-    open(path, 'wb').write(response.content)
+    else:
+        open(path, 'wb').write(response.content)
 
     return response.status_code
 
+def get_rucio_dump_url(
+    date: datetime,
+    rse: str
+) -> str:
+
+    url  = f"https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{date:%Y-%m-%d}/replicas_per_rse/{rse}.replicas_per_rse.{date:%Y-%m-%d}.csv.bz2"
+    return url
 
 def prepare_rse_dump(
     dump_path: str
