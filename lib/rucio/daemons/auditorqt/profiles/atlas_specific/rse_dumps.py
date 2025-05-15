@@ -100,7 +100,8 @@ def generate_url(
 
 #    if site not in config.sections():
 
-    base_url = ddmendpoint_url(rse) + 'dumps'
+    base_url = f"{ddmendpoint_url(rse)}/test/dumps"
+#    base_url = f"ddmendpoint_url(rse)/dumps"
     url_pattern = 'dump_%Y%m%d'
     """
     else:
