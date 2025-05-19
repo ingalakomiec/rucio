@@ -166,42 +166,16 @@ def fetch_rse_dump(
 
 #    base_url, url_pattern = generate_url(rse, configuration)
 
-    base_url, url_pattern = generate_url(rse)
+    base_url = generate_url(rse)
 
-    print("base_url: ", base_url)
-    print("url_pattern: ", url_pattern)
+#    print("base_url: ", base_url)
 
     rse_id = get_rse_id(rse)
     rse_attr = list_rse_attributes(rse_id)
-#    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
-    """
-    tries = 1
-    if date is None:
-        date = datetime.now()
-        tries = OBJECTSTORE_NUM_TRIES
-    path = ''
-    while tries > 0:
-        url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
 
-        filename = '{0}_{1}_{2}_{3}'.format(
-            'ddmendpoint',
-            rse,
-            date.strftime('%d-%m-%Y'),
-            hashlib.sha1(url.encode()).hexdigest()
-        )
-        filename = re.sub(r'\W', '-', filename)
-        path = os.path.join(cache_dir, filename)
-        if not os.path.exists(path):
-            logger.debug('Trying to download: "%s"', url)
-            if RseAttr.SIGN_URL in rse_attr:
-                url = get_signed_url(rse_id, rse_attr[RseAttr.SIGN_URL], 'read', url)
-                status_code = download (url, path)
-                if status_code != 200:
-                    tries -= 1
-                    date = date - timedelta(1)
-                else:
-                    tries = 0
-    """
+#    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
+    if 3>1:
+        fetch_object_store(rse, date)
 
 #                except
 #    url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
@@ -213,7 +187,11 @@ def fetch_rse_dump(
         links = get_links(base_url)
         url, date =  get_newest(base_url, url_pattern, links)
     else:
-        url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
+#        url = f"{base_url}/dump_{date:%Y%m%d}"
+
+        url = "https://fts:8446/rucio/test/80/25/file1"
+
+#        url = f"{base_url}/file1"
 
     filename = '{0}_{1}_{2}_{3}'.format(
         'ddmendpoint',
@@ -233,7 +211,7 @@ def fetch_rse_dump(
 
     status_code = download(url, path)
 
-    return (path_rse_dump, date)
+    return (path, date)
 
 def fetch_rucio_dump(
     rse: str,
@@ -260,6 +238,47 @@ def fetch_rucio_dump(
 
     return path
 
+def fetch_object_store(
+    rse: str,
+    date: Optional[datetime] = None,
+) -> True:
+    print("fetching objectstore")
+
+    tries = 1
+
+#    if date is None:
+    if 3>2:
+    # on objectstores, can't list dump files, so try the last N dates
+        date = datetime.now()
+        tries = OBJECTSTORE_NUM_TRIES
+        print ("OBJECTSTORE_NUM_TRIES: ", tries)
+    """
+    path = ''
+    while tries > 0:
+        url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
+
+        filename = '{0}_{1}_{2}_{3}'.format(
+            'ddmendpoint',
+            rse,
+            date.strftime('%d-%m-%Y'),
+            hashlib.sha1(url.encode()).hexdigest()
+        )
+        filename = re.sub(r'\W', '-', filename)
+        path = os.path.join(cache_dir, filename)
+        if not os.path.exists(path):
+            logger.debug('Trying to download: "%s"', url)
+            if RseAttr.SIGN_URL in rse_attr:
+                url = get_signed_url(rse_id, rse_attr[RseAttr.SIGN_URL], 'read', url)
+                status_code = download (url, path)
+                if status_code != 200:
+                    tries -= 1
+                    date = date - timedelta(1)
+                else:
+                    tries = 0
+    """
+
+
+    return True
 
 def download(
     url: str,
