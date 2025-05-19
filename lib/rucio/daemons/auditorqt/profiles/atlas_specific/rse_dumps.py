@@ -66,18 +66,10 @@ protocol_funcs = {
         'links': gfal_links,
         'download': gfal_download_to_file,
     },
-#    'gsiftp': {
-#        'links': gfal_links,
-#        'download': gfal_download_to_file,
-#    },
     'root': {
         'links': gfal_links,
         'download': gfal_download_to_file,
     },
-#    'srm': {
-#        'links': gfal_links,
-#        'download': gfal_download_to_file,
-#    },
     'http': {
         'links': http_links,
         'download': http_download_to_file,
@@ -100,9 +92,9 @@ def generate_url(
 
 #    if site not in config.sections():
 
-    base_url = f"{ddmendpoint_url(rse)}/test/dumps"
+#    base_url = f"{ddmendpoint_url(rse)}/test/dumps"
+    base_url = f"{ddmendpoint_url(rse)}/test/80/25"
 #    base_url = f"ddmendpoint_url(rse)/dumps"
-    url_pattern = 'dump_%Y%m%d'
     """
     else:
 
@@ -112,7 +104,7 @@ def generate_url(
     url_pattern = '/'.join(url_components[pattern_index:])
     """
 
-    return base_url, url_pattern
+    return base_url
 
 def get_links(base_url: str) -> list[str]:
 
