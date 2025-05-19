@@ -114,13 +114,6 @@ def run_once(
     """
     worker_number, _, logger = heartbeat_handler.live()
 
-    # print parameters' values
-#    print(nprocs)
-#    print(rses)
-#    print(keep_dumps)
-#    print(delta)
-#    print(profile)
-
     if nprocs < 1:
         raise RuntimeError("No Process to Run")
 
