@@ -168,48 +168,44 @@ def fetch_rse_dump(
 
     base_url = generate_url(rse)
 
-#    print("base_url: ", base_url)
-
     rse_id = get_rse_id(rse)
     rse_attr = list_rse_attributes(rse_id)
 
-#    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
-    if 3>1:
-        fetch_object_store(rse, date)
+    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
+        fetch_object_store(rse, base_url, cache_dir, date)
 
-#                except
-#    url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
-#    print("url: ", url)
-
-
-    if date is None:
-        logger.debug('Looking for site dumps in: "%s"', base_url)
-        links = get_links(base_url)
-        url, date =  get_newest(base_url, url_pattern, links)
     else:
-#        url = f"{base_url}/dump_{date:%Y%m%d}"
+        #removethe line below: date = None; it's just for tests
+        date = None
+        if date is None:
+            logger.debug('Looking for site dumps in: "%s"', base_url)
+#            print("base_url: ", base_url)
+#            links = get_links(base_url)
+            print("links: ", links)
+            #url, date =  get_newest(base_url, url_pattern, links)
+            #dwie ponizsze linijki tylko do testow
+            date = datetime.now()
+            url = f"{base_url}/dump_{date:%Y%m%d}"
+        else:
+            url = f"{base_url}/dump_{date:%Y%m%d}"
 
-        url = "https://fts:8446/rucio/test/80/25/file1"
+        hash = hashlib.sha1(url.encode()).hexdigest()
+        filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
 
-#        url = f"{base_url}/file1"
+        filename = re.sub(r'\W', '-', filename)
 
-    filename = '{0}_{1}_{2}_{3}'.format(
-        'ddmendpoint',
-        rse,
-        date.strftime('%d-%m-%Y'),
-        hashlib.sha1(url.encode()).hexdigest()
-    )
-    filename = re.sub(r'\W', '-', filename)
-
-    path = os.path.join(cache_dir, filename)
+        path = f"{cache_dir}/{filename}"
 
     if os.path.exists(path):
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
         return path
 
-    logging.debug('Trying to download: %s for %s', url, rse)
+        logging.debug('Trying to download: %s for %s', url, rse)
 
-    status_code = download(url, path)
+        try:
+            status_code = download(url, path)
+        except:
+            logging.debug('Dump for %s from %s not downloaded', rse, url)
 
     return (path, date)
 
@@ -226,58 +222,68 @@ def fetch_rucio_dump(
     url = get_rucio_dump_url(date, rse)
 #    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
 
-    filename = f"{rse}_{date:%Y-%m-%d}"
+    hash = hashlib.sha1(url.encode()).hexdigest()
+
+    filename = f"{rse}_{date:%Y-%m-%d}_{hash}"
+    filename = re.sub(r'\W', '-', filename)
+
     path = f"{cache_dir}/{filename}"
 
     if os.path.exists(path):
         logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
         return path
 
-    logging.debug('Trying to download: %s for %s', url, rse)
-    status_code = download(url, path)
+    try:
+        logging.debug('Trying to download: %s for %s', url, rse)
+        status_code = download(url, path)
+    except:
+        logging.debug('Dump for %s from %s not downloaded', rse, url)
 
     return path
 
 def fetch_object_store(
     rse: str,
+    base_url: str,
+    cache_dir: str,
     date: Optional[datetime] = None,
 ) -> True:
-    print("fetching objectstore")
+
+    # on objectstores can't list dump files, so try the last N dates
+
+    logger = logging.getLogger('auditor.fetch_object_store')
 
     tries = 1
 
-#    if date is None:
-    if 3>2:
-    # on objectstores, can't list dump files, so try the last N dates
+    if date is None:
         date = datetime.now()
         tries = OBJECTSTORE_NUM_TRIES
-        print ("OBJECTSTORE_NUM_TRIES: ", tries)
-    """
-    path = ''
-    while tries > 0:
-        url = '{0}/{1}'.format(base_url, date.strftime(url_pattern))
 
-        filename = '{0}_{1}_{2}_{3}'.format(
-            'ddmendpoint',
-            rse,
-            date.strftime('%d-%m-%Y'),
-            hashlib.sha1(url.encode()).hexdigest()
-        )
+    while tries > 0:
+        url = f"{base_url}/dump_{date:%Y%m%d}"
+
+        hash = hashlib.sha1(url.encode()).hexdigest()
+
+        filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
         filename = re.sub(r'\W', '-', filename)
-        path = os.path.join(cache_dir, filename)
+
+        path = f"{cache_dir}/{filename}"
+
+        rse_id = get_rse_id(rse)
+        rse_attr = list_rse_attributes(rse_id)
+
         if not os.path.exists(path):
             logger.debug('Trying to download: "%s"', url)
+
             if RseAttr.SIGN_URL in rse_attr:
                 url = get_signed_url(rse_id, rse_attr[RseAttr.SIGN_URL], 'read', url)
-                status_code = download (url, path)
-                if status_code != 200:
-                    tries -= 1
-                    date = date - timedelta(1)
-                else:
-                    tries = 0
-    """
 
-
+            try:
+                status_code = download(url, path)
+            except:
+                tries -= 1
+                date = date - timedelta(1)
+            else:
+                tries = 0
     return True
 
 def download(
