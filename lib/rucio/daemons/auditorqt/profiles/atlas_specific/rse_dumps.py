@@ -55,7 +55,7 @@ def http_links(base_url: str) -> list[str]:
     links = []
     for link in link_collector.links:
         if not link.startswith('http://') and not link.startswith('https://'):
-            links.append('{0}/{1}'.format(base_url, link))
+            links.append({base_url}/{link})
         else:
             links.append(link)
     return links
@@ -93,8 +93,8 @@ def generate_url(
 #    if site not in config.sections():
 
 #    base_url = f"{ddmendpoint_url(rse)}/test/dumps"
-    base_url = f"{ddmendpoint_url(rse)}/test/80/25"
-#    base_url = f"ddmendpoint_url(rse)/dumps"
+#    base_url = f"{ddmendpoint_url(rse)}/test/80/25"
+    base_url = f"{ddmendpoint_url(rse)}/dumps"
     """
     else:
 
@@ -112,7 +112,7 @@ def get_links(base_url: str) -> list[str]:
 
 def get_newest(
         base_url: str,
-        url_pattern: str,
+#        url_pattern: str,
         links: "Iterable[str]"
 ) -> tuple[str, datetime]:
     '''
@@ -124,7 +124,7 @@ def get_newest(
     '''
     logger = logging.getLogger('auditor.srmdumps')
     times = []
-
+    """
     pattern_components = url_pattern.split('/')
 
     date_pattern = '{0}/{1}'.format(base_url, pattern_components[0])
@@ -147,6 +147,8 @@ def get_newest(
         raise RuntimeError(msg)
 
     return max(times, key=operator.itemgetter(1))
+    """
+    return ('aaa', datetime.now())
 
 def protocol(url: str) -> str:
     '''
@@ -154,6 +156,6 @@ def protocol(url: str) -> str:
     '''
     proto = url.split('://')[0]
     if proto not in protocol_funcs:
-        raise RuntimeError('Protocol {0} not supported'.format(proto))
+        raise RuntimeError(f"Protocol {proto} not supported")
 
     return proto
