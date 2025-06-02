@@ -180,7 +180,7 @@ def fetch_rse_dump(
         if date is None:
             logger.debug('Looking for site dumps in: "%s"', base_url)
 #            print("base_url: ", base_url)
-#            links = get_links(base_url)
+            links = get_links(base_url)
             print("links: ", links)
             #url, date =  get_newest(base_url, url_pattern, links)
             #dwie ponizsze linijki tylko do testow
@@ -188,7 +188,7 @@ def fetch_rse_dump(
             url = f"{base_url}/dump_{date:%Y%m%d}"
         else:
             url = f"{base_url}/dump_{date:%Y%m%d}"
-
+# add a coment ...
         hash = hashlib.sha1(url.encode()).hexdigest()
         filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
 
