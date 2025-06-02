@@ -44,6 +44,8 @@ def gfal_links(base_url: str) -> list[str]:
     ctxt = gfal2.creat_context()  # pylint: disable=no-member
     return ['/'.join((base_url, f)) for f in ctxt.listdir(str(base_url))]
 
+
+
 def http_links(base_url: str) -> list[str]:
     '''
     Returns a list of the urls contained in `base_url`.
