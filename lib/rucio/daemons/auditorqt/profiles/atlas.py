@@ -166,7 +166,11 @@ def fetch_rse_dump(
 
 #    base_url, url_pattern = generate_url(rse, configuration)
 
+    print("generating url")
+
     base_url = generate_url(rse)
+
+    print("base_url: ", base_url)
 
     rse_id = get_rse_id(rse)
     rse_attr = list_rse_attributes(rse_id)
@@ -175,7 +179,7 @@ def fetch_rse_dump(
         fetch_object_store(rse, base_url, cache_dir, date)
 
     else:
-        #removethe line below: date = None; it's just for tests
+        #remove the line below: date = None; it's just for tests
         date = None
         if date is None:
             logger.debug('Looking for site dumps in: "%s"', base_url)
@@ -183,12 +187,12 @@ def fetch_rse_dump(
             links = get_links(base_url)
             print("links: ", links)
             #url, date =  get_newest(base_url, url_pattern, links)
-            #dwie ponizsze linijki tylko do testow
+            #dwie ponizsze linijki tylko do testow. gorna linijka powinna zostac
             date = datetime.now()
             url = f"{base_url}/dump_{date:%Y%m%d}"
         else:
             url = f"{base_url}/dump_{date:%Y%m%d}"
-# add a coment ...
+# add a comment ...
         hash = hashlib.sha1(url.encode()).hexdigest()
         filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
 
