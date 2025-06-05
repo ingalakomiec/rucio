@@ -42,8 +42,13 @@ def gfal_links(base_url: str) -> list[str]:
     Returns a list of the urls contained in `base_url`.
     '''
     ctxt = gfal2.creat_context()  # pylint: disable=no-member
-    return ['/'.join((base_url, f)) for f in ctxt.listdir(str(base_url))]
 
+    print("in gfal_links")
+    print(f"{base_url}/file1")
+    stat = ctxt.stat(f"{base_url}/file1")
+#    return ['/'.join((base_url, f)) for f in ctxt.listdir(str(base_url))]
+
+    return ['aaa', 'bbb']
 
 
 def http_links(base_url: str) -> list[str]:
@@ -94,9 +99,11 @@ def generate_url(
 
 #    if site not in config.sections():
 
-#    base_url = f"{ddmendpoint_url(rse)}/test/dumps"
-#    base_url = f"{ddmendpoint_url(rse)}/test/80/25"
-    base_url = f"{ddmendpoint_url(rse)}/dumps"
+    # what the base_url for real dumps should look like
+#    base_url = f"{ddmendpoint_url(rse)}/dumps"
+
+    # tmp url for XRD1
+    base_url = f"{ddmendpoint_url(rse)}/test/80/25"
     """
     else:
 
