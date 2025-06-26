@@ -159,12 +159,7 @@ def fetch_rse_dump(
 
     logger = logging.getLogger('auditor.fetch_rse_dump')
 
-    print("fetching rse dump")
-
 #    base_url, url_pattern = generate_url(rse, configuration)
-
-    print("generating url")
-
     base_url = generate_url(rse)
 
     print("base_url: ", base_url)
@@ -175,16 +170,17 @@ def fetch_rse_dump(
     if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
         fetch_object_store(rse, base_url, cache_dir, date)
 
-    """
     else:
         #remove the line below: date = None; it's just for tests
         date = None
         if date is None:
+#            base_url = "root://xrd1:1094//rucio/test"
             logger.debug('Looking for site dumps in: "%s"', base_url)
-#            print("base_url: ", base_url)
             links = get_links(base_url)
             print("links: ", links)
-            #url, date =  get_newest(base_url, url_pattern, links)
+            url, date =  get_newest(base_url, links)
+            print("url from get_newest: ", url)
+            print("date from get_newest: ", date)
             #dwie ponizsze linijki tylko do testow. gorna linijka powinna zostac
             date = datetime.now()
             url = f"{base_url}/dump_{date:%Y%m%d}"
@@ -210,10 +206,6 @@ def fetch_rse_dump(
         except:
             logging.debug('Dump for %s from %s not downloaded', rse, url)
 
-    """
-# REMOVE THIS LINE WHEN TESTS ARE ENDED
-    path = "aaaaaa"
-#**********************
     return (path, date)
 
 def fetch_rucio_dump(
