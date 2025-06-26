@@ -15,12 +15,20 @@
 """fetching ATLAS-RSE dumps"""
 
 import gfal2
+import hashlib
+import logging
+import os
+import re
 
 from configparser import RawConfigParser
-from datetime import datetime
+from datetime import datetime, timedelta
 from html.parser import HTMLParser
+from typing import IO, Optional
 
-from rucio.common.dumper import ddmendpoint_url, gfal_download_to_file, http_download_to_file
+from rucio.common.constants import RseAttr
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, gfal_download_to_file, http_download_to_file, temp_file
+from rucio.core.credential import get_signed_url
+from rucio.core.rse import get_rse_id, list_rse_attributes
 
 class _LinkCollector(HTMLParser):
     def __init__(self):
@@ -87,6 +95,59 @@ protocol_funcs = {
     },
 }
 
+def download(url: str, filename: IO) -> None:
+    """
+    Given the URL 'url' downloads its contents on 'filename'
+    """
+
+    return protocol_funcs[protocol(url)]['download'](url, filename)
+
+def fetch_object_store(
+    rse: str,
+    base_url: str,
+    cache_dir: str,
+    date: Optional[datetime] = None,
+) -> True:
+
+    # on objectstores can't list dump files, so try the last N dates
+
+    logger = logging.getLogger('auditor.fetch_object_store')
+
+    tries = 30
+
+    if date is None:
+        date = datetime.now()
+        tries = 31
+
+    while tries > 0:
+        url = f"{base_url}/dump_{date:%Y%m%d}"
+        # hash added to the file name to get a distinct name
+        hash = hashlib.sha1(url.encode()).hexdigest()
+
+        filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
+        filename = re.sub(r'\W', '-', filename)
+
+        path = f"{cache_dir}/{filename}"
+
+        rse_id = get_rse_id(rse)
+        rse_attr = list_rse_attributes(rse_id)
+
+        if not os.path.exists(path):
+            logger.debug('Trying to download: "%s"', url)
+
+            if RseAttr.SIGN_URL in rse_attr:
+                url = get_signed_url(rse_id, rse_attr[RseAttr.SIGN_URL], 'read', url)
+
+            try:
+                with temp_file(cache_dir, final_name=filename) as (f, _):
+                    download(url,f)
+                tries = 0
+            except (HTTPDownloadFailed, gfal2.GError):
+                tries -= 1
+                date = date - timedelta(1)
+
+    return True
+
 
 def generate_url(
     rse: str
@@ -96,14 +157,14 @@ def generate_url(
     print("generating url for rse")
 
     site = rse.split('_')[0]
-
+#    uncomment when the config part is added
 #    if site not in config.sections():
 
-    # what the base_url for real dumps should look like
-#    base_url = f"{ddmendpoint_url(rse)}/dumps"
+    # base_url for real dumps
+    base_url = f"{ddmendpoint_url(rse)}/dumps"
 
-    # tmp url for XRD1
-    base_url = f"{ddmendpoint_url(rse)}/test/80/25"
+    # tmp base_url for the test RSE - XRD1
+#    base_url = f"{ddmendpoint_url(rse)}/test/80/25"
     """
     else:
 
