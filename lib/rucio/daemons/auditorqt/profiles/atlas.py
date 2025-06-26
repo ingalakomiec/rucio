@@ -27,8 +27,7 @@ from typing import Any, Optional, Union
 
 #from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
-from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, get_links, get_newest
-from rucio.core.credential import get_signed_url
+from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, get_links, get_newest, fetch_object_store
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
 """
@@ -40,10 +39,8 @@ _DUMPERCONFIGDIRS = list(
         )
     )
 )
-"""
-OBJECTSTORE_NUM_TRIES = 30
 
-"""
+
 class Parser(RawConfigParser):
     '''
     RawConfigParser subclass that doesn't modify the the name of the options
@@ -178,6 +175,7 @@ def fetch_rse_dump(
     if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
         fetch_object_store(rse, base_url, cache_dir, date)
 
+    """
     else:
         #remove the line below: date = None; it's just for tests
         date = None
@@ -200,6 +198,7 @@ def fetch_rse_dump(
 
         path = f"{cache_dir}/{filename}"
 
+
     if os.path.exists(path):
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
         return path
@@ -211,6 +210,10 @@ def fetch_rse_dump(
         except:
             logging.debug('Dump for %s from %s not downloaded', rse, url)
 
+    """
+# REMOVE THIS LINE WHEN TESTS ARE ENDED
+    path = "aaaaaa"
+#**********************
     return (path, date)
 
 def fetch_rucio_dump(
@@ -245,50 +248,6 @@ def fetch_rucio_dump(
 
     return path
 
-def fetch_object_store(
-    rse: str,
-    base_url: str,
-    cache_dir: str,
-    date: Optional[datetime] = None,
-) -> True:
-
-    # on objectstores can't list dump files, so try the last N dates
-
-    logger = logging.getLogger('auditor.fetch_object_store')
-
-    tries = 1
-
-    if date is None:
-        date = datetime.now()
-        tries = OBJECTSTORE_NUM_TRIES
-
-    while tries > 0:
-        url = f"{base_url}/dump_{date:%Y%m%d}"
-
-        hash = hashlib.sha1(url.encode()).hexdigest()
-
-        filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
-        filename = re.sub(r'\W', '-', filename)
-
-        path = f"{cache_dir}/{filename}"
-
-        rse_id = get_rse_id(rse)
-        rse_attr = list_rse_attributes(rse_id)
-
-        if not os.path.exists(path):
-            logger.debug('Trying to download: "%s"', url)
-
-            if RseAttr.SIGN_URL in rse_attr:
-                url = get_signed_url(rse_id, rse_attr[RseAttr.SIGN_URL], 'read', url)
-
-            try:
-                status_code = download(url, path)
-            except:
-                tries -= 1
-                date = date - timedelta(1)
-            else:
-                tries = 0
-    return True
 
 def download(
     url: str,
