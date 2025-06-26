@@ -26,6 +26,7 @@ ORACLE_DEADLOCK_DETECTED_REGEX = r".*ORA-00060.*"
 ORACLE_RESOURCE_BUSY_REGEX = r".*ORA-00054.*"
 ORACLE_UNIQUE_CONSTRAINT_VIOLATED_REGEX = r".*ORA-00001.*"
 PSQL_LOCK_NOT_AVAILABLE_REGEX = r".*55P03.*"
+PSQL_PSYCOPG_LOCK_NOT_AVAILABLE_REGEX = r".*psycopg.errors.LockNotAvailable.*"
 MYSQL_LOCK_NOWAIT_REGEX = r".*3572.*"
 MYSQL_LOCK_WAIT_TIMEOUT_EXCEEDED = "ERROR 1205 (HY000)"
 
@@ -196,9 +197,9 @@ class SubscriptionState(Enum):
     BROKEN = 'B'
 
 
-class TransferLimitDirection(Enum):
-    SOURCE = 'S'
-    DESTINATION = 'D'
+# class TransferLimitDirection(Enum):
+#     SOURCE = 'S'
+#     DESTINATION = 'D'
 
 
 class DatabaseOperationType(Enum):

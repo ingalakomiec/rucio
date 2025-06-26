@@ -36,7 +36,7 @@ from rucio.common.types import InternalScope
 from rucio.core.monitor import MetricManager
 from rucio.core.rule import delete_updated_did, get_updated_dids, re_evaluate_did
 from rucio.daemons.common import HeartbeatHandler, run_daemon
-from rucio.db.sqla.constants import ORACLE_CONNECTION_LOST_CONTACT_REGEX, ORACLE_RESOURCE_BUSY_REGEX, ORACLE_UNIQUE_CONSTRAINT_VIOLATED_REGEX
+from rucio.db.sqla.constants import MYSQL_LOCK_NOWAIT_REGEX, ORACLE_CONNECTION_LOST_CONTACT_REGEX, ORACLE_RESOURCE_BUSY_REGEX, ORACLE_UNIQUE_CONSTRAINT_VIOLATED_REGEX, PSQL_PSYCOPG_LOCK_NOT_AVAILABLE_REGEX
 
 if TYPE_CHECKING:
     from types import FrameType
@@ -52,7 +52,7 @@ def re_evaluator(
         did_limit: int = 100
 ) -> None:
     """
-    Main loop to check the re-evaluation of dids.
+    Main loop to check the re-evaluation of DIDs.
     """
 
     paused_dids = {}  # {(scope, name): datetime}
@@ -81,13 +81,13 @@ def run_once(
     # heartbeat
     start = time.time()  # NOQA
 
-    # Refresh paused dids
+    # Refresh paused DIDs
     iter_paused_dids = copy.copy(paused_dids)
     for key in iter_paused_dids:
         if datetime.utcnow() > paused_dids[key]:
             del paused_dids[key]
 
-    # Select a bunch of dids for re evaluation for this worker
+    # Select a bunch of DIDs for re-evaluation for this worker
     dids = get_updated_dids(total_workers=total_workers,
                             worker_number=worker_number,
                             limit=did_limit,
@@ -106,7 +106,7 @@ def run_once(
         if graceful_stop.is_set():
             break
 
-        # Check if this did has already been operated on
+        # Check if this DID has already been operated on
         did_tag = '%s:%s' % (did.scope.internal, did.name)
         if did_tag in done_dids:
             if did.rule_evaluation_action in done_dids[did_tag]:
@@ -116,7 +116,7 @@ def run_once(
         else:
             done_dids[did_tag] = []
 
-        # Jump paused dids
+        # Jump paused DIDs
         if (did.scope.internal, did.name) in paused_dids:
             continue
 
@@ -129,7 +129,7 @@ def run_once(
         except DataIdentifierNotFound:
             delete_updated_did(id_=did.id)
         except (DatabaseException, DatabaseError) as e:
-            if match(ORACLE_UNIQUE_CONSTRAINT_VIOLATED_REGEX, str(e.args[0])) or match(ORACLE_RESOURCE_BUSY_REGEX, str(e.args[0])):
+            if match(ORACLE_UNIQUE_CONSTRAINT_VIOLATED_REGEX, str(e.args[0])) or match(ORACLE_RESOURCE_BUSY_REGEX, str(e.args[0])) or match(PSQL_PSYCOPG_LOCK_NOT_AVAILABLE_REGEX, str(e.args[0])) or match(MYSQL_LOCK_NOWAIT_REGEX, str(e.args[0])):
                 paused_dids[(did.scope.internal, did.name)] = datetime.utcnow() + timedelta(seconds=randint(60, 600))  # noqa: S311
                 logger(logging.WARNING, 'Locks detected for %s:%s', did.scope, did.name)
                 METRICS.counter('exceptions.{exception}').labels(exception='LocksDetected').inc()

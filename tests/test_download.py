@@ -16,16 +16,17 @@ import logging
 import os
 import shutil
 import tarfile
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import ANY, MagicMock, patch
 from zipfile import ZipFile
 
 import pytest
 
 from rucio.client.downloadclient import DownloadClient
+from rucio.common.checksum import md5
 from rucio.common.config import config_add_section, config_set
 from rucio.common.exception import InputValidationError, NoFilesDownloaded, RucioException
-from rucio.common.types import InternalScope
+from rucio.common.types import FileToUploadDict, InternalScope
 from rucio.common.utils import generate_uuid
 from rucio.core import did as did_core
 from rucio.core import scope as scope_core
@@ -100,7 +101,7 @@ def test_download_exception_return_information(did_factory, rse_factory, downloa
 @pytest.mark.dirty(reason='creates a new scope which is not cleaned up')
 def test_overlapping_did_names(rse_factory, did_factory, download_client, root_account, mock_scope, vo):
     """
-    Downloading two different did with different scope but same name to the same directory must fail
+    Downloading two different DIDs with different scope but same name to the same directory must fail
     """
     rse, _ = rse_factory.make_posix_rse()
     scope1 = mock_scope
@@ -146,7 +147,7 @@ def test_overlapping_containers_and_wildcards(rse_factory, did_factory, download
     container_str = '%s:%s' % (container['scope'], container['name'])
 
     with TemporaryDirectory() as tmp_dir:
-        # No filters: all dids will be grouped and downloaded together
+        # No filters: all DIDs will be grouped and downloaded together
         result = download_client.download_dids([{'did': dataset1_str, 'base_dir': tmp_dir},
                                                 {'did': dataset2_str, 'base_dir': tmp_dir},
                                                 {'did': dataset3_str, 'base_dir': tmp_dir},
@@ -204,7 +205,7 @@ def test_download_to_two_paths(rse_factory, did_factory, download_client):
     did100_str = '%s:%s' % (item100['did_scope'], item100['did_name'])
 
     with TemporaryDirectory() as tmp_dir1, TemporaryDirectory() as tmp_dir2:
-        # Download two overlapping wildcard dids to two separate paths.
+        # Download two overlapping wildcard DIDs to two separate paths.
         # 000 will be in both paths. Other two files only in one of the two paths.
         result = download_client.download_dids([{'did': '%s:%s.*0' % (scope, base_name), 'base_dir': tmp_dir1},
                                                 {'did': '%s:%s.0*' % (scope, base_name), 'base_dir': tmp_dir2}])
@@ -443,7 +444,7 @@ def test_trace_copy_out_and_checksum_validation(vo, rse_factory, did_factory, do
     did_str = '%s:%s' % (did['scope'], did['name'])
 
     with TemporaryDirectory() as tmp_dir:
-        # Try downloading non-existing did
+        # Try downloading non-existing DID
         traces = []
         with pytest.raises(NoFilesDownloaded):
             download_client.download_dids([{'did': 'some:randomNonExistingDid', 'base_dir': tmp_dir}], traces_copy_out=traces)
@@ -470,13 +471,13 @@ def test_trace_copy_out_and_checksum_validation(vo, rse_factory, did_factory, do
 
     # Switch to a new empty directory
     with TemporaryDirectory() as tmp_dir:
-        # Wildcards in did name are not allowed on pfn downloads
+        # Wildcards in DID name are not allowed on pfn downloads
         traces = []
         with pytest.raises(InputValidationError):
             download_client.download_pfns([{'did': '%s:*' % scope, 'pfn': pfn, 'rse': rse, 'base_dir': tmp_dir}], traces_copy_out=traces)
         assert not traces
 
-        # Same pfn, but without wildcard in the did should work
+        # Same pfn, but without a wildcard in the DID should work
         traces = []
         download_client.download_pfns([{'did': did_str, 'pfn': pfn, 'rse': rse, 'base_dir': tmp_dir}], traces_copy_out=traces)
         assert len(traces) == 1 and traces[0]['clientState'] == 'DONE'
@@ -653,17 +654,20 @@ def test_download_file_with_impl(rse_factory, did_factory, download_client, mock
                               'wan': {'read': 2, 'write': 2, 'delete': 2}}})
     path = file_generator()
     name = os.path.basename(path)
-    item = {
+
+    item: FileToUploadDict = {
         'path': path,
         'rse': rse,
         'did_scope': str(mock_scope),
         'did_name': name,
         'guid': generate_uuid(),
     }
-    did_factory.upload_client.upload([item])
+
+    did_factory.upload_client.upload(items=[item])
     did_str = '%s:%s' % (mock_scope, name)
+
     with patch('rucio.rse.protocols.%s.Default.get' % impl, side_effect=lambda pfn, dest, **kw: shutil.copy(path, dest)) as mock_get, \
-            patch('rucio.rse.protocols.%s.Default.connect' % impl),\
+            patch('rucio.rse.protocols.%s.Default.connect' % impl), \
             patch('rucio.rse.protocols.%s.Default.close' % impl):
         download_client.download_dids([{'did': did_str, 'impl': impl}])
         mock_get.assert_called()
@@ -710,18 +714,20 @@ def test_download_file_with_supported_protocol_from_config(rse_factory, did_fact
 
     path = file_generator()
     name = os.path.basename(path)
-    item = {
+
+    item: FileToUploadDict = {
         'path': path,
         'rse': rse,
         'did_scope': str(mock_scope),
         'did_name': name,
         'guid': generate_uuid(),
     }
-    did_factory.upload_client.upload([item])
+
+    did_factory.upload_client.upload(items=[item])
     did_str = '%s:%s' % (mock_scope, name)
 
     with patch('rucio.rse.protocols.%s.Default.get' % supported_impl, side_effect=lambda pfn, dest, **kw: shutil.copy(path, dest)) as mock_get, \
-            patch('rucio.rse.protocols.%s.Default.connect' % supported_impl),\
+            patch('rucio.rse.protocols.%s.Default.connect' % supported_impl), \
             patch('rucio.rse.protocols.%s.Default.close' % supported_impl):
         download_client.download_dids([{'did': did_str, 'impl': supported_impl}])
         mock_get.assert_called()
@@ -748,3 +754,73 @@ def test_download_traceless(rucio_client):
     client = DownloadClient(client=rucio_client, logger=None, tracing=True)
     assert client.logger is not None
     assert client.tracing is True
+
+
+@pytest.mark.noparallel(reason='fails when run in parallel')
+def test_download_no_subdir(download_client, did_factory, rse_factory):
+    """CLIENT(USER): Rucio download files with the 'no_subdir' argument, ensure the scope dir is not created, and check that files already found locally are not replaced"""
+    rse, _ = rse_factory.make_posix_rse()
+    did = did_factory.upload_test_file(rse)
+    did_str = '%s:%s' % (did['scope'], did['name'])
+    with TemporaryDirectory() as tmp_dir:
+        download_client.download_dids([{'did': did_str, 'base_dir': tmp_dir, 'no_subdir': True}])
+        assert did['name'] in os.listdir(tmp_dir)
+        time_created = os.stat(os.path.join(tmp_dir, did['name'])).st_ctime
+
+        # try a second time, verify the file has not been downloaded again
+        download_client.download_dids([{'did': did_str, 'base_dir': tmp_dir, 'no_subdir': True}])
+        assert os.stat(os.path.join(tmp_dir, did['name'])).st_ctime == time_created
+
+
+def test_download_check_md5(rucio_client, rse_factory, mock_scope, download_client, vo):
+    """CLIENT(USER): Rucio download succeeds MD5 only"""
+    # user has a file to upload
+    rse, _ = rse_factory.make_posix_rse()
+    with NamedTemporaryFile() as tmp_file:
+        filename = tmp_file.name.split('/')[-1]
+        file_md5 = md5(tmp_file.name)
+        filesize = os.stat(tmp_file.name).st_size
+        lfn = {'name': filename, 'scope': mock_scope.external, 'bytes': filesize, 'md5': file_md5}
+        # user uploads file
+        rucio_client.add_replicas(files=[lfn], rse=rse)
+        rse_settings = rsemgr.get_rse_info(rse=rse, vo=vo)
+        protocol = rsemgr.create_protocol(rse_settings, 'write')
+        protocol.connect()
+        pfn = list(protocol.lfns2pfns(lfn).values())[0]
+        protocol.put(tmp_file.name[5:], pfn, tmp_file.name[:5])
+        protocol.close()
+
+    with TemporaryDirectory() as tmp_dir:
+        # download files
+        download_client.download_dids([{'did': f"{mock_scope}:{filename}", 'base_dir': tmp_dir}])
+        assert os.path.exists(os.path.join(tmp_dir, mock_scope.external, filename))
+
+    # MD5 mismatch
+    with NamedTemporaryFile() as tmp_file:
+        filename = tmp_file.name.split('/')[-1]
+        filesize = os.stat(tmp_file.name).st_size
+        lfn = {'name': filename, 'scope': mock_scope.external, 'bytes': filesize, 'md5': '0123456789abcdef0123456789abcdef'}
+        # user uploads file
+        rucio_client.add_replicas(files=[lfn], rse=rse)
+        rse_settings = rsemgr.get_rse_info(rse=rse, vo=vo)
+        protocol = rsemgr.create_protocol(rse_settings, 'write')
+        protocol.connect()
+        pfn = list(protocol.lfns2pfns(lfn).values())[0]
+        protocol.put(tmp_file.name[5:], pfn, tmp_file.name[:5])
+        protocol.close()
+
+    with TemporaryDirectory() as tmp_dir:
+        # download files
+        with pytest.raises(NoFilesDownloaded):
+            download_client.download_dids([{'did': f"{mock_scope}:{filename}", 'base_dir': tmp_dir}])
+
+
+def test_download_dataset(download_client, rse_factory, did_factory):
+    """CLIENT(USER): Rucio download dataset"""
+    rse, _ = rse_factory.make_posix_rse()
+    dataset = did_factory.upload_test_dataset(rse, nb_files=3)
+    with TemporaryDirectory() as tmp_dir:
+        download_client.download_dids([{'did': f'{dataset[0]["dataset_scope"]}:{dataset[0]["dataset_name"]}', 'base_dir': tmp_dir}])
+        # Default behavior is to create a subdir for the dataset
+        for f in dataset:
+            assert os.path.exists(os.path.join(tmp_dir, f['dataset_name'], f['did_name']))

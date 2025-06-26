@@ -13,7 +13,7 @@
 # limitations under the License.
 
 '''
-Undertaker is a daemon to manage expired did.
+Undertaker is a daemon to manage expired DID.
 '''
 
 import functools
@@ -36,7 +36,7 @@ from rucio.common.utils import chunks
 from rucio.core.did import delete_dids, list_expired_dids
 from rucio.core.monitor import MetricManager
 from rucio.daemons.common import HeartbeatHandler, run_daemon
-from rucio.db.sqla.constants import MYSQL_LOCK_NOWAIT_REGEX, ORACLE_RESOURCE_BUSY_REGEX, PSQL_LOCK_NOT_AVAILABLE_REGEX
+from rucio.db.sqla.constants import MYSQL_LOCK_NOWAIT_REGEX, ORACLE_RESOURCE_BUSY_REGEX, PSQL_LOCK_NOT_AVAILABLE_REGEX, PSQL_PSYCOPG_LOCK_NOT_AVAILABLE_REGEX
 
 if TYPE_CHECKING:
     from types import FrameType
@@ -51,7 +51,7 @@ DAEMON_NAME = 'undertaker'
 
 def undertaker(once: bool = False, sleep_time: int = 60, chunk_size: int = 10) -> None:
     """
-    Main loop to select and delete dids.
+    Main loop to select and delete DIDs.
     """
     paused_dids = {}  # {(scope, name): datetime}
     run_daemon(
@@ -72,7 +72,7 @@ def run_once(paused_dids: dict[tuple, datetime], chunk_size: int, heartbeat_hand
     worker_number, total_workers, logger = heartbeat_handler.live()
 
     try:
-        # Refresh paused dids
+        # Refresh paused DIDs
         iter_paused_dids = deepcopy(paused_dids)
         for key in iter_paused_dids:
             if datetime.utcnow() > paused_dids[key]:
@@ -96,14 +96,14 @@ def run_once(paused_dids: dict[tuple, datetime], chunk_size: int, heartbeat_hand
             except RuleNotFound as error:
                 logger(logging.ERROR, error)
             except (DatabaseException, DatabaseError, UnsupportedOperation) as e:
-                if match(ORACLE_RESOURCE_BUSY_REGEX, str(e.args[0])) or match(PSQL_LOCK_NOT_AVAILABLE_REGEX, str(e.args[0])) or match(MYSQL_LOCK_NOWAIT_REGEX, str(e.args[0])):
+                if match(ORACLE_RESOURCE_BUSY_REGEX, str(e.args[0])) or match(PSQL_LOCK_NOT_AVAILABLE_REGEX, str(e.args[0])) or match(PSQL_PSYCOPG_LOCK_NOT_AVAILABLE_REGEX, str(e.args[0])) or match(MYSQL_LOCK_NOWAIT_REGEX, str(e.args[0])):
                     for did in chunk:
                         paused_dids[(did['scope'], did['name'])] = datetime.utcnow() + timedelta(seconds=randint(600, 2400))  # noqa: S311
                     METRICS.counter('delete_dids.exceptions.{exception}').labels(exception='LocksDetected').inc()
                     logger(logging.WARNING, 'Locks detected for chunk')
                 else:
                     logger(logging.ERROR, 'Got database error %s.', str(e))
-    except:
+    except Exception:
         logging.critical(traceback.format_exc())
 
 

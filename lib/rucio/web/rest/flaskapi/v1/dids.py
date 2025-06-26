@@ -22,7 +22,6 @@ from rucio.common.exception import (
     DatabaseException,
     DataIdentifierAlreadyExists,
     DataIdentifierNotFound,
-    Duplicate,
     DuplicateContent,
     FileAlreadyExists,
     FileConsistencyMismatch,
@@ -94,7 +93,7 @@ class Scope(ErrorHandlingMethodView):
           style: simple
         - name: name
           in: query
-          description: "The name of the data identifier (did)."
+          description: "The name of the data identifier (DID)."
           required: false
           schema:
             type: string
@@ -110,7 +109,7 @@ class Scope(ErrorHandlingMethodView):
             content:
               application/x-json-stream:
                 schema:
-                  description: "Line-separated dictionary of dids."
+                  description: "Line-separated dictionary of DIDs."
                   type: array
                   items:
                     type: object
@@ -118,24 +117,24 @@ class Scope(ErrorHandlingMethodView):
                     properties:
                       scope:
                         type: string
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                       name:
                         type: string
-                        description: "The name of the did."
+                        description: "The name of the DID."
                       type:
                         type: string
-                        description: "The type of the did."
+                        description: "The type of the DID."
                         enum: ['F', 'D', 'C', 'A', 'X', 'Y', 'Z']
                       parent:
                         type: string
-                        description: "The parent of the did."
+                        description: "The parent of the DID."
                       level:
                         type: integer
-                        description: "The level of the did."
+                        description: "The level of the DID."
           401:
             description: "Invalid Auth Token"
           404:
-            description: "No Dids found"
+            description: "No DIDs found"
           406:
             description: "Not acceptable"
         """
@@ -176,14 +175,14 @@ class Search(ErrorHandlingMethodView):
           style: simple
         - name: type
           in: query
-          description: "The did type to search for."
+          description: "The DID type to search for."
           schema:
             type: string
             enum: ['all', 'collection', 'container', 'dataset', 'file']
             default: 'collection'
         - name: limit
           in: query
-          description: "The maximum number od dids returned."
+          description: "The maximum number of DIDs returned."
           schema:
             type: integer
         - name: long
@@ -234,7 +233,7 @@ class Search(ErrorHandlingMethodView):
             type: integer
         - name: name
           in: query
-          description: "Name or pattern of a did."
+          description: "Name or pattern of a DID."
           schema:
             type: string
         responses:
@@ -255,7 +254,7 @@ class Search(ErrorHandlingMethodView):
           406:
             description: "Not acceptable"
           409:
-            description: "Wrong did type"
+            description: "Wrong DID type"
         """
         filters = request.args.get('filters', default=None)
         if filters is not None:
@@ -289,8 +288,8 @@ class BulkDIDS(ErrorHandlingMethodView):
     def post(self):
         """
         ---
-        summary: Add Dids bulk
-        description: "Add new Dids in bulk."
+        summary: Add DIDs bulk
+        description: "Add new DIDs in bulk."
         tags:
           - Data Identifiers
         requestBody:
@@ -299,7 +298,7 @@ class BulkDIDS(ErrorHandlingMethodView):
               schema:
                 type: array
                 items:
-                  description: "One did to add."
+                  description: "One DID to add."
                   type: object
                   required:
                     - scope
@@ -307,17 +306,17 @@ class BulkDIDS(ErrorHandlingMethodView):
                     - type
                   properties:
                     scope:
-                      description: "The did scope."
+                      description: "The DID scope."
                       type: string
                     name:
-                      description: "The did name."
+                      description: "The DID name."
                       type: string
                     type:
-                      description: "The type of the did."
+                      description: "The type of the DID."
                       type: string
                       enum: ["F", "D", "C", "A", "X", "Y", "Z"]
                     account:
-                      description: "The account associated with the did."
+                      description: "The account associated with the DID."
                       type: string
                     statuses:
                       description: "The monotonic status"
@@ -335,7 +334,7 @@ class BulkDIDS(ErrorHandlingMethodView):
           406:
             description: "Not acceptable"
           409:
-            description: "Did already exists"
+            description: "DID already exists"
         """
         dids = json_list()
         try:
@@ -354,8 +353,8 @@ class Attachments(ErrorHandlingMethodView):
     def post(self):
         """
         ---
-        summary: Attach did to did
-        description: "Attaches a did to another did"
+        summary: Attach DID to DID
+        description: "Attaches a DID to another DID"
         tags:
           - Data Identifiers
         requestBody:
@@ -363,7 +362,7 @@ class Attachments(ErrorHandlingMethodView):
             'application/json':
               schema:
                 oneOf:
-                  - description: An array containing all dids. Duplicates are not ignored.
+                  - description: An array containing all DIDs. Duplicates are not ignored.
                     type: array
                     required:
                       - scope
@@ -371,29 +370,29 @@ class Attachments(ErrorHandlingMethodView):
                       - dids
                     properties:
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
                       dids:
-                        description: "The dids associated to the did."
+                        description: "The DIDs associated with the DID."
                         type: array
                         items:
                           type: object
-                          description: "A did."
+                          description: "A DID."
                           required:
                             - scope
                             - name
                           properties:
                             scope:
-                              description: "The scope of the did."
+                              description: "The scope of the DID."
                               type: string
                             name:
-                              description: "The name of the did."
+                              description: "The name of the DID."
                               type: string
                       rse_id:
-                        description: "The rse id of the did."
+                        description: "The rse id of the DID."
                         type: string
                   - type: object
                     required:
@@ -404,7 +403,7 @@ class Attachments(ErrorHandlingMethodView):
                         type: boolean
                         default: false
                       attachments:
-                        description: "An array containing all dids. Duplicates are not ignored."
+                        description: "An array containing all DIDs. Duplicates are not ignored."
                         type: array
                         required:
                           - scope
@@ -412,29 +411,29 @@ class Attachments(ErrorHandlingMethodView):
                           - dids
                         properties:
                           scope:
-                            description: "The scope of the did."
+                            description: "The scope of the DID."
                             type: string
                           name:
-                            description: "The name of the did."
+                            description: "The name of the DID."
                             type: string
                           dids:
-                            description: "The dids associated to the did."
+                            description: "The DIDs associated to the DID."
                             type: array
                             items:
                               type: object
-                              description: "A did."
+                              description: "A DID."
                               required:
                                 - scope
                                 - name
                               properties:
                                 scope:
-                                  description: "The scope of the did."
+                                  description: "The scope of the DID."
                                   type: string
                                 name:
-                                  description: "The name of the did."
+                                  description: "The name of the DID."
                                   type: string
                           rse_id:
-                            description: "The rse id of the did."
+                            description: "The rse id of the DID."
                             type: string
         responses:
           200:
@@ -481,14 +480,14 @@ class DIDs(ErrorHandlingMethodView):
     def get(self, scope_name):
         """
         ---
-        summary: Get did
+        summary: Get DID
         description: "Get a single data identifier."
         tags:
           - Data identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -511,14 +510,14 @@ class DIDs(ErrorHandlingMethodView):
               application/json:
                 schema:
                   oneOf:
-                  - description: "A single file did."
+                  - description: "A single file DID."
                     type: object
                     properties:
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
                       type:
                         description: "The type of the string."
@@ -539,14 +538,14 @@ class DIDs(ErrorHandlingMethodView):
                       adler32:
                         description: "adler32 checksum."
                         type: string
-                  - description: "A single file did."
+                  - description: "A single file DID."
                     type: object
                     properties:
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
                       type:
                         description: "The type of the string."
@@ -555,16 +554,16 @@ class DIDs(ErrorHandlingMethodView):
                         description: "The associated account."
                         type: string
                       open:
-                        description: "If the did is write open."
+                        description: "If the DID is write open."
                         type: boolean
                       monotonic:
-                        description: "If the did is monotonic."
+                        description: "If the DID is monotonic."
                         type: boolean
                       expired_at:
-                        description: "When the did expired."
+                        description: "When the DID expired."
                         type: string
                       length:
-                        description: "The number of associated dids."
+                        description: "The number of associated DIDs."
                         type: number
                       bytes:
                         description: "The size in bytes."
@@ -599,14 +598,14 @@ class DIDs(ErrorHandlingMethodView):
     def post(self, scope_name):
         """
         ---
-        summary: Create did
+        summary: Create DID
         description: "Create a new data identifier."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -619,38 +618,38 @@ class DIDs(ErrorHandlingMethodView):
                 - type
                 properties:
                   type:
-                    description: "The type of the did."
+                    description: "The type of the DID."
                     type: string
                   statuses:
-                    description: "The statuses of the did."
+                    description: "The statuses of the DID."
                     type: string
                   meta:
-                    description: "The meta of the did."
+                    description: "The meta of the DID."
                     type: string
                   rules:
-                    description: "The rules associated with the did."
+                    description: "The rules associated with the DID."
                     type: array
                     items:
                       type: object
                       description: "A rule."
                   lifetime:
-                    description: "The lifetime of the did."
+                    description: "The lifetime of the DID."
                     type: string
                   dids:
-                    description: "The dids associated with the did."
+                    description: "The DIDs associated with the DID."
                     type: array
                     items:
                       type: object
-                      description: "The did associated with a did."
+                      description: "The DID associated with a DID."
                       properties:
                         scope:
-                          description: "The scope of the did."
+                          description: "The scope of the DID."
                           type: string
                         name:
-                          description: "The name of the did."
+                          description: "The name of the DID."
                           type: string
                   rse:
-                    description: "The rse associated with the did."
+                    description: "The rse associated with the DID."
                     type: string
         responses:
           201:
@@ -663,9 +662,9 @@ class DIDs(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did or scope not found"
+            description: "DID or scope not found"
           409:
-            description: "Did already exists"
+            description: "DID already exists"
         """
         try:
             scope, name = parse_scope_name(scope_name, request.environ['vo'])
@@ -712,14 +711,14 @@ class DIDs(ErrorHandlingMethodView):
     def put(self, scope_name):
         """
         ---
-        summary: Update did
-        description: "Update a did."
+        summary: Update DID
+        description: "Update a DID."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -738,7 +737,7 @@ class DIDs(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           409:
             description: "Wrong status"
         """
@@ -767,24 +766,24 @@ class Attachment(ErrorHandlingMethodView):
     def get(self, scope_name):
         """
         ---
-        summary: Get did
+        summary: Get DID
         description: "Returns the contents of a data identifier."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
         responses:
           200:
-            description: "Did found"
+            description: "DID found"
             content:
               application/x-json-stream:
                 schema:
-                  description: "The contents of a did. Items are line separated."
+                  description: "The contents of a DID. Items are line separated."
                   type: array
                   items:
                     type: object
@@ -797,22 +796,22 @@ class Attachment(ErrorHandlingMethodView):
                       - md5
                     properties:
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
                       type:
-                        description: "The type of the did."
+                        description: "The type of the DID."
                         type: string
                       bytes:
-                        description: "The size of the did."
+                        description: "The size of the DID."
                         type: number
                       adler32:
-                        description: "The adler32 checksum of the did."
+                        description: "The adler32 checksum of the DID."
                         type: string
                       md5:
-                        description: "The md5 checksum of the did."
+                        description: "The md5 checksum of the DID."
                         type: string
           401:
             description: "Invalid Auth Token"
@@ -837,14 +836,14 @@ class Attachment(ErrorHandlingMethodView):
     def post(self, scope_name):
         """
         ---
-        summary: Add dids to did
+        summary: Add DIDs to DID
         description: "Append data identifiers to data identifiers."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -860,20 +859,20 @@ class Attachment(ErrorHandlingMethodView):
                     description: "The name of the rse."
                     type: string
                   account:
-                    description: "The account which attaches the dids."
+                    description: "The account which attaches the DIDs."
                     type: string
                   dids:
-                    description: "The dids to attach."
+                    description: "The DIDs to attach."
                     type: object
                     properties:
                       account:
-                        description: "The account attaching the did."
+                        description: "The account attaching the DID."
                         type: string
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
         responses:
           201:
@@ -886,7 +885,7 @@ class Attachment(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
           409:
@@ -915,14 +914,14 @@ class Attachment(ErrorHandlingMethodView):
     def delete(self, scope_name):
         """
         ---
-        summary: Detach dids from did
+        summary: Detach DIDs from DID
         description: "Detach data identifiers from data identifiers."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -935,16 +934,16 @@ class Attachment(ErrorHandlingMethodView):
                 - dids
                 properties:
                   dids:
-                    description: "The dids to detach."
+                    description: "The DIDs to detach."
                     type: array
                     items:
                       type: object
                       properties:
                         scope:
-                          description: "The scope of the did."
+                          description: "The scope of the DID."
                           type: string
                         name:
-                          description: "The name of the did."
+                          description: "The name of the DID."
                           type: string
         responses:
           200:
@@ -952,7 +951,7 @@ class Attachment(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
         """
         try:
             scope, name = parse_scope_name(scope_name, request.environ['vo'])
@@ -987,33 +986,33 @@ class AttachmentHistory(ErrorHandlingMethodView):
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
         responses:
           200:
-            description: "Did found"
+            description: "DID found"
             content:
               application/x-json-stream:
                 schema:
-                  description: "The dids with their information and history. Elements are separated by new line characters."
+                  description: "The DIDs with their information and history. Elements are separated by new line characters."
                   type: array
                   items:
                     type: object
-                    description: "A single did with history data."
+                    description: "A single DID with history data."
                     properties:
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
                       type:
-                        description: "The type of the did."
+                        description: "The type of the DID."
                         type: string
                       bytes:
-                        description: "The size of the did in bytes."
+                        description: "The size of the DID in bytes."
                         type: integer
                       adler32:
                         description: "The abler32 sha checksum."
@@ -1028,12 +1027,12 @@ class AttachmentHistory(ErrorHandlingMethodView):
                         description: "The created_at date time."
                         type: string
                       updated_at:
-                        description: "The last time the did was updated."
+                        description: "The last time the DID was updated."
                         type: string
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
         """
@@ -1058,13 +1057,13 @@ class Files(ErrorHandlingMethodView):
         """
         ---
         summary: Get replicas
-        description: "List all replicas for a did."
+        description: "List all replicas for a DID."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -1087,19 +1086,19 @@ class Files(ErrorHandlingMethodView):
                         type: object
                         properties:
                           scope:
-                            description: "The scope of the did."
+                            description: "The scope of the DID."
                             type: string
                           name:
-                            description: "The name of the did."
+                            description: "The name of the DID."
                             type: string
                           bytes:
-                            description: "The size of the did in bytes."
+                            description: "The size of the DID in bytes."
                             type: integer
                           guid:
-                            description: "The guid of the did."
+                            description: "The guid of the DID."
                             type: string
                           events:
-                            description: "The number of events of the did."
+                            description: "The number of events of the DID."
                             type: integer
                           adler32:
                             description: "The adler32 checksum."
@@ -1113,19 +1112,19 @@ class Files(ErrorHandlingMethodView):
                         type: object
                         properties:
                           scope:
-                            description: "The scope of the did."
+                            description: "The scope of the DID."
                             type: string
                           name:
-                            description: "The name of the did."
+                            description: "The name of the DID."
                             type: string
                           bytes:
-                            description: "The size of the did in bytes."
+                            description: "The size of the DID in bytes."
                             type: integer
                           guid:
-                            description: "The guid of the did."
+                            description: "The guid of the DID."
                             type: string
                           events:
-                            description: "The number of events of the did."
+                            description: "The number of events of the DID."
                             type: integer
                           adler32:
                             description: "The adler32 checksum."
@@ -1133,7 +1132,7 @@ class Files(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
         """
@@ -1160,7 +1159,7 @@ class BulkFiles(ErrorHandlingMethodView):
         """
         ---
         summary: List files bulk
-        description: "List files in multiple dids"
+        description: "List files in multiple DIDs"
         tags:
           - Data Identifiers
         requestBody:
@@ -1169,17 +1168,17 @@ class BulkFiles(ErrorHandlingMethodView):
               schema:
                 type: array
                 items:
-                  description: "One did to list files."
+                  description: "One DID to list files."
                   type: object
                   required:
                     - scope
                     - name
                   properties:
                     scope:
-                      description: "The did scope."
+                      description: "The DID scope."
                       type: string
                     name:
-                      description: "The did name."
+                      description: "The DID name."
                       type: string
         responses:
           201:
@@ -1194,25 +1193,25 @@ class BulkFiles(ErrorHandlingMethodView):
                     type: object
                     properties:
                       parent_scope:
-                        description: "The scope of the parent did."
+                        description: "The scope of the parent DID."
                         type: string
                       parent_name:
-                        description: "The name of the parent did."
+                        description: "The name of the parent DID."
                         type: string
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
                       bytes:
-                        description: "The size of the did in bytes."
+                        description: "The size of the DID in bytes."
                         type: integer
                       guid:
-                        description: "The guid of the did."
+                        description: "The guid of the DID."
                         type: string
                       events:
-                        description: "The number of events of the did."
+                        description: "The number of events of the DID."
                         type: integer
                       adler32:
                         description: "The adler32 checksum."
@@ -1240,13 +1239,13 @@ class Parents(ErrorHandlingMethodView):
         """
         ---
         summary: Get Parents
-        description: "Lists all parents of the did."
+        description: "Lists all parents of the DID."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -1256,25 +1255,25 @@ class Parents(ErrorHandlingMethodView):
             content:
               application/x-json-stream:
                 schema:
-                  description: "The parents of the did."
+                  description: "The parents of the DID."
                   type: array
                   items:
                     type: object
-                    description: "A parent of the did."
+                    description: "A parent of the DID."
                     properties:
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
                       type:
-                        description: "The type of the did."
+                        description: "The type of the DID."
                         type: string
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
         """
@@ -1295,257 +1294,310 @@ class Parents(ErrorHandlingMethodView):
 class Meta(ErrorHandlingMethodView):
 
     @check_accept_header_wrapper_flask(['application/json'])
-    def get(self, scope_name):
+    def get(self, scope_name, key=None):
         """
         ---
         summary: Get metadata
-        description: "Get the metadata of a did."
+        description: "Retrieve the metadata of a data identifier (DID)."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID (e.g., `scope:name`)."
+          required: true
+          style: simple
           schema:
             type: string
-          style: simple
         - name: plugin
           in: query
-          description: "The plugin to use."
+          description: "The metadata plugin to use."
+          required: false
+          style: form
           schema:
             type: string
             default: DID_COLUMN
         responses:
           200:
-            description: "OK"
+            description: "OK – returns the metadata of the DID."
             content:
               application/json:
                 schema:
-                  description: "A data identifier with all attributes."
                   type: object
+                  description: "A JSON object containing all attributes of the DID."
+                examples:
+                  defaultPlugin:
+                    summary: "Response produced by the default 'DID_COLUMN' plug-in"
+                    value:
+                      scope: "user"
+                      name: "dataset_123"
+                      did_type: "DATASET"
+                      bytes: 123456789
+                      length: 42
+                      account: "root"
+                      is_open: true
+                      suppressed: false
+                      created_at: "2025-05-20T12:16:58"
+                      updated_at: "2025-05-20T12:17:27"
+                      # ... rest DID fields
+                  jsonPlugin:
+                    summary: "Response produced by the 'JSON' plugin"
+                    value:
+                      custom_key1: "value1"
+                      custom_key2: "value2"
+                      # ... etc
           400:
-            description: "Bad Request - Invalid metadata plugin specified"
+            description: "Bad Request – invalid scope_name, or invalid metadata plugin specified."
           401:
-            description: "Invalid Auth Token"
+            description: "Unauthorized – invalid Auth Token."
           404:
-            description: "Did not found"
+            description: "Not found – the specified DID does not exist."
+          405:
+            description: "Method Not Allowed – the 'key' parameter is not supported with GET."
           406:
-            description: "Not acceptable"
+            description: "Not Acceptable – the requested format is not supported."
         """
+        # Flask injects the `key` keyword argument here because the blueprint registers
+        # the generic `/meta` endpoint with `defaults={'key': None}`.  The GET endpoint is
+        # intentionally *not* exposed as `/meta/<key>`—it always returns the complete
+        # metadata record (optionally filtered by the `plugin` query parameter).  Hence,
+        # a non‑None `key` should never reach this method today.  The following guard
+        # defends against any future routing changes that might introduce
+        # `/meta/<key>` for GET requests by explicitly rejecting such usage.
+        if key is not None:
+            return generate_http_error_flask(405,
+                                             'MethodNotAllowed',
+                                             'GET not allowing keys')
+
+        vo = request.environ['vo']
         try:
-            scope, name = parse_scope_name(scope_name, request.environ['vo'])
+            scope, name = parse_scope_name(scope_name, vo)
         except ValueError as error:
             return generate_http_error_flask(400, error)
 
+        plugin = request.args.get('plugin', default='DID_COLUMN')
         try:
-            plugin = request.args.get('plugin', default='DID_COLUMN')
-            meta = get_metadata(scope=scope, name=name, plugin=plugin, vo=request.environ['vo'])
+            meta = get_metadata(scope=scope, name=name, plugin=plugin, vo=vo)
             return Response(render_json(**meta), content_type='application/json')
         except DataIdentifierNotFound as error:
             return generate_http_error_flask(404, error)
         except UnsupportedMetadataPlugin as error:
             return generate_http_error_flask(400, error)
 
-    def post(self, scope_name):
+    def post(self, scope_name, key=None):
         """
         ---
-        summary: Add metadata
-        description: "Add metadata to a did."
+        summary: Set or update metadata
+        description: |
+          Set metadata for a data identifier (DID). If a piece of metadata for a given key
+          already exists, it will be handled according to the underlying metadata plugin
+          in use. Certain plugins may disallow updating specific metadata keys.
+
+          - **Single-key mode** (key provided in the path):
+            The request body must contain a `value` field (e.g., `{"value": "some_value"}`).
+          - **Multi-key mode** (no key in the path):
+            The request body must contain a `meta` field with the dictionary containing
+            multiple key-value pairs (e.g. `{"meta": {"k1": "v1", "k2": "v2"}}`).
+
+          The optional `recursive` flag indicates whether the metadata should be applied
+          recursively to child DIDs. Note that whether recursion is supported depends on
+          the plugin configured for your system.
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID (e.g., `scope:name`)."
+          required: true
+          style: simple
           schema:
             type: string
+        - name: key
+          in: path
+          description: |
+            The key parameter applies only to the `/meta/<key>` endpoint (**Single-key mode**)
+            and defines which metadata key to set/update. If omitted (by calling just `/meta`
+            without the extra path segment), it defaults to `None` and **Multi-key mode** is used.
+          required: true
           style: simple
+          schema:
+            type: string
         requestBody:
+          required: true
           content:
-            'application/json':
+            application/json:
               schema:
-                type: object
-                required:
-                - meta
-                properties:
-                  meta:
-                    description: "The metadata to add. A dictionary containing the metadata name as key and the value as value."
-                    type: object
-                  recursive:
-                    description: "Flag if the metadata should be applied recirsively to children."
-                    type: boolean
-                    default: false
+                oneOf:
+                  - type: object
+                    description: "Schema for **Single-key mode** (`key` included in path)."
+                    required:
+                      - value
+                    properties:
+                      value:
+                        description: "The metadata value to set for this key."
+                        type: string
+                      recursive:
+                        description: "Whether to apply the update recursively to child DIDs."
+                        type: boolean
+                        default: false
+                  - type: object
+                    description: "Schema for **Multi-key mode** (`key` not included in path)."
+                    required:
+                      - meta
+                    properties:
+                      meta:
+                        description: "A dictionary of multiple metadata keys and their values."
+                        type: object
+                      recursive:
+                        description: "Whether to apply the update recursively to child DIDs."
+                        type: boolean
+                        default: false
+              examples:
+                singleKeyMode:
+                  summary: "Setting a single metadata key"
+                  value:
+                    value: "my_metadata_value"
+                    recursive: false
+                multiKeyMode:
+                  summary: "Setting multiple metadata keys at once"
+                  value:
+                    meta:
+                      experiment: "ATLAS"
+                      physics_group: "Higgs"
+                      data_type: "RAW"
+                    recursive: true
         responses:
           201:
-            description: "Created"
+            description: "Created – metadata was successfully set (or updated)."
             content:
-              application/json:
+              text/plain:
                 schema:
                   type: string
                   enum: ["Created"]
+          400:
+            description: "Bad Request – invalid scope_name, or invalid key/value parameters."
           401:
-            description: "Invalid Auth Token"
+            description: "Unauthorized – invalid Auth Token."
           404:
-            description: "Not found"
-          406:
-            description: "Not acceptable"
+            description: "Not found – the specified DID does not exist."
         """
+        vo = request.environ['vo']
         try:
-            scope, name = parse_scope_name(scope_name, request.environ['vo'])
+            scope, name = parse_scope_name(scope_name, vo)
         except ValueError as error:
             return generate_http_error_flask(400, error)
 
         parameters = json_parameters()
-        meta = param_get(parameters, 'meta')
 
-        try:
-            set_metadata_bulk(
-                scope=scope,
-                name=name,
-                meta=meta,
-                issuer=request.environ['issuer'],
-                recursive=param_get(parameters, 'recursive', default=False),
-                vo=request.environ['vo'],
-            )
-        except DataIdentifierNotFound as error:
-            return generate_http_error_flask(404, error)
-        except Duplicate as error:
-            return generate_http_error_flask(409, error)
-        except (KeyNotFound, InvalidMetadata, InvalidValueForKey) as error:
-            return generate_http_error_flask(400, error)
+        if key is not None:
+            value = param_get(parameters, 'value')
+            try:
+                set_metadata(
+                    scope=scope,
+                    name=name,
+                    key=key,
+                    value=value,
+                    issuer=request.environ['issuer'],
+                    recursive=param_get(parameters, 'recursive', default=False),
+                    vo=vo
+                )
+            except DataIdentifierNotFound as error:
+                return generate_http_error_flask(404, error)
+            except (KeyNotFound, InvalidMetadata, InvalidValueForKey) as error:
+                return generate_http_error_flask(400, error)
+            return 'Created', 201
 
-        return "Created", 201
+        else:
+            meta = param_get(parameters, 'meta')
+            try:
+                set_metadata_bulk(
+                    scope=scope,
+                    name=name,
+                    meta=meta,
+                    issuer=request.environ['issuer'],
+                    recursive=param_get(parameters, 'recursive', default=False),
+                    vo=vo,
+                )
+            except DataIdentifierNotFound as error:
+                return generate_http_error_flask(404, error)
+            except (KeyNotFound, InvalidMetadata, InvalidValueForKey) as error:
+                return generate_http_error_flask(400, error)
+            return "Created", 201
 
-    def delete(self, scope_name):
+    def delete(self, scope_name, key=None):
         """
         ---
         summary: Delete metadata
-        description: "Deletes the specified metadata from the did."
+        description: |
+          Delete a specific metadata key from a data identifier (DID).
+          This `key` must be provided via the query parameter `?key=...`.
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID (e.g., `scope:name`)."
+          required: true
+          style: simple
           schema:
             type: string
-          style: simple
         - name: key
           in: query
-          description: "The key to delete."
+          description: "The metadata key to delete."
+          required: true
+          style: form
           schema:
             type: string
         responses:
           200:
-            description: "OK"
+            description: "OK – the metadata key was successfully removed."
+            content:
+              text/plain:
+                schema:
+                  type: string
+                  enum: [""]
           400:
-            description: "scope_name could not be parsed."
+            description: "Bad Request – invalid scope_name."
           401:
-            description: "Invalid Auth Token"
+            description: "Unauthorized – invalid Auth Token."
           404:
-            description: "Did or key not found"
-          406:
-            description: "Not acceptable"
+            description: >
+              Not found – the specified DID or `key` does not exist, or no `key` query
+              parameter provided.
+          405:
+            description: "Method Not Allowed – the 'key' parameter is not supported with DELETE."
           409:
-            description: "Feature is not in current database."
+            description: "Conflict – action not supported by the utilized metadata plugin."
         """
+        # Flask injects the `key` keyword argument here because the blueprint registers the
+        # generic `/meta` endpoint with `defaults={'key': None}`.  For DELETE requests the
+        # API currently expects any metadata key to be supplied via the **query string**
+        # (e.g. `...?key=myfield`), so a non‑None `key` coming from the path is impossible
+        # today.  We still keep this guard as a defensive measure in case someone later
+        # extends the routing to allow `/meta/<key>` for DELETE as well.
+        if key is not None:
+            return generate_http_error_flask(405,
+                                             'MethodNotAllowed',
+                                             'DELETE not allowing keys')
+
+        vo = request.environ['vo']
         try:
-            scope, name = parse_scope_name(scope_name, request.environ['vo'])
+            scope, name = parse_scope_name(scope_name, vo)
         except ValueError as error:
             return generate_http_error_flask(400, error)
 
-        if 'key' in request.args:
-            key = request.args['key']
-        else:
+        if 'key' not in request.args:
             return generate_http_error_flask(404, KeyNotFound.__name__, 'No key provided to remove')
 
+        delete_key = request.args['key']
         try:
-            delete_metadata(scope=scope, name=name, key=key, vo=request.environ['vo'])
+            delete_metadata(scope=scope, name=name, key=delete_key, vo=vo)
         except (KeyNotFound, DataIdentifierNotFound) as error:
             return generate_http_error_flask(404, error)
         except NotImplementedError as error:
             return generate_http_error_flask(409, error, 'Feature not in current database')
 
         return '', 200
-
-
-class SingleMeta(ErrorHandlingMethodView):
-    def post(self, scope_name, key):
-        """
-        ---
-        summary: Add metadata
-        description: "Add metadata to a did."
-        tags:
-          - Data Identifiers
-        parameters:
-        - name: scope_name
-          in: path
-          description: "The scope and the name of the did."
-          schema:
-            type: string
-          style: simple
-        - name: key
-          in: path
-          description: "The key for the metadata."
-          schema:
-            type: string
-          style: simple
-        requestBody:
-          content:
-            'application/json':
-              schema:
-                type: object
-                required:
-                - value
-                properties:
-                  value:
-                    description: "The value to set."
-                    type: object
-        responses:
-          201:
-            description: "Created"
-            content:
-              application/json:
-                schema:
-                  type: string
-                  enum: ["Created"]
-          401:
-            description: "Invalid Auth Token"
-          404:
-            description: "Did not found"
-          406:
-            description: "Not acceptable"
-          409:
-            description: "Metadata already exists"
-          400:
-            description: "Invalid key or value"
-        """
-        try:
-            scope, name = parse_scope_name(scope_name, request.environ['vo'])
-        except ValueError as error:
-            return generate_http_error_flask(400, error)
-
-        parameters = json_parameters()
-        value = param_get(parameters, 'value')
-
-        try:
-            set_metadata(
-                scope=scope,
-                name=name,
-                key=key,
-                value=value,
-                issuer=request.environ['issuer'],
-                recursive=param_get(parameters, 'recursive', default=False),
-                vo=request.environ['vo'],
-            )
-        except DataIdentifierNotFound as error:
-            return generate_http_error_flask(404, error)
-        except Duplicate as error:
-            return generate_http_error_flask(409, error)
-        except (KeyNotFound, InvalidMetadata, InvalidValueForKey) as error:
-            return generate_http_error_flask(400, error)
-
-        return 'Created', 201
 
 
 class BulkDIDsMeta(ErrorHandlingMethodView):
@@ -1566,17 +1618,17 @@ class BulkDIDsMeta(ErrorHandlingMethodView):
                 - dids
                 properties:
                   dids:
-                    description: "A list with all the dids and the metadata."
+                    description: "A list with all the DIDs and the metadata."
                     type: array
                     items:
-                      description: "The did and associated metadata."
+                      description: "The DID and associated metadata."
                       type: object
                       properties:
                         scope:
-                          description: "The scope of the did."
+                          description: "The scope of the DID."
                           type: string
                         name:
-                          description: "The name of the did."
+                          description: "The name of the DID."
                           type: string
                         meta:
                           description: "The metadata to add. A dictionary with the meta key as key and the value as value."
@@ -1592,7 +1644,7 @@ class BulkDIDsMeta(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
           409:
@@ -1620,23 +1672,23 @@ class Rules(ErrorHandlingMethodView):
         """
         ---
         summary: Get rules
-        description: "Lists all rules of a given did."
+        description: "Lists all rules of a given DID."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
         responses:
           200:
-            description: "The rules associated with a did."
+            description: "The rules associated with a DID."
             content:
               application/x-json-stream:
                 schema:
-                  description: "The rules associated with a did."
+                  description: "The rules associated with a DID."
                   type: array
                   items:
                     description: "A rule."
@@ -1644,7 +1696,7 @@ class Rules(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did or rule not found"
+            description: "DID or rule not found"
           406:
             description: "Not acceptable"
         """
@@ -1684,24 +1736,24 @@ class BulkMeta(ErrorHandlingMethodView):
                 - dids
                 properties:
                   dids:
-                    description: "The dids."
+                    description: "The DIDs."
                     type: array
                     items:
-                      description: "A did."
+                      description: "A DID."
                       type: object
                       properties:
                         name:
-                          description: "The name of the did."
+                          description: "The name of the DID."
                           type: string
                         scope:
-                          description: "The scope of the did."
+                          description: "The scope of the DID."
                           type: string
                   inherit:
                     description: "Concatenated the metadata of the parent if set to true."
                     type: boolean
                     default: false
                   plugin:
-                    description: "The did meta plugin to query or 'ALL' for all available plugins"
+                    description: "The DID meta plugin to query or 'ALL' for all available plugins"
                     type: string
                     default: "JSON"
         responses:
@@ -1710,17 +1762,17 @@ class BulkMeta(ErrorHandlingMethodView):
             content:
               application/json:
                 schema:
-                  description: "A list of metadata identifiers for the dids. Separated by new lines."
+                  description: "A list of metadata identifiers for the DIDs. Separated by new lines."
                   type: array
                   items:
-                    description: "The metadata for one did."
+                    description: "The metadata for one DID."
                     type: object
           400:
             description: "Cannot decode json parameter list"
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
         """
@@ -1754,7 +1806,7 @@ class AssociatedRules(ErrorHandlingMethodView):
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -1794,7 +1846,7 @@ class AssociatedRules(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
         """
@@ -1850,7 +1902,7 @@ class GUIDLookup(ErrorHandlingMethodView):
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
         """
@@ -2029,7 +2081,7 @@ class NewDIDs(ErrorHandlingMethodView):
         parameters:
         - name: type
           in: query
-          description: "The type of the did."
+          description: "The type of the DID."
           schema:
             type: string
           required: false
@@ -2039,20 +2091,20 @@ class NewDIDs(ErrorHandlingMethodView):
             content:
               application/x-json-stream:
                 schema:
-                  description: "A list of the recent dids. Items are separated by new line characters."
+                  description: "A list of the recent DIDs. Items are separated by new line characters."
                   type: array
                   items:
-                    description: "A did."
+                    description: "A DID."
                     type: object
                     properties:
                       scope:
-                        description: "The scope of the did."
+                        description: "The scope of the DID."
                         type: string
                       name:
-                        description: "The name of the did."
+                        description: "The name of the DID."
                         type: string
                       did_type:
-                        description: "The type of the did."
+                        description: "The type of the DID."
                         type: string
           401:
             description: "Invalid Auth Token"
@@ -2073,25 +2125,25 @@ class Resurrect(ErrorHandlingMethodView):
     def post(self):
         """
         ---
-        summary: Resurrect dids
-        description: "Resurrect all given dids."
+        summary: Resurrect DIDs
+        description: "Resurrect all given DIDs."
         tags:
           - Data Identifiers
         requestBody:
           content:
             'application/json':
               schema:
-                description: "List of did to resurrect."
+                description: "List of DIDs to resurrect."
                 type: array
                 items:
-                  description: "A did to resurrect."
+                  description: "A DID to resurrect."
                   type: object
                   properties:
                     scope:
-                      description: "The scope of the did."
+                      description: "The scope of the DID."
                       type: string
                     name:
-                      description: "The name of the did"
+                      description: "The name of the DID"
                       type: string
         responses:
           201:
@@ -2130,13 +2182,13 @@ class Follow(ErrorHandlingMethodView):
         """
         ---
         summary: Get followers
-        description: "Get all followers for a specific did."
+        description: "Get all followers for a specific DID."
         tags:
           - Data Identifiers
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -2146,21 +2198,21 @@ class Follow(ErrorHandlingMethodView):
             content:
               application/json:
                 schema:
-                  description: "A list of all followers of a did."
+                  description: "A list of all followers of a DID."
                   type: array
                   items:
-                    description: "A follower of a did."
+                    description: "A follower of a DID."
                     type: object
                     properties:
                       user:
-                        description: "The user which follows the did."
+                        description: "The user which follows the DID."
                         type: string
           400:
             description: "Value error"
           401:
             description: "Invalid Auth Token"
           404:
-            description: "Did not found"
+            description: "DID not found"
           406:
             description: "Not acceptable"
         """
@@ -2187,7 +2239,7 @@ class Follow(ErrorHandlingMethodView):
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -2200,7 +2252,7 @@ class Follow(ErrorHandlingMethodView):
                 - account
                 properties:
                   account:
-                    description: "The account to follow the did."
+                    description: "The account to follow the DID."
                     type: string
         responses:
           201:
@@ -2239,7 +2291,7 @@ class Follow(ErrorHandlingMethodView):
         parameters:
         - name: scope_name
           in: path
-          description: "The scope and the name of the did."
+          description: "The scope and the name of the DID."
           schema:
             type: string
           style: simple
@@ -2252,7 +2304,7 @@ class Follow(ErrorHandlingMethodView):
                 - account
                 properties:
                   account:
-                    description: "The account to unfollow the did."
+                    description: "The account to unfollow the DID."
                     type: string
         responses:
           200:
@@ -2298,9 +2350,8 @@ def blueprint():
     attachment_view = Attachment.as_view('attachment')
     bp.add_url_rule('/<path:scope_name>/dids', view_func=attachment_view, methods=['get', 'post', 'delete'])
     meta_view = Meta.as_view('meta')
-    bp.add_url_rule('/<path:scope_name>/meta', view_func=meta_view, methods=['get', 'post', 'delete'])
-    singlemeta_view = SingleMeta.as_view('singlemeta')
-    bp.add_url_rule('/<path:scope_name>/meta/<key>', view_func=singlemeta_view, methods=['post', ])
+    bp.add_url_rule('/<path:scope_name>/meta', defaults={'key': None}, view_func=meta_view, methods=['get', 'post', 'delete'])
+    bp.add_url_rule('/<path:scope_name>/meta/<key>', view_func=meta_view, methods=['post', ])
     bulkdidsmeta_view = BulkDIDsMeta.as_view('bulkdidsmeta')
     bp.add_url_rule('/bulkdidsmeta', view_func=bulkdidsmeta_view, methods=['post', ])
     rules_view = Rules.as_view('rules')

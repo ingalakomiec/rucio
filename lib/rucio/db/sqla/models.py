@@ -29,6 +29,7 @@ from sqlalchemy.types import LargeBinary
 # and it must be renamed to avoid conflicts with the policy package schema modules
 from rucio.common import schema as common_schema
 from rucio.common import utils
+from rucio.common.constants import TransferLimitDirection
 from rucio.common.types import InternalAccount, InternalScope  # noqa: TCH001 (types are needed by SQLAlchemy)
 from rucio.db.sqla.constants import (
     AccountStatus,
@@ -51,7 +52,6 @@ from rucio.db.sqla.constants import (
     RuleState,
     ScopeStatus,
     SubscriptionState,
-    TransferLimitDirection,
 )
 from rucio.db.sqla.session import BASE
 from rucio.db.sqla.types import GUID, JSON, BooleanString, InternalAccountString, InternalScopeString
@@ -563,7 +563,7 @@ class DeletedDataIdentifier(BASE, ModelBase):
 
 
 class UpdatedDID(BASE, ModelBase):
-    """Represents the recently updated dids"""
+    """Represents the recently updated DIDs"""
     __tablename__ = 'updated_dids'
     id: Mapped[str] = mapped_column(GUID(), default=utils.generate_uuid)
     scope: Mapped[InternalScope] = mapped_column(InternalScopeString(common_schema.get_schema_value('SCOPE_LENGTH')))

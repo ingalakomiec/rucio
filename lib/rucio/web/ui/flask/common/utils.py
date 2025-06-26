@@ -51,7 +51,7 @@ AUTH_TYPE = config_get('webui', 'auth_type', False, None)
 if AUTH_TYPE == 'oidc':
     try:
         AUTH_ISSUER_WEBUI = config_get('webui', 'auth_issuer')
-    except:
+    except Exception:
         render_template("problem.html", msg="Please specify auth_issuer in the [webui] section of the Rucio configuration.")
 
 # if no specific config on the server side - we collect information
@@ -65,7 +65,7 @@ if not AUTH_TYPE:
                 client_secrets = load(client_secret_file)
                 for iss in client_secrets:
                     AUTH_ISSUERS.append(iss.upper())
-    except:
+    except Exception:
         AUTH_ISSUERS = []
 
 # check if userpass login is enabled
@@ -175,7 +175,7 @@ def select_account_name(identitystr, identity_type, vo=None):
         # try to set the default account to the user account, if not available take the first account.
         def_account = accounts[0]
         for account in accounts:
-            account_info = get_account_info(account, vo=vo)
+            account_info = get_account_info(account, vo=vo or 'def')
             if account_info.account_type == AccountType.USER:
                 def_account = account
                 break
@@ -209,7 +209,7 @@ def get_token(token_method, acc=None, vo=None, idt=None, pwd=None):
         else:
             token = token_method(acc, idt, 'webui', request.environ.get('REMOTE_ADDR'), vo=vo).get('token')
         return token
-    except:
+    except Exception:
         return None
 
 

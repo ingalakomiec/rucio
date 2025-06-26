@@ -71,6 +71,12 @@ MAX_MESSAGE_LENGTH = 4000
 
 
 @enum.unique
+class TransferLimitDirection(enum.Enum):
+    SOURCE = 'S'
+    DESTINATION = 'D'
+
+
+@enum.unique
 class SuspiciousAvailability(enum.Enum):
     ALL = 0
     EXIST_COPIES = 1

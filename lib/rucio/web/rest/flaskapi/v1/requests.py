@@ -18,10 +18,11 @@ from typing import TYPE_CHECKING, Union, cast
 import flask
 from flask import Flask, Response
 
+from rucio.common.constants import TransferLimitDirection
 from rucio.common.exception import AccessDenied, RequestNotFound
 from rucio.common.utils import APIEncoder, render_json
 from rucio.core.rse import get_rses_with_attribute_value
-from rucio.db.sqla.constants import RequestState, TransferLimitDirection
+from rucio.db.sqla.constants import RequestState
 from rucio.gateway import request
 from rucio.web.rest.flaskapi.authenticated_bp import AuthenticatedBlueprint
 from rucio.web.rest.flaskapi.v1.common import ErrorHandlingMethodView, check_accept_header_wrapper_flask, generate_http_error_flask, json_parameters, param_get, parse_scope_name, response_headers, try_stream
@@ -77,7 +78,7 @@ class RequestGet(ErrorHandlingMethodView):
                       description: "The name of the transfer."
                       type: string
                     did_type:
-                      description: "The did type."
+                      description: "The DID type."
                       type: string
                     dest_rse_id:
                       description: "The destination RSE id."
@@ -114,13 +115,13 @@ class RequestGet(ErrorHandlingMethodView):
                       description: "The activity of the request."
                       type: string
                     bytes:
-                      description: "The size of the did in bytes."
+                      description: "The size of the DID in bytes."
                       type: integer
                     md5:
-                      description: "The md5 checksum of the did to transfer."
+                      description: "The md5 checksum of the DID to transfer."
                       type: string
                     adler32:
-                      description: "The adler32 checksum of the did to transfer."
+                      description: "The adler32 checksum of the DID to transfer."
                       type: string
                     dest_url:
                       description: "The destination url."
@@ -242,7 +243,7 @@ class RequestHistoryGet(ErrorHandlingMethodView):
                       description: "The name of the transfer."
                       type: string
                     did_type:
-                      description: "The did type."
+                      description: "The DID type."
                       type: string
                     dest_rse_id:
                       description: "The destination RSE id."
@@ -279,13 +280,13 @@ class RequestHistoryGet(ErrorHandlingMethodView):
                       description: "The activity of the request."
                       type: string
                     bytes:
-                      description: "The size of the did in bytes."
+                      description: "The size of the DID in bytes."
                       type: integer
                     md5:
-                      description: "The md5 checksum of the did to transfer."
+                      description: "The md5 checksum of the DID to transfer."
                       type: string
                     adler32:
-                      description: "The adler32 checksum of the did to transfer."
+                      description: "The adler32 checksum of the DID to transfer."
                       type: string
                     dest_url:
                       description: "The destination url."
@@ -439,7 +440,7 @@ class RequestList(ErrorHandlingMethodView):
                         description: "The name of the transfer."
                         type: string
                       did_type:
-                        description: "The did type."
+                        description: "The DID type."
                         type: string
                       dest_rse_id:
                         description: "The destination RSE id."
@@ -476,13 +477,13 @@ class RequestList(ErrorHandlingMethodView):
                         description: "The activity of the request."
                         type: string
                       bytes:
-                        description: "The size of the did in bytes."
+                        description: "The size of the DID in bytes."
                         type: integer
                       md5:
-                        description: "The md5 checksum of the did to transfer."
+                        description: "The md5 checksum of the DID to transfer."
                         type: string
                       adler32:
-                        description: "The adler32 checksum of the did to transfer."
+                        description: "The adler32 checksum of the DID to transfer."
                         type: string
                       dest_url:
                         description: "The destination url."
@@ -678,7 +679,7 @@ class RequestHistoryList(ErrorHandlingMethodView):
                         description: "The name of the transfer."
                         type: string
                       did_type:
-                        description: "The did type."
+                        description: "The DID type."
                         type: string
                       dest_rse_id:
                         description: "The destination RSE id."
@@ -715,13 +716,13 @@ class RequestHistoryList(ErrorHandlingMethodView):
                         description: "The activity of the request."
                         type: string
                       bytes:
-                        description: "The size of the did in bytes."
+                        description: "The size of the DID in bytes."
                         type: integer
                       md5:
-                        description: "The md5 checksum of the did to transfer."
+                        description: "The md5 checksum of the DID to transfer."
                         type: string
                       adler32:
-                        description: "The adler32 checksum of the did to transfer."
+                        description: "The adler32 checksum of the DID to transfer."
                         type: string
                       dest_url:
                         description: "The destination url."

@@ -1317,9 +1317,9 @@ def __set_replica_unavailable(replica, *, session: "Session"):
 @transactional_session
 def apply_rule(did, rule, rses, source_rses, rseselector, *, session: "Session", logger=logging.log):
     """
-    Apply a replication rule to one did.
+    Apply a replication rule to one DID.
 
-    :param did:          the did object
+    :param did:          the DID object
     :param rule:         the rule object
     :param rses:         target rses_ids
     :param source_rses:  source rses_ids
@@ -1616,4 +1616,3 @@ def apply_rule(did, rule, rses, source_rses, rseselector, *, session: "Session",
     for rse_id in account_counters_files:
         account_counter.increase(rse_id=rse_id, account=rule.account, files=account_counters_files[rse_id], bytes_=account_counters_bytes[rse_id], session=session)
     session.flush()
-
