@@ -17,6 +17,7 @@
 import gfal2
 import hashlib
 import logging
+import operator
 import os
 import re
 
@@ -50,14 +51,16 @@ def gfal_links(base_url: str) -> list[str]:
     Returns a list of the urls contained in `base_url`.
     '''
     ctxt = gfal2.creat_context()  # pylint: disable=no-member
-
-    print("in gfal_links")
-    print(f"{base_url}/file1")
-    stat = ctxt.stat(f"{base_url}/file1")
 #    return ['/'.join((base_url, f)) for f in ctxt.listdir(str(base_url))]
+#    return [f"{base_url}/{file}" for file in ctxt.listdir(str(base_url))]
 
-    return ['aaa', 'bbb']
+    files_tmp = ['dump_20250610', 'dump_20250614', 'dump_20250521']
 
+    list = [f"{base_url}/{file}" for file in files_tmp]
+
+#    return [f"{base_url}/dump_20250621", f"{base_url}/dump_20250624"]
+
+    return list
 
 def http_links(base_url: str) -> list[str]:
     '''
@@ -154,8 +157,6 @@ def generate_url(
 #    config: RawConfigParser
 ) -> tuple[str, str]:
 
-    print("generating url for rse")
-
     site = rse.split('_')[0]
 #    uncomment when the config part is added
 #    if site not in config.sections():
@@ -182,7 +183,6 @@ def get_links(base_url: str) -> list[str]:
 
 def get_newest(
         base_url: str,
-#        url_pattern: str,
         links: "Iterable[str]"
 ) -> tuple[str, datetime]:
     '''
@@ -192,16 +192,23 @@ def get_newest(
 
     The creation date is extracted from the url using datetime.strptime().
     '''
-    logger = logging.getLogger('auditor.srmdumps')
+    logger = logging.getLogger('auditor.rse_dumps')
     times = []
-    """
-    pattern_components = url_pattern.split('/')
 
-    date_pattern = '{0}/{1}'.format(base_url, pattern_components[0])
+#    url_pattern = 'dump_%Y%m%d'
+#    pattern_components = url_pattern.split('/')
+#    date_pattern = '{0}/{1}'.format(base_url, pattern_components[0])
+
+    date_pattern = f"{base_url}/dump_%Y%m%d"
+
+    """
     if len(pattern_components) > 1:
         postfix = '/' + '/'.join(pattern_components[1:])
     else:
         postfix = ''
+    """
+    postfix = ''
+
 
     for link in links:
         try:
@@ -213,12 +220,14 @@ def get_newest(
 
     if not times:
         msg = 'No links found matching the pattern {0} in {1}'.format(date_pattern, links)
+
+        msg = f"No links found matching the pattern {date_pattern} in {links}"
         logger.error(msg)
         raise RuntimeError(msg)
 
     return max(times, key=operator.itemgetter(1))
-    """
-    return ('aaa', datetime.now())
+
+#    return ('aaa', datetime.now())
 
 def protocol(url: str) -> str:
     '''
