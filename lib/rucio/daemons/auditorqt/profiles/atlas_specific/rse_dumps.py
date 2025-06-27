@@ -51,14 +51,11 @@ def gfal_links(base_url: str) -> list[str]:
     Returns a list of the urls contained in `base_url`.
     '''
     ctxt = gfal2.creat_context()  # pylint: disable=no-member
-#    return ['/'.join((base_url, f)) for f in ctxt.listdir(str(base_url))]
-#    return [f"{base_url}/{file}" for file in ctxt.listdir(str(base_url))]
 
     files_tmp = ['dump_20250610', 'dump_20250614', 'dump_20250521']
 
-    list = [f"{base_url}/{file}" for file in files_tmp]
-
-#    return [f"{base_url}/dump_20250621", f"{base_url}/dump_20250624"]
+#    list = [f"{base_url}/{file}" for file in files_tmp]
+    list = [f"{base_url}/{file}" for file in ctxt.listdir(str(base_url))]
 
     return list
 
@@ -110,7 +107,7 @@ def fetch_object_store(
     base_url: str,
     cache_dir: str,
     date: Optional[datetime] = None,
-) -> True:
+):
 
     # on objectstores can't list dump files, so try the last N dates
 
@@ -149,7 +146,42 @@ def fetch_object_store(
                 tries -= 1
                 date = date - timedelta(1)
 
-    return True
+    return path, date
+
+
+def fetch_no_object_store(
+    rse: str,
+    base_url: str,
+    cache_dir: str,
+    date: Optional[datetime] = None,
+):
+
+    logger = logging.getLogger('auditor.fetch_no_object_store')
+
+    date = None
+    if date is None:
+        logger.debug('Looking for site dumps in: "%s"', base_url)
+        links = get_links(base_url)
+        url, date =  get_newest(base_url, links)
+        print("url from get_newest: ", url)
+        print("date from get_newest: ", date)
+    else:
+        url = f"{base_url}/dump_{date:%Y%m%d}"
+
+    # hash added to get a distinct file name
+    hash = hashlib.sha1(url.encode()).hexdigest()
+    filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
+    filename = re.sub(r'\W', '-', filename)
+    path = f"{cache_dir}/{filename}"
+
+    if not os.path.exists(path):
+#        logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
+#        return path
+        logging.debug('Trying to download: %s for %s', url, rse)
+        with temp_file(cache_dir, final_name=filename) as (f, _):
+            download(url, f)
+
+    return path, date
 
 
 def generate_url(
