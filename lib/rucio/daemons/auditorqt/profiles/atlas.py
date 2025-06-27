@@ -27,7 +27,7 @@ from typing import Any, Optional, Union
 
 #from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
-from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, get_links, get_newest, fetch_object_store
+from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, get_links, get_newest, fetch_object_store, fetch_no_object_store
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
 """
@@ -168,43 +168,10 @@ def fetch_rse_dump(
     rse_attr = list_rse_attributes(rse_id)
 
     if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
-        fetch_object_store(rse, base_url, cache_dir, date)
+        path, date = fetch_object_store(rse, base_url, cache_dir, date)
 
     else:
-        #remove the line below: date = None; it's just for tests
-        date = None
-        if date is None:
-#            base_url = "root://xrd1:1094//rucio/test"
-            logger.debug('Looking for site dumps in: "%s"', base_url)
-            links = get_links(base_url)
-            print("links: ", links)
-            url, date =  get_newest(base_url, links)
-            print("url from get_newest: ", url)
-            print("date from get_newest: ", date)
-            #dwie ponizsze linijki tylko do testow. gorna linijka powinna zostac
-            date = datetime.now()
-            url = f"{base_url}/dump_{date:%Y%m%d}"
-        else:
-            url = f"{base_url}/dump_{date:%Y%m%d}"
-# add a comment ...
-        hash = hashlib.sha1(url.encode()).hexdigest()
-        filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
-
-        filename = re.sub(r'\W', '-', filename)
-
-        path = f"{cache_dir}/{filename}"
-
-
-    if os.path.exists(path):
-        logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
-        return path
-
-        logging.debug('Trying to download: %s for %s', url, rse)
-
-        try:
-            status_code = download(url, path)
-        except:
-            logging.debug('Dump for %s from %s not downloaded', rse, url)
+        path, date = fetch_no_object_store(rse, base_url, cache_dir, date)
 
     return (path, date)
 
