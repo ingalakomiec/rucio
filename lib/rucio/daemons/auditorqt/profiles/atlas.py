@@ -27,7 +27,7 @@ from typing import Any, Optional, Union
 
 #from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
-from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, get_links, get_newest, fetch_object_store, fetch_no_object_store
+from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
 """
@@ -77,7 +77,7 @@ def atlas_auditor(
         delta: timedelta,
         cache_dir: str,
         results_dir: str
-) -> None:
+) -> Optional[str]:
     '''
     Downloads the dump for the given ddmendpoint. If this endpoint does not
     follow the standardized method to publish the dumps it should have an
@@ -109,10 +109,10 @@ def atlas_auditor(
 
     rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
-#    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
-#    rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
+    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
+    rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
-    lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
+    lost_files, dark_files = consistency_check(rucio_dump_before_path_tmp, rse_dump_path_tmp, rucio_dump_after_path_tmp)
 
     result_file_name = f"result.{rse}_{date:%Y%m%d}"
     results_path = f"{results_dir}/{result_file_name}"
@@ -127,7 +127,7 @@ def atlas_auditor(
 
     file_results.close()
 
-    return True
+    return results_path
 
 """
 def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
@@ -162,8 +162,6 @@ def fetch_rse_dump(
 #    base_url, url_pattern = generate_url(rse, configuration)
     base_url = generate_url(rse)
 
-    print("base_url: ", base_url)
-
     rse_id = get_rse_id(rse)
     rse_attr = list_rse_attributes(rse_id)
 
@@ -182,51 +180,26 @@ def fetch_rucio_dump(
 ) -> str:
 
     logger = logging.getLogger('auditor.fetch_rucio_dump')
-    print("fetching rucio dump for rse: "+rse)
+
 
 #    url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
     url = get_rucio_dump_url(date, rse)
-#    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
+    # the line below just for tests
+    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
 
+    # hash added to create a unic filename
     hash = hashlib.sha1(url.encode()).hexdigest()
-
     filename = f"{rse}_{date:%Y-%m-%d}_{hash}"
     filename = re.sub(r'\W', '-', filename)
-
     path = f"{cache_dir}/{filename}"
 
-    if os.path.exists(path):
-        logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
-        return path
-
-    try:
+    if not os.path.exists(path):
         logging.debug('Trying to download: %s for %s', url, rse)
-        status_code = download(url, path)
-    except:
-        logging.debug('Dump for %s from %s not downloaded', rse, url)
+        download_rucio_dump(url, cache_dir, filename)
+    else:
+        logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
 
     return path
-
-
-def download(
-    url: str,
-    path: str
-) -> int:
-
-#    url = 'root://xrd1:1094//rucio/test/80/25/file1'
-
-    response = requests.get(url, stream=True)
-
-    if response.status_code != 200:
-        logging.error(
-        'Retrieving %s returned %d status code',
-        url,
-        response.status_code,
-        )
-    else:
-        open(path, 'wb').write(response.content)
-
-    return response.status_code
 
 def get_rucio_dump_url(
     date: datetime,
