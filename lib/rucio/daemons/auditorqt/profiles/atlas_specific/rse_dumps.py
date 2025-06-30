@@ -54,10 +54,10 @@ def gfal_links(base_url: str) -> list[str]:
 
     files_tmp = ['dump_20250610', 'dump_20250614', 'dump_20250521']
 
-#    list = [f"{base_url}/{file}" for file in files_tmp]
-    list = [f"{base_url}/{file}" for file in ctxt.listdir(str(base_url))]
+#    dumps = [f"{base_url}/{file}" for file in files_tmp]
+    dumps = [f"{base_url}/{file}" for file in ctxt.listdir(str(base_url))]
 
-    return list
+    return dumps
 
 def http_links(base_url: str) -> list[str]:
     '''
@@ -101,6 +101,19 @@ def download(url: str, filename: IO) -> None:
     """
 
     return protocol_funcs[protocol(url)]['download'](url, filename)
+
+def download_rucio_dump(
+    url: str,
+    cache_dir: str,
+    filename: str
+) -> None:
+
+    with temp_file(cache_dir, final_name=filename) as (f, _):
+        http_download_to_file(url, f)
+
+    return True
+
+
 
 def fetch_object_store(
     rse: str,
@@ -158,13 +171,10 @@ def fetch_no_object_store(
 
     logger = logging.getLogger('auditor.fetch_no_object_store')
 
-    date = None
     if date is None:
         logger.debug('Looking for site dumps in: "%s"', base_url)
-        links = get_links(base_url)
-        url, date =  get_newest(base_url, links)
-        print("url from get_newest: ", url)
-        print("date from get_newest: ", date)
+        dumps = get_all_dumps(base_url)
+        url, date =  get_newest_dump(base_url, links)
     else:
         url = f"{base_url}/dump_{date:%Y%m%d}"
 
@@ -175,11 +185,11 @@ def fetch_no_object_store(
     path = f"{cache_dir}/{filename}"
 
     if not os.path.exists(path):
-#        logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
-#        return path
         logging.debug('Trying to download: %s for %s', url, rse)
         with temp_file(cache_dir, final_name=filename) as (f, _):
             download(url, f)
+    else:
+        logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
 
     return path, date
 
@@ -190,14 +200,11 @@ def generate_url(
 ) -> tuple[str, str]:
 
     site = rse.split('_')[0]
-#    uncomment when the config part is added
+#    uncomment the line below when the config part is added
 #    if site not in config.sections():
 
-    # base_url for real dumps
     base_url = f"{ddmendpoint_url(rse)}/dumps"
 
-    # tmp base_url for the test RSE - XRD1
-#    base_url = f"{ddmendpoint_url(rse)}/test/80/25"
     """
     else:
 
@@ -209,11 +216,11 @@ def generate_url(
 
     return base_url
 
-def get_links(base_url: str) -> list[str]:
+def get_all_dumps(base_url: str) -> list[str]:
 
     return protocol_funcs[protocol(base_url)]['links'](base_url)
 
-def get_newest(
+def get_newest_dump(
         base_url: str,
         links: "Iterable[str]"
 ) -> tuple[str, datetime]:
@@ -227,20 +234,7 @@ def get_newest(
     logger = logging.getLogger('auditor.rse_dumps')
     times = []
 
-#    url_pattern = 'dump_%Y%m%d'
-#    pattern_components = url_pattern.split('/')
-#    date_pattern = '{0}/{1}'.format(base_url, pattern_components[0])
-
     date_pattern = f"{base_url}/dump_%Y%m%d"
-
-    """
-    if len(pattern_components) > 1:
-        postfix = '/' + '/'.join(pattern_components[1:])
-    else:
-        postfix = ''
-    """
-    postfix = ''
-
 
     for link in links:
         try:
@@ -248,18 +242,14 @@ def get_newest(
         except ValueError:
             pass
         else:
-            times.append((str(link) + postfix, time))
+            times.append((str(link), time))
 
     if not times:
-        msg = 'No links found matching the pattern {0} in {1}'.format(date_pattern, links)
-
         msg = f"No links found matching the pattern {date_pattern} in {links}"
         logger.error(msg)
         raise RuntimeError(msg)
 
     return max(times, key=operator.itemgetter(1))
-
-#    return ('aaa', datetime.now())
 
 def protocol(url: str) -> str:
     '''
