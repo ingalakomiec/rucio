@@ -51,10 +51,6 @@ def gfal_links(base_url: str) -> list[str]:
     Returns a list of the urls contained in `base_url`.
     '''
     ctxt = gfal2.creat_context()  # pylint: disable=no-member
-
-    files_tmp = ['dump_20250610', 'dump_20250614', 'dump_20250521']
-
-#    dumps = [f"{base_url}/{file}" for file in files_tmp]
     dumps = [f"{base_url}/{file}" for file in ctxt.listdir(str(base_url))]
 
     return dumps
