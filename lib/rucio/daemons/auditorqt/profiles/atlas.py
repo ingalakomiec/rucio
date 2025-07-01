@@ -27,8 +27,10 @@ from typing import Any, Optional, Union
 
 #from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
-from rucio.daemons.auditorqt.profiles.atlas_specific.rse_dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump
 from rucio.core.rse import get_rse_id, list_rse_attributes
+
+from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 """
 _DUMPERCONFIGDIRS = list(
@@ -97,6 +99,8 @@ def atlas_auditor(
     the date of the dump.
     '''
 
+    logger = logging.getLogger('atlas_auditor')
+
     date = datetime.today()
     delta = timedelta(delta)
 
@@ -107,15 +111,25 @@ def atlas_auditor(
 #    configuration = parse_configuration()
 #    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
 
+
     rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
     rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
     rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
-    lost_files, dark_files = consistency_check(rucio_dump_before_path_tmp, rse_dump_path_tmp, rucio_dump_after_path_tmp)
+
 
     result_file_name = f"result.{rse}_{date:%Y%m%d}"
     results_path = f"{results_dir}/{result_file_name}"
+
+
+
+    if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
+        logger.warning(f"Consistency check for {rse}, dump dated {date:%d-%m-%Y}, already done. Skipping consistency check.")
+        return results_path
+
+
+    lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
     file_results = open(results_path, 'w')
 
@@ -126,6 +140,8 @@ def atlas_auditor(
         file_results.write('LOST'+(lost_files[k]).replace("/",",",1))
 
     file_results.close()
+
+    process_output(rse, results_path, sanity_check = False)
 
     return results_path
 
@@ -249,11 +265,11 @@ def consistency_check(
 
     print("consistency check")
 
-#    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
+    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
     out = dict()
-    """
+
     i = 0
 
     for k in rucio_dump_before[0]:
@@ -288,7 +304,7 @@ def consistency_check(
         i+=1
 
     del rucio_dump_after
-    """
+
     lost_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
 
