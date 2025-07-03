@@ -125,8 +125,6 @@ def run_once(
 
     rses_to_process = get_rses_to_process(rses)
 
-    print("DATEEE:", date)
-
 #    for rse in rses_to_process:
 #        print(rse)
 

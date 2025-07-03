@@ -15,6 +15,7 @@
 """fetching ATLAS-RSE dumps"""
 
 import gfal2
+import glob
 import hashlib
 import logging
 import operator
@@ -181,7 +182,7 @@ def fetch_no_object_store(
     path = f"{cache_dir}/{filename}"
 
     if not os.path.exists(path):
-        logging.debug('Trying to download: %s for %s', url, rse)
+        logger.debug('Trying to download: %s for %s', url, rse)
         with temp_file(cache_dir, final_name=filename) as (f, _):
             download(url, f)
     else:
@@ -256,3 +257,13 @@ def protocol(url: str) -> str:
         raise RuntimeError(f"Protocol {proto} not supported")
 
     return proto
+
+def remove_cached_dump(path: str) -> None:
+
+    logger = logging.getLogger('auditor: atlas_specific.dumps.remove_cached_dump')
+    os.remove(path)
+
+    logger.debug(f"Removing dump: {path}")
+
+
+    return True
