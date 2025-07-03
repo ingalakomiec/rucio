@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""perform post-consistency-check actions"""
-
+"""perform actions on output of the auditor consistency check"""
 
 import bz2
 import logging
@@ -40,12 +39,11 @@ def process_output(
     """Perform post-consistency-check actions.
 
     DARK files are put in the quarantined-replica table so that they
-    may be deleted by the Dark Reaper. LOST files are reported as
+    may be deleted by the Dark Reaper. Missed files are reported as
     suspicious so that they may be further checked by the cloud squads.
 
     ``results_path``: absolute path to the file
-    produced by ``consistency_check()``.  It must maintain its naming
-    convention.
+    produced by ``consistency_check()``.
 
     If ``sanity_check`` is ``True`` (default) and the number of entries
     in the output file is deemed excessive, the actions are aborted.
@@ -57,69 +55,67 @@ def process_output(
     logger = logging.getLogger('atlas_auditor output.process_output')
 
     dark_replicas = []
-# change the name lost, maybe missed
-    lost_replicas = []
+    missed_replicas = []
     try:
         with open(results_path) as f:
             for line in f:
                 label, path = line.rstrip().split(',', 1)
                 scope, name = guess_replica_info(path)
+
                 if label == 'DARK':
                     dark_replicas.append({'path': path,
                                           'scope': InternalScope(scope),
                                           'name': name})
-                elif label == 'LOST':
-                    lost_replicas.append({'scope': InternalScope(scope),
+                elif label == 'MISSED':
+                    missed_replicas.append({'scope': InternalScope(scope),
                                           'name': name})
                 else:
                     raise ValueError('unexpected label')
 
-
    # Since the file is read immediately after its creation, any error
    # exposes a bug in the Auditor.
     except Exception as error:
-        logger.critical('Error processing "%s"', results_path, exc_info=True)
+        logger.critical(f"Error processing {results_path}", exc_info=True)
         raise error
 
     rse_id = get_rse_id(rse=rse)
     usage = get_rse_usage(rse_id=rse_id, source='rucio')[0]
     threshold = config.config_get_float('auditor', 'threshold', False, 0.1)
 
-#    print("threshold: ", threshold)
-#    print("usage: ", usage['files'])
-
     # Perform a basic sanity check by comparing the number of entries
     # with the total number of files on the RSE.  If the percentage is
     # significant, there is most likely an issue with the site dump.
     found_error = False
+
     if len(dark_replicas) > threshold * usage['files']:
-       logger.warning(f"Number of DARK files is exceeding threshold: {results_path}")
-       found_error = True
+        logger.warning(f"Number of DARK files is exceeding threshold: {results_path}")
+        found_error = True
+
+    if len(missed_replicas) > threshold * usage['files']:
+        logger.warning(f"Number of MISSED files is exceeding threshold: {results_path}")
+        found_error = True
+
     if found_error and sanity_check:
         raise AssertionError("sanity check failed")
 
-    # While converting LOST replicas to PFNs, entries that do not
+    # While converting MISSED replicas to PFNs, entries that do not
     # correspond to a replica registered in Rucio are silently dropped.
 
-# maybe split into two lines
-    lost_pfns = [r['rses'][rse_id][0] for chunk in chunks(lost_replicas, 1000) for r in list_replicas(chunk) if rse_id in r['rses']]
-
+    missed_pfns = [r['rses'][rse_id][0] for chunk in chunks(missed_replicas, 1000) for r in list_replicas(chunk) if rse_id in r['rses']]
 
     for chunk in chunks(dark_replicas, 1000):
         add_quarantined_replicas(rse_id=rse_id, replicas=chunk)
 
-
     logger.debug(f"Processed {len(dark_replicas)} DARK files from {results_path}")
 
-    declare_bad_file_replicas(lost_pfns, reason='Reported by Auditor',
+    declare_bad_file_replicas(missed_pfns, reason='Reported by Auditor',
                               issuer=InternalAccount('root'), status=BadFilesStatus.SUSPICIOUS)
 
-    logger.debug(f"Processed {len(lost_replicas)} LOST files from {results_path}")
+    logger.debug(f"Processed {len(missed_replicas)} MISSED files from {results_path}")
 
     if compress:
         final_path = bz2_compress_file(results_path)
         logger.debug(f"Compressed {final_path}")
-
 
     return True
 
@@ -166,7 +162,6 @@ def guess_replica_info(
     Returns a ``tuple`` of which the first element is the scope of the
     replica and the second element is its name.
     """
-
 
     items = path.split('/')
     if len(items) == 1:
