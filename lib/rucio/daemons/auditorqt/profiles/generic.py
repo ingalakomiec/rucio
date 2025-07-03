@@ -14,7 +14,9 @@
 
 """Generic auditor profiles."""
 
-import datetime
+import logging
+import os
+from datetime import datetime, timedelta
 from typing import Optional
 
 def generic_auditor(
@@ -25,50 +27,57 @@ def generic_auditor(
         date: datetime,
         cache_dir: str,
         results_dir: str
-) -> None:
-    '''
-    Downloads the dump for the given ddmendpoint. If this endpoint does not
-    follow the standardized method to publish the dumps it should have an
-    entry in the `configuration` object describing how to download the dump.
+) -> Optional[str]:
 
-    `rse` is the DDMEndpoint name.
+    """
+    `rse` is the RSE name
 
-    `configuration` is a RawConfigParser subclass.
+    'keep_dumps' keep RSE and Rucio dumps on cache or not
+
+    'delta' How many days older/newer than the RSE dump must the Rucio replica dumps be
 
     `date` is a datetime instance with the date of the desired dump or None
-    to download the latest available dump.
+    to download the latest available dump
 
-    `destdir` is the directory where the dump will be saved (the final component
-    in the path is created if it doesn't exist).
+    'cache_dir' dierectory where the dumps are cached
 
-    Return value: a tuple with the filename and a datetime instance with
-    the date of the dump.
-    '''
+    `results_dir` is the directory where the results of the consistency check will be saved
+
+    Return value: path to results
+    """
+
+    logger = logging.getLogger('generic_auditor')
+
+    if date is None:
+        date = datetime.now()
+    delta = timedelta(delta)
 
 #   paths to rse and rucio dumps
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
-
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
-
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
+    # cached_dumps ...
 
-    lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
 
-    file_lost_files = open(results_dir+'/lost_files', 'w')
-    file_lost_files.writelines(lost_files)
-    file_lost_files.close()
 
-    file_dark_files = open(results_dir+'/dark_files', 'w')
-    file_dark_files.writelines(dark_files)
-    file_dark_files.close()
+    result_file_name = f"result.{rse}_{date:%Y%m%d}"
+    results_path = f"{results_dir}/{result_file_name}"
 
-    file_results = open(results_dir+'/result.DESY-ZN_DATADISK_20250127', 'w')
+    if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
+        logger.warning(f"Consistency check for {rse}, dump dated {date_rse:%d-%m-%Y}, already done. Skipping consistency check.")
+#        remove_cached_dumps(cached_dumps)
+        return results_path
+
+    missed_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
+
+    file_results = open(results_path, 'w')
+
     for k in range(len(dark_files)):
         file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
-    for k in range(len(lost_files)):
-        file_results.write('LOST'+(lost_files[k]).replace("/",",",1))
+    for k in range(len(missed_files)):
+        file_results.write('MISSED'+(lost_files[k]).replace("/",",",1))
 
     file_results.close()
 
@@ -113,11 +122,11 @@ def consistency_check(
 
     print("consistency check")
 
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
+#    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
 
     out = dict()
-
+    """
     i = 0
 
     for k in rucio_dump_before[0]:
@@ -152,7 +161,7 @@ def consistency_check(
         i+=1
 
     del rucio_dump_after
-
+    """
     lost_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
 
