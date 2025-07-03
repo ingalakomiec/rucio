@@ -13,8 +13,7 @@
 # limitations under the License.
 
 """
-The auditor daemon is the one responsible for the detection of inconsistencies
-on storage, i.e.: dark data discovery.
+The auditor daemon is the one responsible for the detection of inconsistencies on storage.
 """
 
 import functools
@@ -125,11 +124,7 @@ def run_once(
 
     rses_to_process = get_rses_to_process(rses)
 
-#    for rse in rses_to_process:
-#        print(rse)
-
     rses_names = [entry['rse'] for entry in rses_to_process]
-#    print(rses_names)
 
     if not config_has_section('auditor'):
         raise NoSectionError("Auditor section required in config tu run te auditor daemon.")
@@ -149,30 +144,13 @@ def run_once(
     except KeyError:
         logger(logging.ERROR, 'Invalid auditor profile name \''+profile+'\'')
 
-# loop over all rses
-    """
+    # loop over all rses
     for rse in rses_names:
         try:
-            profile = profile_maker(nprocs, rse, keep_dumps, delta, cache_dir, results_dir)
+            profile = profile_maker(nprocs, rse, keep_dumps, delta, date, cache_dir, results_dir)
         except RucioException:
             logger(logging.ERROR, 'Invalid configuration for profile \''+profile+'\'')
             raise
-    """
-#without an rse loop - just for tests
-
-#    rse='AMAZON-BOTO'
-#s3://s3.amazonaws.com:80rucio_bucketdumps/dump_20250515
-
-
-    rse='XRD1'
-#root://xrd1:1094//ruciodumps/dump_20250515
-
-
-    try:
-       profile = profile_maker(nprocs, rse, keep_dumps, delta, date, cache_dir, results_dir)
-    except RucioException:
-        logger(logging.ERROR, 'Invalid configuration for profile \''+profile+'\'')
-        raise
 
     return True
 
