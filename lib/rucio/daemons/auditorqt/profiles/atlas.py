@@ -77,6 +77,7 @@ def atlas_auditor(
         rse: str,
         keep_dumps: bool,
         delta: timedelta,
+        date: datetime,
         cache_dir: str,
         results_dir: str
 ) -> Optional[str]:
@@ -101,7 +102,6 @@ def atlas_auditor(
 
     logger = logging.getLogger('atlas_auditor')
 
-    date = datetime.today()
     delta = timedelta(delta)
 
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
@@ -114,12 +114,12 @@ def atlas_auditor(
 
     rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
-    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date - delta, cache_dir)
+    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
     rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
 
 
-    result_file_name = f"result.{rse}_{date:%Y%m%d}"
+    result_file_name = f"result.{rse}_{date_rse:%Y%m%d}"
     results_path = f"{results_dir}/{result_file_name}"
 
 

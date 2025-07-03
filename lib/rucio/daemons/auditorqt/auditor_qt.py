@@ -23,6 +23,7 @@ import os
 import socket
 import threading
 from configparser import NoSectionError
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
 from rucio.common.logging import setup_logging
@@ -49,6 +50,7 @@ def auditor_qt(
     rses: str,
     keep_dumps: bool,
     delta: int,
+    date: datetime,
     profile: str,
     once: bool,
     sleep_time: int
@@ -63,6 +65,7 @@ def auditor_qt(
                        (default: False).
     :param delta:      How many days older/newer than the RSE dump
                        must the Rucio replica dumps be (default: 3).
+    :param date:       The date of the RSE dump, for which the consistency check should be done.
     :param profile:    Which profile to use (default: atlas).
     :param once:       Whether to execute once and exit.
     :param sleep_time: Number of seconds to sleep before restarting.
@@ -79,6 +82,7 @@ def auditor_qt(
             rses=rses,
             keep_dumps=keep_dumps,
             delta=delta,
+            date=date,
             profile=profile
         )
     )
@@ -88,6 +92,7 @@ def run_once(
     rses: str,
     keep_dumps: bool,
     delta: int,
+    date: datetime,
     profile: str,
     *,
     heartbeat_handler: 'HeartbeatHandler',
@@ -107,6 +112,7 @@ def run_once(
                               (default: False).
     :param delta:             How many days older/newer than the RSE dump
                               must the Rucio replica dumps be (default: 3).
+    :param date:              The date of the RSE dump, for which the consistency check should be done.
     :param profile:           Which profile to use (default: atlas).
     :param heartbeat_handler: A HeartbeatHandler instance.
     :param activity:          Activity to work on.
@@ -118,6 +124,8 @@ def run_once(
         raise RuntimeError("No Process to Run")
 
     rses_to_process = get_rses_to_process(rses)
+
+    print("DATEEE:", date)
 
 #    for rse in rses_to_process:
 #        print(rse)
@@ -163,7 +171,7 @@ def run_once(
 
 
     try:
-       profile = profile_maker(nprocs, rse, keep_dumps, delta, cache_dir, results_dir)
+       profile = profile_maker(nprocs, rse, keep_dumps, delta, date, cache_dir, results_dir)
     except RucioException:
         logger(logging.ERROR, 'Invalid configuration for profile \''+profile+'\'')
         raise
@@ -176,6 +184,7 @@ def run(
     rses: str,
     keep_dumps: bool = False,
     delta: int = 3,
+    date: datetime = None,
     profile: str = "atlas",
     once: bool = False,
     sleep_time: int = 86400
@@ -191,6 +200,7 @@ def run(
                        (default: False).
     :param delta:      How many days older/newer than the RSE dump
                        must the Rucio replica dumps be (default: 3).
+    :param date:       The date of the RSE dump, for which the consistency check should be done.
     :param profile:    Which profile to use (default: atlas).
     :param once:       Whether to execute once and exit.
     :param sleep_time: Number of seconds to sleep before restarting.
@@ -212,6 +222,7 @@ def run(
                 'rses': rses,
                 'keep_dumps': keep_dumps,
                 'delta': delta,
+                'date': date,
                 'profile': profile,
                 'sleep_time': sleep_time,
                 'once': once
