@@ -258,12 +258,13 @@ def protocol(url: str) -> str:
 
     return proto
 
-def remove_cached_dump(path: str) -> None:
+def remove_cached_dumps(paths: []) -> None:
 
     logger = logging.getLogger('auditor: atlas_specific.dumps.remove_cached_dump')
-    os.remove(path)
 
-    logger.debug(f"Removing dump: {path}")
+    for path in paths:
+        os.remove(path)
+        logger.debug(f"Removing dump: {path}")
 
 
     return True
