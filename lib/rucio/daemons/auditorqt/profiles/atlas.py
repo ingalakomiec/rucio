@@ -82,22 +82,20 @@ def atlas_auditor(
         results_dir: str
 ) -> Optional[str]:
     '''
-    Downloads the dump for the given ddmendpoint. If this endpoint does not
-    follow the standardized method to publish the dumps it should have an
-    entry in the `configuration` object describing how to download the dump.
+    `rse` is the RSE name
 
-    `rse` is the DDMEndpoint name.
+    'keep_dumps' keep RSE and Rucio dumps on cache or not
 
-    `configuration` is a RawConfigParser subclass.
+    'delta' How many days older/newer than the RSE dump must the Rucio replica dumps be
 
     `date` is a datetime instance with the date of the desired dump or None
-    to download the latest available dump.
+    to download the latest available dump
 
-    `destdir` is the directory where the dump will be saved (the final component
-    in the path is created if it doesn't exist).
+    'cache_dir' dierectory where the dumps are cached
 
-    Return value: a tuple with the filename and a datetime instance with
-    the date of the dump.
+    `results_dir` is the directory where the results of the consistency check will be saved
+
+    Return value: path to results
     '''
 
     logger = logging.getLogger('atlas_auditor')
@@ -110,7 +108,6 @@ def atlas_auditor(
 
 #    configuration = parse_configuration()
 #    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
-
 
     rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
@@ -127,15 +124,15 @@ def atlas_auditor(
         remove_cached_dumps(cached_dumps)
         return results_path
 
-    lost_files, dark_files = consistency_check(rucio_dump_before_path_tmp, rse_dump_path_tmp, rucio_dump_after_path_tmp)
+    missed_files, dark_files = consistency_check(rucio_dump_before_path_tmp, rse_dump_path_tmp, rucio_dump_after_path_tmp)
 
     file_results = open(results_path, 'w')
 
     for k in range(len(dark_files)):
         file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
-    for k in range(len(lost_files)):
-        file_results.write('LOST'+(lost_files[k]).replace("/",",",1))
+    for k in range(len(missed_files)):
+        file_results.write('MISSED'+(lost_files[k]).replace("/",",",1))
 
     file_results.close()
 
@@ -198,11 +195,11 @@ def fetch_rucio_dump(
 
     logger = logging.getLogger('auditor.fetch_rucio_dump')
 
-
-#    url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
     url = get_rucio_dump_url(date, rse)
-    # the line below just for tests
-    url = 'https://learnpython.com/blog/python-pillow-module/1.jpg'
+
+    # two lines below just for tests
+    # url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
+    url = "https://learnpython.com/blog/python-pillow-module/1.jpg"
 
     # hash added to create a unic filename
     hash = hashlib.sha1(url.encode()).hexdigest()
@@ -211,10 +208,10 @@ def fetch_rucio_dump(
     path = f"{cache_dir}/{filename}"
 
     if not os.path.exists(path):
-        logging.debug('Trying to download: %s for %s', url, rse)
+        logging.debug(f"Trying to download: {url} for {rse}")
         download_rucio_dump(url, cache_dir, filename)
     else:
-        logger.debug('Taking Rucio Replica Dump %s for %s from cache', path, rse)
+        logger.debug(f"Taking Rucio Replica Dump {path} for {rse} from cache")
 
     return path
 
@@ -230,7 +227,8 @@ def prepare_rse_dump(
     dump_path: str
 ) -> []:
 
-    print("preparing rse dump")
+    logger = logging.getLogger('auditor.prepare_rse_dump')
+    logger.debug("Preparing RSE dump")
 
     file_rse_dump = open(dump_path, 'rt')
     rse_dump = file_rse_dump.readlines()
@@ -243,7 +241,8 @@ def prepare_rucio_dump(
     dump_path: str
 ) -> [[],[]]:
 
-    print("preparing rucio dump")
+    logger = logging.getLogger('auditor.prepare_rucio_dump')
+    logger.debug("Preparing Rucio dump")
 
     rucio_dump = [[],[]]
 
@@ -264,8 +263,8 @@ def consistency_check(
     rucio_dump_after_path: str
 ) -> ([],[]):
 
-    print("consistency check")
-
+    logger = logging.getLogger('auditor.consistency_check')
+    logger.debug("Consistency check")
 
 #    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 

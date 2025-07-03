@@ -60,12 +60,6 @@ def function(
 
     import rucio.daemons.auditor
 
-
-#    print(nprocs)
-#    print(rses)
-#    print(keep_dumps)
-#    print(delta)
-#    nprocs = args.nprocs
     if nprocs < 1:
         raise RuntimeError("No Processes to Run")
 
@@ -226,10 +220,6 @@ def atlas_auditor_old(
         cache_dir: str,
         results_dir: str
 ) -> None:
-
-    print("atlas auditor old")
-#    parser = get_parser()
-#    args = parser.parse_args()
 
     function(nprocs,
         rse,

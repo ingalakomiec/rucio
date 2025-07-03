@@ -58,9 +58,9 @@ def auditor_qt(
 
     :param nprocs:     Number of subprocesses, each subprocess checks a fraction of the DDM.
                        Endpoints in sequence (default: 1).
-    :param rses:       RSEs to check specified as an RSE expression 
+    :param rses:       RSEs to check specified as an RSE expression
                        (default: check all RSEs).
-    :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache 
+    :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache
                        (default: False).
     :param delta:      How many days older/newer than the RSE dump
                        must the Rucio replica dumps be (default: 3).
@@ -97,12 +97,7 @@ def run_once(
     heartbeat_handler: 'HeartbeatHandler',
     activity: Optional[str]
 ) -> bool:
-    """Add - what is auditor-QT doing?
-
-    Auditor-QT - add a description
-
-    worker number - number of worker threads; worker_number == 0 --> only one worker thread
-
+    """
     :param nprocs:            Number of subprocesses, each subprocess checks a fraction of the DDM.
                               Endpoints in sequence (default: 1).
     :param rses:              RSEs to check specified as an RSE expression
@@ -117,6 +112,8 @@ def run_once(
     :param activity:          Activity to work on.
     :returns:                 A boolean flag indicating whether the daemon should go to sleep.
     """
+
+    # worker number - number of worker threads; worker_number == 0 --> only one worker thread
     worker_number, _, logger = heartbeat_handler.live()
 
     if nprocs < 1:
@@ -140,16 +137,15 @@ def run_once(
 
     try:
         profile_maker = PROFILE_MAP[profile]
-
     except KeyError:
-        logger(logging.ERROR, 'Invalid auditor profile name \''+profile+'\'')
+        logger(logging.ERROR, f"Invalid auditor profile name '{profile}'")
 
     # loop over all rses
     for rse in rses_names:
         try:
             profile = profile_maker(nprocs, rse, keep_dumps, delta, date, cache_dir, results_dir)
         except RucioException:
-            logger(logging.ERROR, 'Invalid configuration for profile \''+profile+'\'')
+            logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
             raise
 
     return True
@@ -186,7 +182,7 @@ def run(
     hostname = socket.gethostname()
     sanity_check(executable='rucio-auditorqt', hostname=hostname)
 
-    logging.info('Auditor-QT starting 1 thread')
+    logging.info("Auditor-QT starting 1 thread")
 
     # Creating only one thread but putting it in a list to conform to how
     # other daemons are run.
@@ -229,10 +225,4 @@ def get_rses_to_process(
     else:
         rses_to_process = RSEClient().list_rses()
 
-# list_rses as in reaper
-#    rses_to_process_reaper = list_rses()
-#    print("RSEs to process REAPER VERSION")
-#    print(rses_to_process_reaper)
-
     return rses_to_process
-
