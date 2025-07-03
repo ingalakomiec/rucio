@@ -25,7 +25,7 @@ from rucio.common import config
 from rucio.common.types import InternalAccount, InternalScope
 from rucio.common.utils import chunks
 from rucio.core.quarantined_replica import add_quarantined_replicas
-#from rucio.core.replica import declare_bad_file_replicas, list_replicas
+from rucio.core.replica import declare_bad_file_replicas, list_replicas
 from rucio.core.rse import get_rse_id, get_rse_usage
 from rucio.db.sqla.constants import BadFilesStatus
 
@@ -58,6 +58,7 @@ def process_output(
     logger = logging.getLogger('atlas_auditor output.process_output')
 
     dark_replicas = []
+# change the name lost, maybe missed
     lost_replicas = []
     try:
         with open(results_path) as f:
@@ -93,7 +94,7 @@ def process_output(
     # significant, there is most likely an issue with the site dump.
     found_error = False
     if len(dark_replicas) > threshold * usage['files']:
-       logger.warning(f"Number of LOST files is exceeding threshold: {results_path}")
+       logger.warning(f"Number of DARK files is exceeding threshold: {results_path}")
        found_error = True
     if found_error and sanity_check:
         raise AssertionError("sanity check failed")
@@ -101,21 +102,18 @@ def process_output(
     # While converting LOST replicas to PFNs, entries that do not
     # correspond to a replica registered in Rucio are silently dropped.
 
-
-    """
-
+# maybe split into two lines
     lost_pfns = [r['rses'][rse_id][0] for chunk in chunks(lost_replicas, 1000) for r in list_replicas(chunk) if rse_id in r['rses']]
 
 
     for chunk in chunks(dark_replicas, 1000):
         add_quarantined_replicas(rse_id=rse_id, replicas=chunk)
 
-    """
 
     logger.debug(f"Processed {len(dark_replicas)} DARK files from {results_path}")
 
-#    declare_bad_file_replicas(lost_pfns, reason='Reported by Auditor',
-#                              issuer=InternalAccount('root'), status=BadFilesStatus.SUSPICIOUS)
+    declare_bad_file_replicas(lost_pfns, reason='Reported by Auditor',
+                              issuer=InternalAccount('root'), status=BadFilesStatus.SUSPICIOUS)
 
     logger.debug(f"Processed {len(lost_replicas)} LOST files from {results_path}")
 
