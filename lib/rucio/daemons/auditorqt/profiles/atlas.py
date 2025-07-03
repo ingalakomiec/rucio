@@ -29,7 +29,7 @@ from typing import Any, Optional, Union
 from rucio.common.constants import RseAttr
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
-from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump, remove_cached_dumps
 from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 """
@@ -117,17 +117,15 @@ def atlas_auditor(
     rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
     rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
-
+    cached_dumps = [rse_dump_path_tmp, rucio_dump_before_path_tmp, rucio_dump_after_path_tmp]
 
     result_file_name = f"result.{rse}_{date_rse:%Y%m%d}"
     results_path = f"{results_dir}/{result_file_name}"
 
-
-
     if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
-        logger.warning(f"Consistency check for {rse}, dump dated {date:%d-%m-%Y}, already done. Skipping consistency check.")
+        logger.warning(f"Consistency check for {rse}, dump dated {date_rse:%d-%m-%Y}, already done. Skipping consistency check.")
+        remove_cached_dumps(cached_dumps)
         return results_path
-
 
     lost_files, dark_files = consistency_check(rucio_dump_before_path_tmp, rse_dump_path_tmp, rucio_dump_after_path_tmp)
 
@@ -141,9 +139,10 @@ def atlas_auditor(
 
     file_results.close()
 
-    process_output(rse, results_path, sanity_check = False)
+    process_output(rse, results_path)
 
-    print("END")
+    if not keep_dumps:
+        remove_cached_dumps(cached_dumps)
 
     return results_path
 
