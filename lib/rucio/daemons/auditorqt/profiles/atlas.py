@@ -81,7 +81,8 @@ def atlas_auditor(
         cache_dir: str,
         results_dir: str
 ) -> Optional[str]:
-    '''
+
+    """
     `rse` is the RSE name
 
     'keep_dumps' keep RSE and Rucio dumps on cache or not
@@ -96,7 +97,7 @@ def atlas_auditor(
     `results_dir` is the directory where the results of the consistency check will be saved
 
     Return value: path to results
-    '''
+    """
 
     logger = logging.getLogger('atlas_auditor')
 
