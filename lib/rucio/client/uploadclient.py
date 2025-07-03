@@ -867,7 +867,7 @@ class UploadClient:
         This method iterates over the provided items, each describing a local path and
         associated upload parameters, checks that each item has a valid path and RSE, and
         computes basic file details such as size and checksums. If the item is a directory
-        and `recursive` is set, the method calls `_recursive` to traverse subdirectories,
+        and `recursive` is set, the method calls `_collect_files_recursive` to traverse subdirectories,
         creating or attaching them as Rucio datasets or containers.
 
         Parameters
@@ -935,7 +935,7 @@ class UploadClient:
                     logger(logging.WARNING,
                            'Skipping %s because it has no files in it. Subdirectories are not supported.' % dname)
             elif os.path.isdir(path) and recursive:
-                files.extend(cast("list[FileToUploadWithCollectedInfoDict]", self._recursive(item)))
+                files.extend(cast("list[FileToUploadWithCollectedInfoDict]", self._collect_files_recursive(item)))
             elif os.path.isfile(path) and not recursive:
                 file = self._collect_file_info(path, item)
                 files.append(file)
@@ -1324,10 +1324,7 @@ class UploadClient:
         if self.tracing:
             send_trace(trace, self.client.trace_host, self.client.user_agent)
 
-    def _recursive(
-            self,
-            item: "FileToUploadDict"
-    ) -> list["FileToUploadWithCollectedAndDatasetInfoDict"]:
+    def _collect_files_recursive(self, item: "FileToUploadDict") -> list["FileToUploadWithCollectedAndDatasetInfoDict"]:
         """
         Recursively inspects a folder and creates corresponding Rucio datasets or containers.
 
@@ -1382,10 +1379,9 @@ class UploadClient:
         if path and isinstance(path, str):
             if path[-1] == '/':
                 path = path[0:-1]
-            i = 0
             path = os.path.abspath(path)
             for root, dirs, fnames in os.walk(path):
-                if len(dirs) > 0 and len(fnames) > 0 and i == 0:
+                if len(dirs) > 0 and len(fnames) > 0:
                     self.logger(logging.ERROR, 'A container can only have either collections or files, not both')
                     raise InputValidationError('Invalid input folder structure')
                 if len(fnames) > 0:
@@ -1406,7 +1402,6 @@ class UploadClient:
                 elif len(dirs) == 0 and len(fnames) == 0:
                     self.logger(logging.WARNING, 'The folder %s is empty, skipping' % root)
                     continue
-                i += 1
         # if everything went ok, replicate the folder structure in Rucio storage
         for dataset in datasets:
             try:
