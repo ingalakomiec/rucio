@@ -170,7 +170,7 @@ def fetch_no_object_store(
     if date is None:
         logger.debug('Looking for site dumps in: "%s"', base_url)
         dumps = get_all_dumps(base_url)
-        url, date =  get_newest_dump(base_url, links)
+        url, date =  get_newest_dump(base_url, dumps)
     else:
         url = f"{base_url}/dump_{date:%Y%m%d}"
 

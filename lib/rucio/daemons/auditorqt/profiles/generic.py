@@ -22,6 +22,7 @@ def generic_auditor(
         rse: str,
         keep_dumps: bool,
         delta: int,
+        date: datetime,
         cache_dir: str,
         results_dir: str
 ) -> None:
