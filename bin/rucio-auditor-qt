@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-The auditor daemon is the one responsible for the detection of inconsistencies on storage
+The auditor daemon is the one responsible for the detection of inconsistencies on storage.
 """
 
 import argparse
@@ -39,6 +39,9 @@ def get_parser() -> argparse.ArgumentParser:
 
             # Check all Tier 2 DATADISKs, except "BLUE_DATADISK" and "RED_DATADISK"
             %(prog)s --rses "tier=2&type=DATADISK\(BLUE_DATADISK|RED_DATADISK)"
+
+            # Check an RSE (for example: GOEGRID_DATADISK) specifing the date of the RSE dump
+            %(prog)s --rses "GOEGRID_DATADISK" --date 2025-05-25
             """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
