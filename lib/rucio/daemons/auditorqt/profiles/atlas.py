@@ -129,7 +129,7 @@ def atlas_auditor(
         return results_path
 
 
-    lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
+    lost_files, dark_files = consistency_check(rucio_dump_before_path_tmp, rse_dump_path_tmp, rucio_dump_after_path_tmp)
 
     file_results = open(results_path, 'w')
 
@@ -142,6 +142,8 @@ def atlas_auditor(
     file_results.close()
 
     process_output(rse, results_path, sanity_check = False)
+
+    print("END")
 
     return results_path
 
@@ -266,10 +268,11 @@ def consistency_check(
     print("consistency check")
 
 
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
+#    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
     out = dict()
 
+    """
     i = 0
 
     for k in rucio_dump_before[0]:
@@ -304,7 +307,7 @@ def consistency_check(
         i+=1
 
     del rucio_dump_after
-
+    """
     lost_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
 
