@@ -14,8 +14,17 @@
 
 """Generic auditor profiles."""
 
-import datetime
+import logging
+import hashlib
+import os
+import re
+import shutil
+
+from datetime import datetime, timedelta
 from typing import Optional
+
+from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
+from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 def generic_auditor(
         nprocs: int,
@@ -25,60 +34,124 @@ def generic_auditor(
         date: datetime,
         cache_dir: str,
         results_dir: str
-) -> None:
-    '''
-    Downloads the dump for the given ddmendpoint. If this endpoint does not
-    follow the standardized method to publish the dumps it should have an
-    entry in the `configuration` object describing how to download the dump.
+) -> Optional[str]:
 
-    `rse` is the DDMEndpoint name.
+    """
+    `rse` is the RSE name
 
-    `configuration` is a RawConfigParser subclass.
+    'keep_dumps' keep RSE and Rucio dumps on cache or not
+
+    'delta' How many days older/newer than the RSE dump must the Rucio replica dumps be
 
     `date` is a datetime instance with the date of the desired dump or None
-    to download the latest available dump.
+    to download the latest available dump
 
-    `destdir` is the directory where the dump will be saved (the final component
-    in the path is created if it doesn't exist).
+    'cache_dir' dierectory where the dumps are cached
 
-    Return value: a tuple with the filename and a datetime instance with
-    the date of the dump.
-    '''
+    `results_dir` is the directory where the results of the consistency check will be saved
+
+    Return value: path to results
+    """
+
+    logger = logging.getLogger('generic_auditor')
+
+    if date is None:
+        date = datetime.now()
+
+    delta = timedelta(delta)
 
 #   paths to rse and rucio dumps
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
-
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
-
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
 
+    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse_dump_path, rse, cache_dir, date)
+    rucio_dump_before_path_tmp = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - delta, cache_dir)
+    rucio_dump_after_path_tmp = fetch_rucio_dump(rucio_dump_after_path, rse, date_rse + delta, cache_dir)
 
-    lost_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
+    cached_dumps = [rse_dump_path_tmp, rucio_dump_before_path_tmp, rucio_dump_after_path_tmp]
 
-    file_lost_files = open(results_dir+'/lost_files', 'w')
-    file_lost_files.writelines(lost_files)
-    file_lost_files.close()
+    result_file_name = f"result.{rse}_{date:%Y%m%d}"
+    results_path = f"{results_dir}/{result_file_name}"
 
-    file_dark_files = open(results_dir+'/dark_files', 'w')
-    file_dark_files.writelines(dark_files)
-    file_dark_files.close()
+    if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
+        logger.warning(f"Consistency check for {rse}, dump dated {date_rse:%d-%m-%Y}, already done. Skipping consistency check.")
+        remove_cached_dumps(cached_dumps)
+        return results_path
 
-    file_results = open(results_dir+'/result.DESY-ZN_DATADISK_20250127', 'w')
+    missed_files, dark_files = consistency_check(rucio_dump_before_path, rse_dump_path, rucio_dump_after_path)
+
+    file_results = open(results_path, 'w')
+
     for k in range(len(dark_files)):
         file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
-    for k in range(len(lost_files)):
-        file_results.write('LOST'+(lost_files[k]).replace("/",",",1))
+    for k in range(len(missed_files)):
+        file_results.write('MISSED'+(missed_files[k]).replace("/",",",1))
 
     file_results.close()
 
-    return True
+    # taken from the atlas profile
+    process_output(rse, results_path)
+
+    if not keep_dumps:
+        # taken from the atlas profile
+        remove_cached_dumps(cached_dumps)
+
+    return results_path
+
+def fetch_rse_dump(
+    source_path: str,
+    rse: str,
+    cache_dir: str,
+    date: Optional[datetime] = None,
+    ) -> tuple[str, datetime]:
+
+    logger = logging.getLogger('auditor.fetch_rse_dump')
+
+    if date is None:
+        date = datetime.now()
+
+    # hash added to get a distinct file name
+    hash = hashlib.sha1(source_path.encode()).hexdigest()
+    filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
+    filename = re.sub(r'\W', '-', filename)
+    final_path = f"{cache_dir}/{filename}"
+
+    shutil.copyfile(source_path, final_path)
+
+    logger.debug(f"RSE dump taken from: {source_path} and cached in: {final_path}")
+
+    return (final_path, date)
+
+def fetch_rucio_dump(
+    source_path: str,
+    rse: str,
+    date: "datetime",
+    cache_dir: str
+) -> str:
+
+    logger = logging.getLogger('auditor.fetch_rucio_dump')
+
+    # hash added to get a distinct file name
+    hash = hashlib.sha1(source_path.encode()).hexdigest()
+    filename = f"{rse}_{date:%d-%m-%Y}_{hash}"
+    filename = re.sub(r'\W', '-', filename)
+    final_path = f"{cache_dir}/{filename}"
+
+    shutil.copyfile(source_path, final_path)
+
+    logger.debug(f"Rucio dump before taken from: {source_path} and cached in: {final_path}")
+
+    return final_path
+
 
 def prepare_rse_dump(
     dump_path: str
 ) -> []:
 
-    print("preparing rse dump")
+    logger = logging.getLogger('auditor.prepare_rse_dump')
+    logger.debug("Preparing RSE dump")
 
     file_rse_dump = open(dump_path, 'rt')
     rse_dump = file_rse_dump.readlines()
@@ -91,7 +164,9 @@ def prepare_rucio_dump(
     dump_path: str
 ) -> [[],[]]:
 
-    print("preparing rucio dump")
+    logger = logging.getLogger('auditor.prepare_rucio_dump')
+    logger.debug("Preparing Rucio dump")
+
     rucio_dump = [[],[]]
 
     with open(dump_path, 'rt') as file_rucio_dump:
@@ -111,7 +186,8 @@ def consistency_check(
     rucio_dump_after_path: str
 ) -> ([],[]):
 
-    print("consistency check")
+    logger = logging.getLogger('auditor.consistency_check')
+    logger.debug("Consistncy check")
 
     rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
@@ -153,9 +229,9 @@ def consistency_check(
 
     del rucio_dump_after
 
-    lost_files = [k for k in out if out[k]==23]
+    missed_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
 
-    results = (lost_files, dark_files)
+    results = (missed_files, dark_files)
 
     return results
