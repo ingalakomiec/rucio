@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""fetching ATLAS-RSE dumps"""
+"""action on RSE and Rucio dumps: fetching, removing cached dumps"""
 
 import gfal2
 import glob
@@ -72,7 +72,6 @@ def http_links(base_url: str) -> list[str]:
             links.append(link)
     return links
 
-
 protocol_funcs = {
     'davs': {
         'links': gfal_links,
@@ -110,14 +109,12 @@ def download_rucio_dump(
 
     return True
 
-
-
 def fetch_object_store(
     rse: str,
     base_url: str,
     cache_dir: str,
     date: Optional[datetime] = None,
-):
+) -> tuple[str, datetime]:
 
     # on objectstores can't list dump files, so try the last N dates
 
@@ -164,7 +161,7 @@ def fetch_no_object_store(
     base_url: str,
     cache_dir: str,
     date: Optional[datetime] = None,
-):
+) -> tuple[str, datetime]:
 
     logger = logging.getLogger('auditor.fetch_no_object_store')
 
@@ -194,7 +191,7 @@ def fetch_no_object_store(
 def generate_url(
     rse: str
 #    config: RawConfigParser
-) -> tuple[str, str]:
+) -> str:
 
     site = rse.split('_')[0]
 #    uncomment the line below when the config part is added
@@ -265,6 +262,5 @@ def remove_cached_dumps(paths: []) -> None:
     for path in paths:
         os.remove(path)
         logger.debug(f"Removing dump: {path}")
-
 
     return True
