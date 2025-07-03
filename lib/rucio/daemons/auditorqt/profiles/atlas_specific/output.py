@@ -30,7 +30,6 @@ from rucio.core.rse import get_rse_id, get_rse_usage
 from rucio.db.sqla.constants import BadFilesStatus
 
 
-
 def process_output(
     rse: str,
     results_path: str,
