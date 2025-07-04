@@ -17,20 +17,25 @@
 import gfal2
 import glob
 import hashlib
+import io
 import logging
 import operator
 import os
 import re
 
+
 from configparser import RawConfigParser
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
+from magic import Magic
 from typing import IO, Optional
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, gfal_download_to_file, http_download_to_file, temp_file
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file, is_plaintext
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
+
+CHUNK_SIZE = 4194304 # 4MiB
 
 class _LinkCollector(HTMLParser):
     def __init__(self):
@@ -72,14 +77,73 @@ def http_links(base_url: str) -> list[str]:
             links.append(link)
     return links
 
+
+def gfal_download_to_file_with_decoding(
+    url: str,
+    file_: "IO",
+    cache_dir: str
+) -> None:
+    '''
+    Download the file from 'url', store it in the file-like object 'file_' 
+    '''
+
+    logger = logging.getLogger('auditorqt.atlas_specific.dumps.gfal_download_to_file_auditor')
+    ctx = gfal2.creat_context()
+    decode = False
+
+    try:
+        gfal_file = ctx.open(url, 'r')
+    except gfal2.GError as e:
+        logger.error(f"Failed to open {url}: {str(e)}")
+
+    try:
+        chunk = gfal_file.read(CHUNK_SIZE)
+    except gfal2.GError:
+        if gfal2.GError.code == 70:
+            logger.debug(f"GError(70) raised, using GRIDFTP PLUGIN:STAT_ON_OPEN=False workaround to download {url}")
+            ctx.set_opt_boolean('GRIDFTP PLUGIN', 'STAT_ON_OPEN', False)
+            gfal_file = ctx.open(url, 'r')
+            chunk = gfal_file.read(CHUNK_SIZE)
+    except UnicodeDecodeError as e:
+        logger.error(f"UnicodeDecodeError occurred: {str(e)}, for url: {url}")
+        decode = True
+
+    if not decode:
+            while chunk:
+                file_.write(chunk)
+                chunk = gfal_file.read(CHUNK_SIZE)
+
+    else:
+        # hash added to get a distinct file name
+        hash = hashlib.sha1(url.encode()).hexdigest()
+        file_tmp_name = f"file_tmp_{hash}"
+        file_tmp_name = re.sub(r'\W', '-', file_tmp_name)
+        path = f"{cache_dir}/{file_tmp_name}"
+        ctx.filecopy(url,f"file://{path}")
+
+        with open(path, 'rb') as f:
+            chunk = f.read(CHUNK_SIZE)
+            while chunk:
+                m = Magic(mime_encoding = True)
+                encoding = m.from_buffer(chunk)
+                chunk = chunk.decode(encoding)
+                file_.write(chunk)
+                chunk = f.read(CHUNK_SIZE)
+        f.close()
+        os.remove(path)
+        logger.debug(f"url: {url} encoded")
+
+    return True
+
+
 protocol_funcs = {
     'davs': {
         'links': gfal_links,
-        'download': gfal_download_to_file,
+        'download': gfal_download_to_file_with_decoding,
     },
     'root': {
         'links': gfal_links,
-        'download': gfal_download_to_file,
+        'download': gfal_download_to_file_with_decoding,
     },
     'http': {
         'links': http_links,
@@ -91,12 +155,15 @@ protocol_funcs = {
     },
 }
 
-def download(url: str, filename: IO) -> None:
+def download(url: str, filename: IO, cache_dir: Optional[str]) -> None:
     """
     Given the URL 'url' downloads its contents on 'filename'
     """
 
-    return protocol_funcs[protocol(url)]['download'](url, filename)
+    if protocol(url) is "http*":
+        return protocol_funcs[protocol(url)]['download'](url, filename)
+    else:
+        return protocol_funcs[protocol(url)]['download'](url, filename, cache_dir)
 
 def download_rucio_dump(
     url: str,
@@ -147,7 +214,7 @@ def fetch_object_store(
 
             try:
                 with temp_file(cache_dir, final_name=filename) as (f, _):
-                    download(url,f)
+                    download(url, f, cache_dir)
                 tries = 0
             except (HTTPDownloadFailed, gfal2.GError):
                 tries -= 1
@@ -181,7 +248,7 @@ def fetch_no_object_store(
     if not os.path.exists(path):
         logger.debug('Trying to download: %s for %s', url, rse)
         with temp_file(cache_dir, final_name=filename) as (f, _):
-            download(url, f)
+            download(url, f, cache_dir)
     else:
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
 
