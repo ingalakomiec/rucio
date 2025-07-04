@@ -28,7 +28,7 @@ from html.parser import HTMLParser
 from typing import IO, Optional
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, gfal_download_to_file, http_download_to_file, temp_file
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, gfal_download_to_file, http_download_to_file, smart_open, temp_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
