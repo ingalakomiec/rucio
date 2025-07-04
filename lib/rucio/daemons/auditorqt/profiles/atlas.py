@@ -27,10 +27,12 @@ from typing import Any, Optional, Union
 
 #from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
+from rucio.common.dumper import smart_open
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
+
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump, remove_cached_dumps
-from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+#from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 """
 _DUMPERCONFIGDIRS = list(
@@ -103,29 +105,27 @@ def atlas_auditor(
 
     delta = timedelta(delta)
 
-    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127'
-    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
-    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
-
 #    configuration = parse_configuration()
 #    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
 
-    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
+    rse_dump_path_cache, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
-    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
-    rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
+    rucio_dump_before_path_cache = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
+    rucio_dump_after_path_cache = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
-    cached_dumps = [rse_dump_path_tmp, rucio_dump_before_path_tmp, rucio_dump_after_path_tmp]
+    cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 
     result_file_name = f"result.{rse}_{date_rse:%Y%m%d}"
     results_path = f"{results_dir}/{result_file_name}"
 
     if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
         logger.warning(f"Consistency check for {rse}, dump dated {date_rse:%d-%m-%Y}, already done. Skipping consistency check.")
-        remove_cached_dumps(cached_dumps)
+        if not keep_dumps:
+            remove_cached_dumps(cached_dumps)
         return results_path
 
-    missed_files, dark_files = consistency_check(rucio_dump_before_path_tmp, rse_dump_path_tmp, rucio_dump_after_path_tmp)
+    missed_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+
 
     file_results = open(results_path, 'w')
 
@@ -137,7 +137,7 @@ def atlas_auditor(
 
     file_results.close()
 
-    process_output(rse, results_path)
+#    process_output(rse, results_path)
 
     if not keep_dumps:
         remove_cached_dumps(cached_dumps)
@@ -231,7 +231,7 @@ def prepare_rse_dump(
     logger = logging.getLogger('auditor.prepare_rse_dump')
     logger.debug("Preparing RSE dump")
 
-    file_rse_dump = open(dump_path, 'rt')
+    file_rse_dump = smart_open(dump_path)
     rse_dump = file_rse_dump.readlines()
     file_rse_dump.close()
 
@@ -247,7 +247,7 @@ def prepare_rucio_dump(
 
     rucio_dump = [[],[]]
 
-    with open(dump_path, 'rt') as file_rucio_dump:
+    with smart_open(dump_path) as file_rucio_dump:
 
         for line in file_rucio_dump:
             rucio_dump[0].append(line.split()[7]+'\n')
@@ -267,10 +267,10 @@ def consistency_check(
     logger = logging.getLogger('auditor.consistency_check')
     logger.debug("Consistency check")
 
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
+#    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
     out = dict()
-
+    """
 
     i = 0
 
@@ -283,7 +283,6 @@ def consistency_check(
     del rucio_dump_before
 
     rse_dump = prepare_rse_dump(rse_dump_path)
-
 
     i = 0
     for k in rse_dump:
@@ -306,6 +305,8 @@ def consistency_check(
         i+=1
 
     del rucio_dump_after
+
+    """
 
     missed_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
