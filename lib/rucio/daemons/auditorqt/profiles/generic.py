@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
-from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+#from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 def generic_auditor(
         nprocs: int,
@@ -92,7 +92,7 @@ def generic_auditor(
     file_results.close()
 
     # taken from the atlas profile
-    process_output(rse, results_path)
+#    process_output(rse, results_path)
 
     if not keep_dumps:
         # taken from the atlas profile
