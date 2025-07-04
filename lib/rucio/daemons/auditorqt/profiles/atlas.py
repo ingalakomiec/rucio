@@ -133,7 +133,7 @@ def atlas_auditor(
         file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
     for k in range(len(missed_files)):
-        file_results.write('MISSED'+(lost_files[k]).replace("/",",",1))
+        file_results.write('MISSED'+(missed_files[k]).replace("/",",",1))
 
     file_results.close()
 
@@ -267,11 +267,11 @@ def consistency_check(
     logger = logging.getLogger('auditor.consistency_check')
     logger.debug("Consistency check")
 
-#    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
+    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
     out = dict()
 
-    """
+
     i = 0
 
     for k in rucio_dump_before[0]:
@@ -306,10 +306,10 @@ def consistency_check(
         i+=1
 
     del rucio_dump_after
-    """
-    lost_files = [k for k in out if out[k]==23]
+
+    missed_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
 
-    results = (lost_files, dark_files)
+    results = (missed_files, dark_files)
 
     return results
