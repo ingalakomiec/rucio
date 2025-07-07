@@ -28,9 +28,11 @@ from html.parser import HTMLParser
 from typing import IO, Optional
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, gfal_download_to_file, http_download_to_file, smart_open, temp_file
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
+
+CHUNK_SIZE = 4194304 # 4MiB
 
 class _LinkCollector(HTMLParser):
     def __init__(self):
@@ -72,14 +74,63 @@ def http_links(base_url: str) -> list[str]:
             links.append(link)
     return links
 
+
+def gfal_download_to_file_with_decoding(
+    url: str,
+    file_: "IO"
+) -> None:
+    '''
+    Download the file from 'url', decode it as UTF-8, store it in the file-like object 'file_' 
+    '''
+
+    logger = logging.getLogger('auditorqt.atlas_specific.dumps.gfal_download_to_file_auditor')
+    ctx = gfal2.creat_context()
+
+    def _do_download(decode_utf8: bool):
+        try:
+            gfal_file = ctx.open(url, 'r')
+        except gfal2.GError as e:
+            logger.error(f"Failed to open {url}: {str(e)}")
+            raise
+
+        try:
+            chunk = gfal_file.read(CHUNK_SIZE)
+        except gfal2.GError as e:
+            if e.code == 70:
+                logger.debug(f"GError(70) raised, using GRIDFTP PLUGIN:STAT_ON_OPEN=False workaround to download {url}")
+                ctx.set_opt_boolean('GRIDFTP PLUGIN', 'STAT_ON_OPEN', False)
+                gfal_file = ctx.open(url, 'r')
+                chunk = gfal_file.read(CHUNK_SIZE)
+            else:
+                raise
+
+        while chunk:
+            if decode_utf8:
+                try:
+                    chunk = chunk.decode("utf-8")
+                except UnicodeDecodeError as e:
+                    logger.error(f"UTF-8 decode error from {url}: {str(e)}")
+                    raise
+            file_.write(chunk)
+            chunk = gfal_file.read(CHUNK_SIZE)
+
+    try:
+        _do_download(decode_utf8 = False)
+    except TypeError:
+        logger.debug(f"TypeError, retrying with UTF-8 decoding for {url}")
+        _do_download(decode_utf8 = True)
+
+    return True
+
+
 protocol_funcs = {
     'davs': {
         'links': gfal_links,
-        'download': gfal_download_to_file,
+        'download': gfal_download_to_file_with_decoding,
     },
     'root': {
         'links': gfal_links,
-        'download': gfal_download_to_file,
+        'download': gfal_download_to_file_with_decoding,
     },
     'http': {
         'links': http_links,
