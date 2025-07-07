@@ -77,7 +77,8 @@ def generic_auditor(
 
     if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
         logger.warning(f"Consistency check for {rse}, dump dated {date_rse:%d-%m-%Y}, already done. Skipping consistency check.")
-        remove_cached_dumps(cached_dumps)
+        if not keep_dumps:
+            remove_cached_dumps(cached_dumps)
         return results_path
 
     missed_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
@@ -218,6 +219,7 @@ def consistency_check(
     del rse_dump
 
     rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
+
 
     for k in rucio_dump_after[0]:
         if k in out:
