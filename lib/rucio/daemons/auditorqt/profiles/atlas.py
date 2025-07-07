@@ -105,19 +105,15 @@ def atlas_auditor(
 
     delta = timedelta(delta)
 
-    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
-    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24'
-    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30'
-
 #    configuration = parse_configuration()
 #    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
 
-    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, cache_dir, date)
+    rse_dump_path_cache, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
-    rucio_dump_before_path_tmp = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
-    rucio_dump_after_path_tmp = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
+    rucio_dump_before_path_cache = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
+    rucio_dump_after_path_cache = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
 
-    cached_dumps = [rse_dump_path, rucio_dump_before_path_tmp, rucio_dump_after_path_tmp]
+    cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 
     result_file_name = f"result.{rse}_{date_rse:%Y%m%d}"
     results_path = f"{results_dir}/{result_file_name}"
@@ -127,7 +123,8 @@ def atlas_auditor(
         remove_cached_dumps(cached_dumps)
         return results_path
 
-    missed_files, dark_files = consistency_check(rucio_dump_before_path_tmp, rse_dump_path, rucio_dump_after_path_tmp)
+    missed_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+
 
     file_results = open(results_path, 'w')
 
@@ -249,7 +246,7 @@ def prepare_rucio_dump(
 
     rucio_dump = [[],[]]
 
-    with open(dump_path, 'rt') as file_rucio_dump:
+    with smart_open(dump_path) as file_rucio_dump:
 
         for line in file_rucio_dump:
             rucio_dump[0].append(line.split()[7]+'\n')
@@ -272,8 +269,8 @@ def consistency_check(
 #    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
     out = dict()
-
     """
+
     i = 0
 
     for k in rucio_dump_before[0]:
@@ -283,10 +280,9 @@ def consistency_check(
         i+=1
 
     del rucio_dump_before
-    """
+
     rse_dump = prepare_rse_dump(rse_dump_path)
 
-    """
     i = 0
     for k in rse_dump:
         if k in out:
