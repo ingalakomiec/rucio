@@ -23,9 +23,11 @@ import operator
 import os
 import re
 
+
 from configparser import RawConfigParser
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
+from magic import Magic
 from typing import IO, Optional
 
 from rucio.common.constants import RseAttr
@@ -87,45 +89,64 @@ def gfal_download_to_file_with_decoding(
     logger = logging.getLogger('auditorqt.atlas_specific.dumps.gfal_download_to_file_auditor')
     ctx = gfal2.creat_context()
 
-
     def _do_download(decode: bool):
-
         try:
             gfal_file = ctx.open(url, 'r')
         except gfal2.GError as e:
             logger.error(f"Failed to open {url}: {str(e)}")
-            raise
 
         try:
             chunk = gfal_file.read(CHUNK_SIZE)
-        except gfal2.GError as e:
-            if e.code == 70:
+        except (UnicodeDecodeError, gfal2.GError):
+            if gfal2.GError.code == 70:
                 logger.debug(f"GError(70) raised, using GRIDFTP PLUGIN:STAT_ON_OPEN=False workaround to download {url}")
                 ctx.set_opt_boolean('GRIDFTP PLUGIN', 'STAT_ON_OPEN', False)
                 gfal_file = ctx.open(url, 'r')
                 chunk = gfal_file.read(CHUNK_SIZE)
+            if UnicodeDecodeError:
+                decode = True
+                logger.debug(f"UnicodeDecodeError occurred, retrying with decoding for {url}")
+                # FOR TESTS
+                chunk = gfal_file.read(CHUNK_SIZE) # didive into binary chunks?
+                m = Magic(mime_encoding=True)
+#                encoding = m.from_buffer(chunk)
+#                chunk = chunk.decode('utf-16')
+                while chunk:
+                    file_.write(chunk)
+                    chunk = gfal_file.read(CHUNK_SIZE)
+                # END OF TESTS
             else:
                 raise
 
-        while chunk:
-            if decode:
-                encoding = getattr(chunk, 'encoding', None)
-                if encoding:
-                    logger.debug(f"Detected {encoding} encoding for {url}, decoding will be applied")
-                    try:
-                        chunk = chunk.decode(encoding)
-                    except UnicodeDecodeError as e:
-                        logger.error(f"Decode error from {url}: {str(e)}")
-                        raise
+        if not decode:
+            while chunk:
+                # FOR TESTS of decoding
+                chunk = chunk.encode('utf-16')
+                m = Magic(mime_encoding=True)
+                encoding = m.from_buffer(chunk)
+                chunk = chunk.decode(encoding)
+                # END TESTS
+                file_.write(chunk)
+                chunk = gfal_file.read(CHUNK_SIZE)
 
-            file_.write(chunk)
-            chunk = gfal_file.read(CHUNK_SIZE)
+        else:
+            m = Magic(mime_encoding=True)
+            encoding = m.from_buffer(chunk)
+            chunk = chunk.decode(encoding)
+            while chunk:
+                file_.write(chunk)
+                chunk = gfal_file.read(CHUNK_SIZE).decode(encoding)
 
+
+    _do_download(decode = False)
+
+    """
     try:
         _do_download(decode = False)
-    except TypeError:
-        logger(f"TypeError occurred, retrying with decoding for {url}")
+    except:
+        logger.debug(f"TypeError occurred, retrying with decoding for {url}")
         _do_download(decode = True)
+    """
 
     return True
 
