@@ -20,16 +20,16 @@ Behavior
 ------------------------+-----------------------+---------------------------+
  Flag(s)                |  What happens         |  Subsequent actions       |
 ------------------------+-----------------------+---------------------------+
- (no flag)              | destroy_database()    | build_database() +        |
-                        | # drop_orm_tables     | create_base_vo() +        |
+ (no flag)              | drop_orm_tables()     | build_database() +        |
+                        |                       | create_base_vo() +        |
                         |                       | create_root_account()     |
 ------------------------+-----------------------+---------------------------+
- -b / --purge-build     | drop_everything()     | build_database() +        |
-                        | # purge_db            | create_base_vo() +        |
+ -b / --purge-build     | purge_db()            | build_database() +        |
+                        |                       | create_base_vo() +        |
                         |                       | create_root_account()     |
 ------------------------+-----------------------+---------------------------+
- -p / --purge           | drop_everything()     | nothing else..            |
-                        | # purge_db            | the script ends           |
+ -p / --purge           | purge_db()            | nothing else..            |
+                        |                       | the script ends           |
 ------------------------+-----------------------+---------------------------+
 """
 
@@ -46,8 +46,8 @@ from rucio.db.sqla.util import (  # noqa: E402
     build_database,  # noqa: E402
     create_base_vo,  # noqa: E402
     create_root_account,  # noqa: E402
-    destroy_database,  # noqa: E402
-    drop_everything,  # noqa: E402
+    drop_orm_tables,  # noqa: E402
+    purge_db,  # noqa: E402
 )
 
 if __name__ == '__main__':
@@ -74,9 +74,9 @@ if __name__ == '__main__':
     # 1. Decide how to reset
     # ------------------------------------------------------------------
     if args.purge_build or args.purge:
-        drop_everything()
+        purge_db()
     else:
-        destroy_database()
+        drop_orm_tables()
 
     # ------------------------------------------------------------------
     # 2. Decide what to rebuild
