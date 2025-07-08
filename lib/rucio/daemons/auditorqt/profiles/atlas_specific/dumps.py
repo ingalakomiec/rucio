@@ -17,6 +17,7 @@
 import gfal2
 import glob
 import hashlib
+import io
 import logging
 import operator
 import os
@@ -86,7 +87,9 @@ def gfal_download_to_file_with_decoding(
     logger = logging.getLogger('auditorqt.atlas_specific.dumps.gfal_download_to_file_auditor')
     ctx = gfal2.creat_context()
 
-    def _do_download(decode_utf8: bool):
+
+    def _do_download(decode: bool):
+
         try:
             gfal_file = ctx.open(url, 'r')
         except gfal2.GError as e:
@@ -105,20 +108,24 @@ def gfal_download_to_file_with_decoding(
                 raise
 
         while chunk:
-            if decode_utf8:
-                try:
-                    chunk = chunk.decode("utf-8")
-                except UnicodeDecodeError as e:
-                    logger.error(f"UTF-8 decode error from {url}: {str(e)}")
-                    raise
+            if decode:
+                encoding = getattr(chunk, 'encoding', None)
+                if encoding:
+                    logger.debug(f"Detected {encoding} encoding for {url}, decoding will be applied")
+                    try:
+                        chunk = chunk.decode(encoding)
+                    except UnicodeDecodeError as e:
+                        logger.error(f"Decode error from {url}: {str(e)}")
+                        raise
+
             file_.write(chunk)
             chunk = gfal_file.read(CHUNK_SIZE)
 
     try:
-        _do_download(decode_utf8 = False)
+        _do_download(decode = False)
     except TypeError:
-        logger.debug(f"TypeError, retrying with UTF-8 decoding for {url}")
-        _do_download(decode_utf8 = True)
+        logger(f"TypeError occurred, retrying with decoding for {url}")
+        _do_download(decode = True)
 
     return True
 
