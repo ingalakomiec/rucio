@@ -89,49 +89,70 @@ def gfal_download_to_file_with_decoding(
     logger = logging.getLogger('auditorqt.atlas_specific.dumps.gfal_download_to_file_auditor')
     ctx = gfal2.creat_context()
 
+#    print(gfal2.__file__)
+    # FOR TESTS
+
+#    print("ctx: ", ctx)
+#    gfal_file = ctx.open(url, 'r')
+#    print("BEGIN")
+
+    # END OF TESTS
+
     def _do_download(decode: bool):
         try:
             gfal_file = ctx.open(url, 'r')
+            print("OPENED")
         except gfal2.GError as e:
             logger.error(f"Failed to open {url}: {str(e)}")
 
         try:
-            chunk = gfal_file.read(CHUNK_SIZE)
-        except (UnicodeDecodeError, gfal2.GError):
+#            print(type(gfal_file.read(1)))
+#            chunk = gfal_file.read(CHUNK_SIZE)
+            chunk = gfal_file.read(1)
+            # test lines
+            print("chunk done")
+            m = Magic(mime_encoding=True)
+            encoding = m.from_buffer(chunk)
+            print("encoding: ", encoding)
+            # end of test lines
+        except gfal2.GError:
             if gfal2.GError.code == 70:
                 logger.debug(f"GError(70) raised, using GRIDFTP PLUGIN:STAT_ON_OPEN=False workaround to download {url}")
                 ctx.set_opt_boolean('GRIDFTP PLUGIN', 'STAT_ON_OPEN', False)
                 gfal_file = ctx.open(url, 'r')
                 chunk = gfal_file.read(CHUNK_SIZE)
-            if UnicodeDecodeError:
-                decode = True
-                logger.debug(f"UnicodeDecodeError occurred, retrying with decoding for {url}")
-                # FOR TESTS
-                chunk = gfal_file.read(CHUNK_SIZE) # didive into binary chunks?
-                m = Magic(mime_encoding=True)
-#                encoding = m.from_buffer(chunk)
-#                chunk = chunk.decode('utf-16')
-                while chunk:
-                    file_.write(chunk)
-                    chunk = gfal_file.read(CHUNK_SIZE)
-                # END OF TESTS
-            else:
-                raise
+        except UnicodeDecodeError as e:
+            decode = True
+            logger.debug(f"UnicodeDecodeError occurred: {str(e)}, retrying with decoding for {url}")
+            # FOR TESTS
+#            chunk = gfal_file.read(CHUNK_SIZE) # didive into binary chunks?
+#            m = Magic(mime_encoding=True)
+#            encoding = m.from_buffer(chunk)
+#            chunk = chunk.decode('utf-16')
+#            while chunk:
+#                file_.write(chunk)
+#                chunk = gfal_file.read(CHUNK_SIZE)
+            # END OF TESTS
+#        else:
+#            raise
 
         if not decode:
             while chunk:
                 # FOR TESTS of decoding
-                chunk = chunk.encode('utf-16')
-                m = Magic(mime_encoding=True)
-                encoding = m.from_buffer(chunk)
-                chunk = chunk.decode(encoding)
+#                chunk = chunk.encode('utf-16')
+#                m = Magic(mime_encoding=True)
+#                encoding = m.from_buffer(chunk)
+#                chunk = chunk.decode(encoding)
                 # END TESTS
                 file_.write(chunk)
                 chunk = gfal_file.read(CHUNK_SIZE)
 
         else:
+            print("DECODE")
+            chunk = gfal_file.read(CHUNK_SIZE)
             m = Magic(mime_encoding=True)
             encoding = m.from_buffer(chunk)
+            print("encoding: ", encoding)
             chunk = chunk.decode(encoding)
             while chunk:
                 file_.write(chunk)
@@ -260,6 +281,7 @@ def fetch_no_object_store(
     if not os.path.exists(path):
         logger.debug('Trying to download: %s for %s', url, rse)
         with temp_file(cache_dir, final_name=filename) as (f, _):
+#        with temp_file(cache_dir, final_name=filename, binary = True) as (f, _):
             download(url, f)
     else:
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
