@@ -14,7 +14,6 @@
 
 """action on RSE and Rucio dumps: fetching, removing cached dumps"""
 
-import codecs
 import gfal2
 import glob
 import hashlib
@@ -107,38 +106,29 @@ def gfal_download_to_file_with_decoding(
         except UnicodeDecodeError as e:
             logger.error(f"UnicodeDecodeError occurred: {str(e)}, for url: {url}")
             decode = True
-#            ctx.set_opt_boolean(?)
-#            gfal_file = ctx.open(url, 'r')
-#            chunk = gfal_file.read(CHUNK_SIZE)
 
-            print("PARAMS: ", ctx.transfer_parameters())
-            chunk = ctx.checksum(url, "adler32")
         if not decode:
             while chunk:
                 file_.write(chunk)
                 chunk = gfal_file.read(CHUNK_SIZE)
 
         else:
-            print("DECODE")
-            """
-            chunk = gfal_file.read(CHUNK_SIZE)
-            m = Magic(mime_encoding=True)
-            encoding = m.from_buffer(chunk)
-            print("encoding: ", encoding)
-            chunk = chunk.decode(encoding)
+            params = ctx.transfer_parameters()
+            params.overwrite = True
+            params.checksum_check = False
+            ctx.filecopy(params, url, "file:///opt/rucio/auditor-cache/file_tmp")
 
-            chunk = ctx.checksum(url, "adler32")
-            chunk_dec = chunk.decode('utf-16')
+            with open("/opt/rucio/auditor-cache/file_tmp", 'rb') as f:
+                chunk = f.read(CHUNK_SIZE)
+                while chunk:
+                    m = Magic(mime_encoding = True)
+                    encoding = m.from_buffer(chunk)
+                    chunk = chunk.decode(encoding)
+                    file_.write(chunk)
+                    chunk = f.read(CHUNK_SIZE)
 
-            while chunk:
-                file_.write(chunk)
-                chunk = gfal_file.read(CHUNK_SIZE)
-           """
-#            chunk = ctx.checksum(url, "adler32")
-#            file_.write(chunk)
-
-
-
+            f.close()
+            os.remove("/opt/rucio/auditor-cache/file_tmp")
 
     _do_download(decode = False)
 
@@ -262,7 +252,6 @@ def fetch_no_object_store(
     if not os.path.exists(path):
         logger.debug('Trying to download: %s for %s', url, rse)
         with temp_file(cache_dir, final_name=filename) as (f, _):
-#        with temp_file(cache_dir, final_name=filename, binary = True) as (f, _):
             download(url, f)
     else:
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
