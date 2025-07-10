@@ -14,6 +14,7 @@
 
 """action on RSE and Rucio dumps: fetching, removing cached dumps"""
 
+import codecs
 import gfal2
 import glob
 import hashlib
@@ -31,7 +32,7 @@ from magic import Magic
 from typing import IO, Optional
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file, is_plaintext
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
@@ -83,38 +84,20 @@ def gfal_download_to_file_with_decoding(
     file_: "IO"
 ) -> None:
     '''
-    Download the file from 'url', decode it as UTF-8, store it in the file-like object 'file_' 
+    Download the file from 'url', store it in the file-like object 'file_' 
     '''
 
     logger = logging.getLogger('auditorqt.atlas_specific.dumps.gfal_download_to_file_auditor')
     ctx = gfal2.creat_context()
 
-#    print(gfal2.__file__)
-    # FOR TESTS
-
-#    print("ctx: ", ctx)
-#    gfal_file = ctx.open(url, 'r')
-#    print("BEGIN")
-
-    # END OF TESTS
-
     def _do_download(decode: bool):
         try:
             gfal_file = ctx.open(url, 'r')
-            print("OPENED")
         except gfal2.GError as e:
             logger.error(f"Failed to open {url}: {str(e)}")
 
         try:
-#            print(type(gfal_file.read(1)))
-#            chunk = gfal_file.read(CHUNK_SIZE)
-            chunk = gfal_file.read(1)
-            # test lines
-            print("chunk done")
-            m = Magic(mime_encoding=True)
-            encoding = m.from_buffer(chunk)
-            print("encoding: ", encoding)
-            # end of test lines
+            chunk = gfal_file.read(CHUNK_SIZE)
         except gfal2.GError:
             if gfal2.GError.code == 70:
                 logger.debug(f"GError(70) raised, using GRIDFTP PLUGIN:STAT_ON_OPEN=False workaround to download {url}")
@@ -122,41 +105,39 @@ def gfal_download_to_file_with_decoding(
                 gfal_file = ctx.open(url, 'r')
                 chunk = gfal_file.read(CHUNK_SIZE)
         except UnicodeDecodeError as e:
+            logger.error(f"UnicodeDecodeError occurred: {str(e)}, for url: {url}")
             decode = True
-            logger.debug(f"UnicodeDecodeError occurred: {str(e)}, retrying with decoding for {url}")
-            # FOR TESTS
-#            chunk = gfal_file.read(CHUNK_SIZE) # didive into binary chunks?
-#            m = Magic(mime_encoding=True)
-#            encoding = m.from_buffer(chunk)
-#            chunk = chunk.decode('utf-16')
-#            while chunk:
-#                file_.write(chunk)
-#                chunk = gfal_file.read(CHUNK_SIZE)
-            # END OF TESTS
-#        else:
-#            raise
+#            ctx.set_opt_boolean(?)
+#            gfal_file = ctx.open(url, 'r')
+#            chunk = gfal_file.read(CHUNK_SIZE)
 
+            print("PARAMS: ", ctx.transfer_parameters())
+            chunk = ctx.checksum(url, "adler32")
         if not decode:
             while chunk:
-                # FOR TESTS of decoding
-#                chunk = chunk.encode('utf-16')
-#                m = Magic(mime_encoding=True)
-#                encoding = m.from_buffer(chunk)
-#                chunk = chunk.decode(encoding)
-                # END TESTS
                 file_.write(chunk)
                 chunk = gfal_file.read(CHUNK_SIZE)
 
         else:
             print("DECODE")
+            """
             chunk = gfal_file.read(CHUNK_SIZE)
             m = Magic(mime_encoding=True)
             encoding = m.from_buffer(chunk)
             print("encoding: ", encoding)
             chunk = chunk.decode(encoding)
+
+            chunk = ctx.checksum(url, "adler32")
+            chunk_dec = chunk.decode('utf-16')
+
             while chunk:
                 file_.write(chunk)
-                chunk = gfal_file.read(CHUNK_SIZE).decode(encoding)
+                chunk = gfal_file.read(CHUNK_SIZE)
+           """
+#            chunk = ctx.checksum(url, "adler32")
+#            file_.write(chunk)
+
+
 
 
     _do_download(decode = False)
