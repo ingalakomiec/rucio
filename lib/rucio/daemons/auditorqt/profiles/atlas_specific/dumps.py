@@ -113,10 +113,12 @@ def gfal_download_to_file_with_decoding(
                 chunk = gfal_file.read(CHUNK_SIZE)
 
         else:
-            params = ctx.transfer_parameters()
-            params.overwrite = True
-            params.checksum_check = False
-            ctx.filecopy(params, url, "file:///opt/rucio/auditor-cache/file_tmp")
+#            params = ctx.transfer_parameters()
+#            params.overwrite = True
+#            params.checksum_check = False
+#            ctx.filecopy(params, url, "file:///opt/rucio/auditor-cache/file_tmp")
+            ctx.filecopy(url, "file:///opt/rucio/auditor-cache/file_tmp")
+
 
             with open("/opt/rucio/auditor-cache/file_tmp", 'rb') as f:
                 chunk = f.read(CHUNK_SIZE)
