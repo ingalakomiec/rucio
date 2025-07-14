@@ -80,8 +80,7 @@ def http_links(base_url: str) -> list[str]:
 
 def gfal_download_to_file_with_decoding(
     url: str,
-    file_: "IO",
-    cache_dir: str
+    file_: "IO"
 ) -> None:
     '''
     Download the file from 'url', store it in the file-like object 'file_' 
@@ -114,23 +113,15 @@ def gfal_download_to_file_with_decoding(
                 chunk = gfal_file.read(CHUNK_SIZE)
 
     else:
-        # hash added to get a distinct file name
-        hash = hashlib.sha1(url.encode()).hexdigest()
-        file_tmp_name = f"file_tmp_{hash}"
-        file_tmp_name = re.sub(r'\W', '-', file_tmp_name)
-        path = f"{cache_dir}/{file_tmp_name}"
-        ctx.filecopy(url,f"file://{path}")
+        gfal_file_bytes = ctx.open(url, 'r')
+        chunk = gfal_file_bytes.read_bytes(CHUNK_SIZE)
+        while chunk:
+            m = Magic(mime_encoding = True)
+            encoding = m.from_buffer(chunk)
+            chunk = chunk.decode(encoding)
+            file_.write(chunk)
+            chunk = gfal_file.read_bytes(CHUNK_SIZE)
 
-        with open(path, 'rb') as f:
-            chunk = f.read(CHUNK_SIZE)
-            while chunk:
-                m = Magic(mime_encoding = True)
-                encoding = m.from_buffer(chunk)
-                chunk = chunk.decode(encoding)
-                file_.write(chunk)
-                chunk = f.read(CHUNK_SIZE)
-        f.close()
-        os.remove(path)
         logger.debug(f"url: {url} encoded")
 
     return True
@@ -155,15 +146,12 @@ protocol_funcs = {
     },
 }
 
-def download(url: str, filename: IO, cache_dir: Optional[str]) -> None:
+def download(url: str, filename: IO) -> None:
     """
     Given the URL 'url' downloads its contents on 'filename'
     """
 
-    if protocol(url) is "http*":
-        return protocol_funcs[protocol(url)]['download'](url, filename)
-    else:
-        return protocol_funcs[protocol(url)]['download'](url, filename, cache_dir)
+    return protocol_funcs[protocol(url)]['download'](url, filename)
 
 def download_rucio_dump(
     url: str,
@@ -214,7 +202,7 @@ def fetch_object_store(
 
             try:
                 with temp_file(cache_dir, final_name=filename) as (f, _):
-                    download(url, f, cache_dir)
+                    download(url, f)
                 tries = 0
             except (HTTPDownloadFailed, gfal2.GError):
                 tries -= 1
@@ -248,7 +236,7 @@ def fetch_no_object_store(
     if not os.path.exists(path):
         logger.debug('Trying to download: %s for %s', url, rse)
         with temp_file(cache_dir, final_name=filename) as (f, _):
-            download(url, f, cache_dir)
+            download(url, f)
     else:
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
 
