@@ -55,7 +55,7 @@ def process_output(
     logger = logging.getLogger('atlas_auditor output.process_output')
 
     dark_replicas = []
-    missed_replicas = []
+    missing_replicas = []
     try:
         with open(results_path) as f:
             for line in f:
@@ -66,8 +66,8 @@ def process_output(
                     dark_replicas.append({'path': path,
                                           'scope': InternalScope(scope),
                                           'name': name})
-                elif label == 'MISSED':
-                    missed_replicas.append({'scope': InternalScope(scope),
+                elif label == 'MISSING':
+                    missing_replicas.append({'scope': InternalScope(scope),
                                           'name': name})
                 else:
                     raise ValueError('unexpected label')
@@ -91,14 +91,14 @@ def process_output(
         logger.warning(f"Number of DARK files is exceeding threshold: {results_path}")
         found_error = True
 
-    if len(missed_replicas) > threshold * usage['files']:
-        logger.warning(f"Number of MISSED files is exceeding threshold: {results_path}")
+    if len(missing_replicas) > threshold * usage['files']:
+        logger.warning(f"Number of MISSING files is exceeding threshold: {results_path}")
         found_error = True
 
     if found_error and sanity_check:
         raise AssertionError("sanity check failed")
 
-    # While converting MISSED replicas to PFNs, entries that do not
+    # While converting MISSING replicas to PFNs, entries that do not
     # correspond to a replica registered in Rucio are silently dropped.
 
     missed_pfns = [r['rses'][rse_id][0] for chunk in chunks(missed_replicas, 1000) for r in list_replicas(chunk) if rse_id in r['rses']]
@@ -111,7 +111,7 @@ def process_output(
     declare_bad_file_replicas(missed_pfns, reason='Reported by Auditor',
                               issuer=InternalAccount('root'), status=BadFilesStatus.SUSPICIOUS)
 
-    logger.debug(f"Processed {len(missed_replicas)} MISSED files from {results_path}")
+    logger.debug(f"Processed {len(missing_replicas)} MISSING files from {results_path}")
 
     if compress:
         final_path = bz2_compress_file(results_path)
