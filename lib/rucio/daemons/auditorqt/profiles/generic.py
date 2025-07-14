@@ -81,15 +81,16 @@ def generic_auditor(
             remove_cached_dumps(cached_dumps)
         return results_path
 
-    missed_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+    missing_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
 
     file_results = open(results_path, 'w')
 
     for k in range(len(dark_files)):
         file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
-    for k in range(len(missed_files)):
-        file_results.write('MISSED'+(missed_files[k]).replace("/",",",1))
+#missing
+    for k in range(len(missing_files)):
+        file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
 
     file_results.close()
 
@@ -232,9 +233,9 @@ def consistency_check(
 
     del rucio_dump_after
 
-    missed_files = [k for k in out if out[k]==23]
+    missing_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
 
-    results = (missed_files, dark_files)
+    results = (missing_files, dark_files)
 
     return results
