@@ -182,10 +182,8 @@ def run(
     hostname = socket.gethostname()
     sanity_check(executable='rucio-auditorqt', hostname=hostname)
 
-    logging.info("Auditor-QT starting 1 thread")
+    logging.info("Auditor-QT starting threads")
 
-    # Creating only one thread but putting it in a list to conform to how
-    # other daemons are run.
     threads = [
         threading.Thread(
             target=auditor_qt,
