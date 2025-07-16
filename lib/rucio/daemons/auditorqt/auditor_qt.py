@@ -123,6 +123,9 @@ def run_once(
 
     rses_names = [entry['rse'] for entry in rses_to_process]
 
+    if len(rses_names) <= 0:
+        raise RSENotFound("No RSE found to audit.")
+
     if not config_has_section('auditor'):
         raise NoSectionError("Auditor section required in config tu run te auditor daemon.")
 
