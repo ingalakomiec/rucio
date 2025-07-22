@@ -212,7 +212,7 @@ def get_parser():
 #if __name__ == '__main__':
 
 def atlas_auditor_old(
-        nprocs: int,
+#        nprocs: int,
         rse: str,
         keep_dumps: bool,
         delta: int,
@@ -221,6 +221,7 @@ def atlas_auditor_old(
         results_dir: str
 ) -> None:
 
+    nprocs = 1
     function(nprocs,
         rse,
         keep_dumps,
