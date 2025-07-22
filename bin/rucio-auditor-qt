@@ -18,8 +18,8 @@ The auditor daemon is the one responsible for the detection of inconsistencies o
 """
 
 import argparse
-from datetime import datetime
 import signal
+from datetime import datetime
 
 from rucio.daemons.auditorqt.auditor_qt import run,stop
 
