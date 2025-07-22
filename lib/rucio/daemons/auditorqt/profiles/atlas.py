@@ -75,7 +75,7 @@ class Parser(RawConfigParser):
 """
 
 def atlas_auditor(
-        nprocs: int,
+#        nprocs: int,
         rse: str,
         keep_dumps: bool,
         delta: timedelta,
