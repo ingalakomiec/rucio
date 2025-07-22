@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from rucio.daemon.common import HeartbeatHandler
 
 def auditor_qt(
-    nprocs: int,
+#    nprocs: int,
     rses: str,
     keep_dumps: bool,
     delta: int,
@@ -77,7 +77,7 @@ def auditor_qt(
         sleep_time=sleep_time,
         run_once_fnc=functools.partial(
             run_once,
-            nprocs=nprocs,
+ #           nprocs=nprocs,
             rses=rses,
             keep_dumps=keep_dumps,
             delta=delta,
@@ -87,7 +87,7 @@ def auditor_qt(
     )
 
 def run_once(
-    nprocs: int,
+#    nprocs: int,
     rses: str,
     keep_dumps: bool,
     delta: int,
@@ -116,8 +116,8 @@ def run_once(
     # worker number - number of worker threads; worker_number == 0 --> only one worker thread
     worker_number, _, logger = heartbeat_handler.live()
 
-    if nprocs < 1:
-        raise RuntimeError("No Process to Run")
+#    if nprocs < 1:
+#        raise RuntimeError("No Process to Run")
 
     rses_to_process = get_rses_to_process(rses)
 
@@ -146,7 +146,8 @@ def run_once(
     # loop over all rses
     for rse in rses_names:
         try:
-            profile = profile_maker(nprocs, rse, keep_dumps, delta, date, cache_dir, results_dir)
+#            profile = profile_maker(nprocs, rse, keep_dumps, delta, date, cache_dir, results_dir)
+            profile = profile_maker(rse, keep_dumps, delta, date, cache_dir, results_dir)
         except RucioException:
             logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
             raise
@@ -155,7 +156,7 @@ def run_once(
 
 
 def run(
-    nprocs: int,
+#    nprocs: int,
     rses: str,
     keep_dumps: bool = False,
     delta: int = 3,
@@ -191,7 +192,7 @@ def run(
         threading.Thread(
             target=auditor_qt,
             kwargs={
-                'nprocs': nprocs,
+#                'nprocs': nprocs,
                 'rses': rses,
                 'keep_dumps': keep_dumps,
                 'delta': delta,
