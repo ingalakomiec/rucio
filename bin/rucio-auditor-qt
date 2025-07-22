@@ -46,9 +46,9 @@ def get_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
-    parser.add_argument('--nprocs', default=1, type=int,
-                       help='Number of subprocesses, each subprocess checks a fraction of the DDM '
-                       'Endpoints in sequence (default: 1).')
+#    parser.add_argument('--nprocs', default=1, type=int,
+#                       help='Number of subprocesses, each subprocess checks a fraction of the DDM '
+#                       'Endpoints in sequence (default: 1).')
     parser.add_argument('--rses', default=None, type=str,
                         help='RSEs to check, specified as an RSE expression '
                         '(default: check all RSEs).')
@@ -77,7 +77,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, stop)
     args = get_parser().parse_args()
     try:
-        run(nprocs=args.nprocs,
+        run(
+#        nprocs=args.nprocs,
         rses=args.rses,
         keep_dumps=args.keep_dumps,
         delta=args.delta,
