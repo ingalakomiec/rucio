@@ -16,6 +16,9 @@
 The auditor daemon is the one responsible for the detection of inconsistencies on storage.
 """
 
+#for benchmarking
+import time
+
 import functools
 import logging
 import os
@@ -113,6 +116,9 @@ def run_once(
     :returns:                 A boolean flag indicating whether the daemon should go to sleep.
     """
 
+    # for benchmarking
+    start_time = time.perf_counter()
+
     # worker number - number of worker threads; worker_number == 0 --> only one worker thread
     worker_number, _, logger = heartbeat_handler.live()
 
@@ -151,6 +157,12 @@ def run_once(
         except RucioException:
             logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
             raise
+
+    # for benchmarking
+    end_time = time.perf_counter()
+    execution_time = end_time - start_time
+    print(f"Execution time: {execution_time:.6f} seconds")
+
 
     return True
 
@@ -204,10 +216,10 @@ def run(
         )
     ]
     [thread.start() for thread in threads]
+
     # Interruptible joins require a timeout.
     while any(thread.is_alive() for thread in threads):
         [thread.join(timeout=3.14) for thread in threads]
-
 
 def stop(
     signum: Optional[int] = None,
