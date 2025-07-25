@@ -212,7 +212,6 @@ def get_parser():
 #if __name__ == '__main__':
 
 def atlas_auditor_old(
-#        nprocs: int,
         rse: str,
         keep_dumps: bool,
         delta: int,
