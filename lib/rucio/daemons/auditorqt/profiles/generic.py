@@ -28,7 +28,6 @@ from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_
 #from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 def generic_auditor(
-#        nprocs: int,
         rse: str,
         keep_dumps: bool,
         delta: int,
