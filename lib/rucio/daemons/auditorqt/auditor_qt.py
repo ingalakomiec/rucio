@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from rucio.daemon.common import HeartbeatHandler
 
 def auditor_qt(
-#    nprocs: int,
     rses: str,
     keep_dumps: bool,
     delta: int,
@@ -58,9 +57,6 @@ def auditor_qt(
     sleep_time: int
 ) -> None:
     """Daemon runner.
-
-    :param nprocs:     Number of subprocesses, each subprocess checks a fraction of the DDM.
-                       Endpoints in sequence (default: 1).
     :param rses:       RSEs to check specified as an RSE expression
                        (default: check all RSEs).
     :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache
@@ -80,7 +76,6 @@ def auditor_qt(
         sleep_time=sleep_time,
         run_once_fnc=functools.partial(
             run_once,
- #           nprocs=nprocs,
             rses=rses,
             keep_dumps=keep_dumps,
             delta=delta,
@@ -90,7 +85,6 @@ def auditor_qt(
     )
 
 def run_once(
-#    nprocs: int,
     rses: str,
     keep_dumps: bool,
     delta: int,
@@ -101,8 +95,6 @@ def run_once(
     activity: Optional[str]
 ) -> bool:
     """
-    :param nprocs:            Number of subprocesses, each subprocess checks a fraction of the DDM.
-                              Endpoints in sequence (default: 1).
     :param rses:              RSEs to check specified as an RSE expression
                               (default: check all RSEs).
     :param keep_dumps:        Keep RSE and Rucio Replica Dumps on cache
@@ -152,7 +144,6 @@ def run_once(
     # loop over all rses
     for rse in rses_names:
         try:
-#            profile = profile_maker(nprocs, rse, keep_dumps, delta, date, cache_dir, results_dir)
             profile = profile_maker(rse, keep_dumps, delta, date, cache_dir, results_dir)
         except RucioException:
             logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
@@ -168,7 +159,7 @@ def run_once(
 
 
 def run(
-#    nprocs: int,
+    threads: int,
     rses: str,
     keep_dumps: bool = False,
     delta: int = 3,
@@ -180,8 +171,8 @@ def run(
     """
     Starts up the auditor-qt threads.
 
-    :param nprocs:     Number of subprocesses, each subprocess checks a fraction of the DDM.
-                       Endpoints in sequence (default: 1).
+    :param threads:    Number of threads for this process
+                       (default: 1).
     :param rses:       RSEs to check specified as an RSE expression
                        (default: check all RSEs).
     :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache
@@ -199,12 +190,10 @@ def run(
     sanity_check(executable='rucio-auditorqt', hostname=hostname)
 
     logging.info("Auditor-QT starting threads")
-
-    threads = [
+    thread_list = [
         threading.Thread(
             target=auditor_qt,
             kwargs={
-#                'nprocs': nprocs,
                 'rses': rses,
                 'keep_dumps': keep_dumps,
                 'delta': delta,
@@ -214,12 +203,13 @@ def run(
                 'once': once
             },
         )
+        for _ in range(0, threads)
     ]
-    [thread.start() for thread in threads]
+    [thread.start() for thread in thread_list]
 
     # Interruptible joins require a timeout.
-    while any(thread.is_alive() for thread in threads):
-        [thread.join(timeout=3.14) for thread in threads]
+    while thread_list[0].is_alive():
+        [thread.join(timeout=3.14) for thread in thread_list]
 
 def stop(
     signum: Optional[int] = None,

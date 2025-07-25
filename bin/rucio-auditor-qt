@@ -31,11 +31,11 @@ def get_parser() -> argparse.ArgumentParser:
         description=__doc__,
         epilog="""
         examples:
-            # Check all RSEs using only 1 subprocess
+            # Check all RSEs using only 1 thread
             %(prog)s
 
-            # Check all SCRATCHDISKs with 4 subprocesses
-            %(prog)s --nprocs 4 --rses "type=SCRATCHDISK"
+            # Check all SCRATCHDISKs with 4 threads
+            %(prog)s --threads 4 --rses "type=SCRATCHDISK"
 
             # Check all Tier 2 DATADISKs, except "BLUE_DATADISK" and "RED_DATADISK"
             %(prog)s --rses "tier=2&type=DATADISK\(BLUE_DATADISK|RED_DATADISK)"
@@ -46,9 +46,9 @@ def get_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
-#    parser.add_argument('--nprocs', default=1, type=int,
-#                       help='Number of subprocesses, each subprocess checks a fraction of the DDM '
-#                       'Endpoints in sequence (default: 1).')
+    parser.add_argument('--threads', action='store', default=1, type=int,
+                        help='RSEs to check, specified as an RSE expression '
+                        '(default: check all RSEs).')
     parser.add_argument('--rses', default=None, type=str,
                         help='RSEs to check, specified as an RSE expression '
                         '(default: check all RSEs).')
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     args = get_parser().parse_args()
     try:
         run(
-#        nprocs=args.nprocs,
+        threads=args.threads,
         rses=args.rses,
         keep_dumps=args.keep_dumps,
         delta=args.delta,
