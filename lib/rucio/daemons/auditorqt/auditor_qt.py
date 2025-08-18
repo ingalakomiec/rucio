@@ -66,7 +66,7 @@ def auditor_qt(
     :param date:       The date of the RSE dump, for which the consistency check should be done.
     :param profile:    Which profile to use (default: atlas).
     :param once:       Whether to execute once and exit.
-    :param sleep_time: Number of seconds to sleep before restarting.
+    :param sleep_time: Thread sleep time after each chunk of work.
     """
     run_daemon(
         once=once,
@@ -111,11 +111,7 @@ def run_once(
     # for benchmarking
     start_time = time.perf_counter()
 
-    # worker number - number of worker threads; worker_number == 0 --> only one worker thread
-    worker_number, _, logger = heartbeat_handler.live()
-
-#    if nprocs < 1:
-#        raise RuntimeError("No Process to Run")
+    worker_number, total_workers, logger = heartbeat_handler.live()
 
     rses_to_process = get_rses_to_process(rses)
 
@@ -159,20 +155,19 @@ def run_once(
 
 
 def run(
-    threads: int,
     rses: str,
     keep_dumps: bool = False,
     delta: int = 3,
     date: datetime = None,
     profile: str = "atlas",
     once: bool = False,
-    sleep_time: int = 86400
+    threads: int = 1,
+#    sleep_time: int = 86400
+    sleep_time: int = 60
 ) -> None:
     """
     Starts up the auditor-qt threads.
 
-    :param threads:    Number of threads for this process
-                       (default: 1).
     :param rses:       RSEs to check specified as an RSE expression
                        (default: check all RSEs).
     :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache
@@ -182,6 +177,8 @@ def run(
     :param date:       The date of the RSE dump, for which the consistency check should be done.
     :param profile:    Which profile to use (default: atlas).
     :param once:       Whether to execute once and exit.
+    :param threads:    Number of threads for this process
+                       (default: 1).
     :param sleep_time: Number of seconds to sleep before restarting.
     """
 
@@ -189,27 +186,35 @@ def run(
     hostname = socket.gethostname()
     sanity_check(executable='rucio-auditorqt', hostname=hostname)
 
-    logging.info("Auditor-QT starting threads")
-    thread_list = [
-        threading.Thread(
-            target=auditor_qt,
-            kwargs={
-                'rses': rses,
-                'keep_dumps': keep_dumps,
-                'delta': delta,
-                'date': date,
-                'profile': profile,
-                'sleep_time': sleep_time,
-                'once': once
-            },
-        )
-        for _ in range(0, threads)
-    ]
-    [thread.start() for thread in thread_list]
+    if threads < 1:
+        raise RuntimeError("Number of threads < 1")
 
-    # Interruptible joins require a timeout.
-    while thread_list[0].is_alive():
-        [thread.join(timeout=3.14) for thread in thread_list]
+    if once:
+        logging.info('main: executing one iteration only')
+        auditor_qt(rses, keep_dumps, delta, date, profile, sleep_time, once)
+    else:
+        logging.info("Auditor-QT starting threads")
+        print("once: ", once)
+        thread_list = [
+            threading.Thread(
+                target=auditor_qt,
+                kwargs={
+                    'rses': rses,
+                    'keep_dumps': keep_dumps,
+                    'delta': delta,
+                    'date': date,
+                    'profile': profile,
+                    'once': once,
+                    'sleep_time': sleep_time
+                },
+            )
+            for i in range(0, threads)
+        ]
+        [thread.start() for thread in thread_list]
+
+        # Interruptible joins require a timeout.
+        while thread_list[0].is_alive():
+            [thread.join(timeout=3.14) for thread in thread_list]
 
 def stop(
     signum: Optional[int] = None,
