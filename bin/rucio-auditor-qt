@@ -45,10 +45,6 @@ def get_parser() -> argparse.ArgumentParser:
             """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-
-    parser.add_argument('--threads', action='store', default=1, type=int,
-                        help='RSEs to check, specified as an RSE expression '
-                        '(default: check all RSEs).')
     parser.add_argument('--rses', default=None, type=str,
                         help='RSEs to check, specified as an RSE expression '
                         '(default: check all RSEs).')
@@ -66,6 +62,9 @@ def get_parser() -> argparse.ArgumentParser:
                         '(default: atlas).')
     parser.add_argument('--run-once', dest='run_once', action='store_true',
                         help='One iteration only.')
+    parser.add_argument('--threads', action='store', default=1, type=int,
+                        help='Concurrency control: number of threads on this process'
+                        '(default: 1).')
     parser.add_argument('--sleep-time', dest='sleep_time', action='store',
                         default=86400, type=int,
                         help='Concurrency control: thread sleep time after each'
@@ -78,13 +77,13 @@ if __name__ == '__main__':
     args = get_parser().parse_args()
     try:
         run(
-        threads=args.threads,
         rses=args.rses,
         keep_dumps=args.keep_dumps,
         delta=args.delta,
         date=args.date,
         profile=args.profile,
         once=args.run_once,
+        threads=args.threads,
         sleep_time=args.sleep_time)
     except KeyboardInterrupt:
         stop()
