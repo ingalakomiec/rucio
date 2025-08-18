@@ -32,7 +32,7 @@ from rucio.core.rse import get_rse_id, list_rse_attributes
 
 
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump, remove_cached_dumps
-#from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 """
 _DUMPERCONFIGDIRS = list(
@@ -80,7 +80,8 @@ def atlas_auditor(
         delta: timedelta,
         date: datetime,
         cache_dir: str,
-        results_dir: str
+        results_dir: str,
+        no_declaration: bool
 ) -> Optional[str]:
 
     """
@@ -136,7 +137,10 @@ def atlas_auditor(
 
     file_results.close()
 
-#    process_output(rse, results_path)
+    if no_declaration:
+        logger.warning(f"No action on output performed")
+    else:
+        process_output(rse, results_path)
 
     if not keep_dumps:
         remove_cached_dumps(cached_dumps)
