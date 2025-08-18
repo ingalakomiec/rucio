@@ -217,7 +217,8 @@ def atlas_auditor_old(
         delta: int,
         date: datetime,
         cache_dir: str,
-        results_dir: str
+        results_dir: str,
+        no_declaration: bool
 ) -> None:
 
     nprocs = 1
