@@ -25,7 +25,7 @@ from typing import Optional
 
 from rucio.common.dumper import smart_open
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
-#from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 def generic_auditor(
         rse: str,
@@ -33,7 +33,8 @@ def generic_auditor(
         delta: int,
         date: datetime,
         cache_dir: str,
-        results_dir: str
+        results_dir: str,
+        no_declaration: bool
 ) -> Optional[str]:
 
     """
@@ -93,8 +94,11 @@ def generic_auditor(
 
     file_results.close()
 
-    # taken from the atlas profile
-#    process_output(rse, results_path)
+    if no_declaration:
+        logger.warning(f"No action on output performed")
+    else:
+        process_output(rse, results_path)
+
 
     if not keep_dumps:
         # taken from the atlas profile
