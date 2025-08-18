@@ -28,6 +28,9 @@ from configparser import NoSectionError
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
+#for benchmarking
+from memory_profiler import profile
+
 from rucio.common.logging import setup_logging
 from rucio.common.config import config_get, config_has_section
 from rucio.common.exception import RucioException
@@ -53,20 +56,22 @@ def auditor_qt(
     delta: int,
     date: datetime,
     profile: str,
+    no_declaration: bool,
     once: bool,
     sleep_time: int
 ) -> None:
     """Daemon runner.
-    :param rses:       RSEs to check specified as an RSE expression
-                       (default: check all RSEs).
-    :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache
-                       (default: False).
-    :param delta:      How many days older/newer than the RSE dump
-                       must the Rucio replica dumps be (default: 3).
-    :param date:       The date of the RSE dump, for which the consistency check should be done.
-    :param profile:    Which profile to use (default: atlas).
-    :param once:       Whether to execute once and exit.
-    :param sleep_time: Thread sleep time after each chunk of work.
+    :param rses:           RSEs to check specified as an RSE expression
+                           (default: check all RSEs).
+    :param keep_dumps:     Keep RSE and Rucio Replica Dumps on cache
+                           (default: False).
+    :param delta:          How many days older/newer than the RSE dump
+                           must the Rucio replica dumps be (default: 3).
+    :param date:           The date of the RSE dump, for which the consistency check should be done.
+    :param profile:        Which profile to use (default: atlas).
+    :param no_declaration: No action on output (default: False).
+    :param once:           Whether to execute once and exit.
+    :param sleep_time:     Thread sleep time after each chunk of work.
     """
     run_daemon(
         once=once,
@@ -80,16 +85,19 @@ def auditor_qt(
             keep_dumps=keep_dumps,
             delta=delta,
             date=date,
-            profile=profile
+            profile=profile,
+            no_declaration=no_declaration
         )
     )
 
+@profile
 def run_once(
     rses: str,
     keep_dumps: bool,
     delta: int,
     date: datetime,
     profile: str,
+    no_declaration: bool,
     *,
     heartbeat_handler: 'HeartbeatHandler',
     activity: Optional[str]
@@ -103,6 +111,8 @@ def run_once(
                               must the Rucio replica dumps be (default: 3).
     :param date:              The date of the RSE dump, for which the consistency check should be done.
     :param profile:           Which profile to use (default: atlas).
+    :param no_declaration:    No action on output (default: False).
+
     :param heartbeat_handler: A HeartbeatHandler instance.
     :param activity:          Activity to work on.
     :returns:                 A boolean flag indicating whether the daemon should go to sleep.
@@ -140,7 +150,7 @@ def run_once(
     # loop over all rses
     for rse in rses_names:
         try:
-            profile = profile_maker(rse, keep_dumps, delta, date, cache_dir, results_dir)
+            profile = profile_maker(rse, keep_dumps, delta, date, cache_dir, results_dir, no_declaration)
         except RucioException:
             logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
             raise
@@ -148,9 +158,8 @@ def run_once(
     # for benchmarking
     end_time = time.perf_counter()
     execution_time = end_time - start_time
+
     print(f"Execution time: {execution_time:.6f} seconds")
-
-
     return True
 
 
@@ -160,6 +169,7 @@ def run(
     delta: int = 3,
     date: datetime = None,
     profile: str = "atlas",
+    no_declaration: bool = False,
     once: bool = False,
     threads: int = 1,
 #    sleep_time: int = 86400
@@ -168,18 +178,19 @@ def run(
     """
     Starts up the auditor-qt threads.
 
-    :param rses:       RSEs to check specified as an RSE expression
-                       (default: check all RSEs).
-    :param keep_dumps: Keep RSE and Rucio Replica Dumps on cache
-                       (default: False).
-    :param delta:      How many days older/newer than the RSE dump
-                       must the Rucio replica dumps be (default: 3).
-    :param date:       The date of the RSE dump, for which the consistency check should be done.
-    :param profile:    Which profile to use (default: atlas).
-    :param once:       Whether to execute once and exit.
-    :param threads:    Number of threads for this process
-                       (default: 1).
-    :param sleep_time: Number of seconds to sleep before restarting.
+    :param rses:           RSEs to check specified as an RSE expression
+                           (default: check all RSEs).
+    :param keep_dumps:     Keep RSE and Rucio Replica Dumps on cache
+                           (default: False).
+    :param delta:          How many days older/newer than the RSE dump
+                           must the Rucio replica dumps be (default: 3).
+    :param date:           The date of the RSE dump, for which the consistency check should be done.
+    :param profile:        Which profile to use (default: atlas).
+    :param no_declaration: No action on output (default: False).
+    :param once:           Whether to execute once and exit.
+    :param threads:        Number of threads for this process
+                           (default: 1).
+    :param sleep_time:     Number of seconds to sleep before restarting.
     """
 
     setup_logging(process_name=DAEMON_NAME)
@@ -190,11 +201,10 @@ def run(
         raise RuntimeError("Number of threads < 1")
 
     if once:
-        logging.info('main: executing one iteration only')
-        auditor_qt(rses, keep_dumps, delta, date, profile, sleep_time, once)
+        logging.info('Auditor-QT: executing one iteration only')
+        auditor_qt(rses, keep_dumps, delta, date, profile, sleep_time, once, no_declaration)
     else:
         logging.info("Auditor-QT starting threads")
-        print("once: ", once)
         thread_list = [
             threading.Thread(
                 target=auditor_qt,
@@ -204,6 +214,7 @@ def run(
                     'delta': delta,
                     'date': date,
                     'profile': profile,
+                    'no_declaration': no_declaration,
                     'once': once,
                     'sleep_time': sleep_time
                 },
