@@ -60,6 +60,9 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--profile', default="atlas", type=str,
                         help='Which profile to use '
                         '(default: atlas).')
+    parser.add_argument('--no-declaration',action='store_true',
+                        help='No action on output '
+                         '(default: False).')
     parser.add_argument('--run-once', dest='run_once', action='store_true',
                         help='One iteration only.')
     parser.add_argument('--threads', action='store', default=1, type=int,
@@ -82,6 +85,7 @@ if __name__ == '__main__':
         delta=args.delta,
         date=args.date,
         profile=args.profile,
+        no_declaration=args.no_declaration,
         once=args.run_once,
         threads=args.threads,
         sleep_time=args.sleep_time)
