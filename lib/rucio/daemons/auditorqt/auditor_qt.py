@@ -18,6 +18,7 @@ The auditor daemon is the one responsible for the detection of inconsistencies o
 
 #for benchmarking
 import time
+import tracemalloc
 
 import functools
 import logging
@@ -116,6 +117,8 @@ def run_once(
 
     # for benchmarking
     start_time = time.perf_counter()
+    tracemalloc.start()
+    snapshot_before = tracemalloc.take_snapshot()
 
     worker_number, total_workers, logger = heartbeat_handler.live()
 
@@ -154,8 +157,19 @@ def run_once(
     # for benchmarking
     end_time = time.perf_counter()
     execution_time = end_time - start_time
-    print(f"Execution time: {execution_time:.6f} seconds")
 
+#    current, peak = tracemalloc.get_traced_memory()
+    snapshot_after = tracemalloc.take_snapshot()
+    top_stats = snapshot_after.compare_to(snapshot_before, 'lineno')
+
+    print(f"Execution time: {execution_time:.6f} seconds")
+#    print(f"Current: {current / 10**6} MB; Peak: {peak / 10**6} MB")
+    print ("[ Top 10 differences in memory usage ]")
+    for stat in top_stats[:10]:
+        print(stat)
+
+
+    tracemalloc.stop()
 
     return True
 
@@ -198,7 +212,7 @@ def run(
         raise RuntimeError("Number of threads < 1")
 
     if once:
-        logging.info('main: executing one iteration only')
+        logging.info('Auditor-QT: executing one iteration only')
         auditor_qt(rses, keep_dumps, delta, date, profile, sleep_time, once, no_declaration)
     else:
         logging.info("Auditor-QT starting threads")
