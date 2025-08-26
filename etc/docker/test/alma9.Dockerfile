@@ -94,6 +94,9 @@ FROM python as rucio-runtime
     COPY requirements requirements
     COPY .pep8 .pycodestyle pyproject.toml setup.py setup_rucio.py setup_rucio_client.py setup_webui.py setuputil.py ./
 
+    # Include packaging manifest so templates ship with the wheel
+    COPY MANIFEST.in.rucio MANIFEST.in
+
     RUN dnf install -y epel-release.noarch && \
         dnf install -y 'dnf-command(config-manager)' && \
         dnf config-manager --enable crb && \
@@ -101,7 +104,6 @@ FROM python as rucio-runtime
         dnf install -y \
         xmlsec1-devel xmlsec1-openssl-devel pkg-config libtool-ltdl-devel \
         httpd-devel \
-        libnsl libaio \
         memcached \
         gridsite \
         sqlite \
