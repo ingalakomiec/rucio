@@ -117,8 +117,8 @@ def run_once(
 
     # for benchmarking
     start_time = time.perf_counter()
-    tracemalloc.start()
-    snapshot_before = tracemalloc.take_snapshot()
+#    tracemalloc.start()
+#    snapshot_before = tracemalloc.take_snapshot()
 
     worker_number, total_workers, logger = heartbeat_handler.live()
 
@@ -159,17 +159,17 @@ def run_once(
     execution_time = end_time - start_time
 
 #    current, peak = tracemalloc.get_traced_memory()
-    snapshot_after = tracemalloc.take_snapshot()
-    top_stats = snapshot_after.compare_to(snapshot_before, 'lineno')
+#    snapshot_after = tracemalloc.take_snapshot()
+#    top_stats = snapshot_after.compare_to(snapshot_before, 'lineno')
 
     print(f"Execution time: {execution_time:.6f} seconds")
 #    print(f"Current: {current / 10**6} MB; Peak: {peak / 10**6} MB")
-    print ("[ Top 10 differences in memory usage ]")
-    for stat in top_stats[:10]:
-        print(stat)
+#    print ("[ Top 10 differences in memory usage ]")
+#    for stat in top_stats[:10]:
+#        print(stat)
 
 
-    tracemalloc.stop()
+#    tracemalloc.stop()
 
     return True
 
