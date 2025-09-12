@@ -25,6 +25,9 @@ import requests
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
+#for benchmarking
+from memory_profiler import profile
+
 #from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
 from rucio.common.dumper import smart_open
@@ -229,6 +232,7 @@ def get_rucio_dump_url(
     url  = f"https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{date:%Y-%m-%d}/replicas_per_rse/{rse}.replicas_per_rse.{date:%Y-%m-%d}.csv.bz2"
     return url
 
+@profile
 def prepare_rse_dump(
     dump_path: str
 ) -> []:
@@ -242,7 +246,7 @@ def prepare_rse_dump(
 
     return rse_dump
 
-
+@profile
 def prepare_rucio_dump(
     dump_path: str
 ) -> [[],[]]:
@@ -263,6 +267,7 @@ def prepare_rucio_dump(
 
     return rucio_dump
 
+@profile
 def consistency_check(
     rucio_dump_before_path: str,
     rse_dump_path: str,
