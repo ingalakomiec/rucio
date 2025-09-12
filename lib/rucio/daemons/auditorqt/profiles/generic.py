@@ -14,31 +14,32 @@
 
 """Generic auditor profiles."""
 
-import logging
+from __future__ import annotations
+
 import hashlib
+import logging
 import os
 import re
 import shutil
-
 from datetime import datetime, timedelta
-from typing import Optional
 
-#for benchmarking
-from memory_profiler import profile
+from rucio.common.dumper import temp_file
+from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
+from rucio.daemons.auditorqt.dumps import remove_cached_dumps
+from rucio.daemons.auditorqt.output import bz2_compress_file
 
-from rucio.common.dumper import smart_open
-from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
-#from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 def generic_auditor(
         rse: str,
         keep_dumps: bool,
         delta: int,
-        date: datetime,
+        date: datetime | None,
+        algorithm: str,
         cache_dir: str,
         results_dir: str,
-        no_declaration: bool
-) -> Optional[str]:
+        no_declaration: bool,
+        compress_results: bool
+) -> str | None:
 
     """
     `rse` is the RSE name
@@ -49,6 +50,9 @@ def generic_auditor(
 
     `date` is a datetime instance with the date of the desired dump or None
     to download the latest available dump
+
+    'algorithm' - which algorithm to use to compare dumps;
+    default: reliable
 
     'cache_dir' dierectory where the dumps are cached
 
@@ -62,7 +66,7 @@ def generic_auditor(
     if date is None:
         date = datetime.now()
 
-    delta = timedelta(delta)
+    days = timedelta(delta)
 
 #   paths to rse and rucio dumps
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
@@ -75,8 +79,8 @@ def generic_auditor(
 #    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-08.bz2'
 
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse_dump_path, rse, cache_dir, date)
-    rucio_dump_before_path_cache = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - delta, cache_dir)
-    rucio_dump_after_path_cache = fetch_rucio_dump(rucio_dump_after_path, rse, date_rse + delta, cache_dir)
+    rucio_dump_before_path_cache = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - days, cache_dir)
+    rucio_dump_after_path_cache = fetch_rucio_dump(rucio_dump_after_path, rse, date_rse + days, cache_dir)
 
     cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 
@@ -89,37 +93,54 @@ def generic_auditor(
             remove_cached_dumps(cached_dumps)
         return results_path
 
-    missing_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+    if algorithm == "fast":
+        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
 
-    file_results = open(results_path, 'w')
+    if algorithm == "faster":
+        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
 
-    for k in range(len(dark_files)):
-        file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
+    if algorithm in ("fast", "faster"):
+        file_results = open(results_path, 'w')
 
-#missing
-    for k in range(len(missing_files)):
-        file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
+        for k in range(len(dark_files)):
+            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1))
 
-    file_results.close()
+        for k in range(len(missing_files)):
+            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1))
 
-    """
-    if no_declaration:
-        logger.warning(f"No action on output performed")
-    else:
-        process_output(rse, results_path)
-    """
+        file_results.close()
+
+    if algorithm == "reliable":
+        results = consistency_check_slow_reliable(
+            rucio_dump_before_path_cache,
+            rse_dump_path_cache,
+            rucio_dump_after_path_cache,
+            results_dir,
+            rse,
+            date,
+            cache_dir=cache_dir,
+        )
+
+        with temp_file(results_dir, final_name=result_file_name) as (output, _):
+            for result in results:
+                status, path = result
+                output.write(f"{status},{path}\n")
 
     if not keep_dumps:
-        # taken from the atlas profile
         remove_cached_dumps(cached_dumps)
 
+    if compress_results:
+        results_path = bz2_compress_file(results_path)
+        logger.debug(f"Compressed {results_path}")
+
     return results_path
+
 
 def fetch_rse_dump(
     source_path: str,
     rse: str,
     cache_dir: str,
-    date: Optional[datetime] = None,
+    date: datetime | None = None,
     ) -> tuple[str, datetime]:
 
     logger = logging.getLogger('auditor.fetch_rse_dump')
@@ -138,6 +159,7 @@ def fetch_rse_dump(
     logger.debug(f"RSE dump taken from: {source_path} and cached in: {final_path}")
 
     return (final_path, date)
+
 
 def fetch_rucio_dump(
     source_path: str,
@@ -159,171 +181,3 @@ def fetch_rucio_dump(
     logger.debug(f"Rucio dump before taken from: {source_path} and cached in: {final_path}")
 
     return final_path
-
-#@profile
-def prepare_rse_dump(
-    dump_path: str
-) -> []:
-
-    logger = logging.getLogger('auditor.prepare_rse_dump')
-    logger.debug("Preparing RSE dump")
-
-    file_rse_dump = smart_open(dump_path)
-    rse_dump = file_rse_dump.readlines()
-    file_rse_dump.close()
-
-    return rse_dump
-
-#@profile
-def prepare_rucio_dump(
-    dump_path: str
-) -> [[],[]]:
-
-    logger = logging.getLogger('auditor.prepare_rucio_dump')
-    logger.debug("Preparing Rucio dump")
-
-    rucio_dump = [[],[]]
-
-    with smart_open(dump_path) as file_rucio_dump:
-
-        for line in file_rucio_dump:
-            rucio_dump[0].append(line.split()[7]+'\n')
-            rucio_dump[1].append(line.split()[10])
-
-        file_rucio_dump.close()
-
-
-    return rucio_dump
-
-#@profile
-def consistency_check(
-    rucio_dump_before_path: str,
-    rse_dump_path: str,
-    rucio_dump_after_path: str
-) -> ([],[]):
-
-    logger = logging.getLogger('auditor.consistency_check')
-    logger.debug("Consistency check")
-
-    out = dict()
-
-    with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
-
-        for line in file_rucio_dump_before:
-            parts = line.strip().split()
-            out[parts[7]] = 16
-            if parts[10]=='A':
-                out[parts[7]]+=2
-
-        file_rucio_dump_before.close()
-
-    with smart_open(rse_dump_path) as file_rse_dump:
-
-        for line in file_rse_dump:
-            if line in out:
-                out[line]+=8
-            else:
-                out[k]=8
-
-        file_rse_dump.close()
-
-    with smart_open(rucio_dump_after_path) as file_rucio_dump_after:
-
-        for line in file_rucio_dump_after:
-            parts = line.strip().split()
-            if parts[7] in out:
-                out[parts[7]]+=4
-                if parts[10]=='A':
-                    out[parts[7]]+=1
-            else:
-                out[parts[7]]=4
-
-        file_rucio_dump_after.close()
-
-    missing_files = [k for k in out if out[k]==23]
-    dark_files = [k for k in out if out[k]==8]
-
-    results = (missing_files, dark_files)
-
-    return results
-
-
-    """
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
-
-
-    out = dict()
-
-    i = 0
-
-    for k in rucio_dump_before[0]:
-        out[k]=16
-        if rucio_dump_before[1][i]=='A':
-            out[k]+=2
-        i+=1
-
-    del rucio_dump_before
-
-    rse_dump = prepare_rse_dump(rse_dump_path)
-
-
-    i = 0
-    for k in rse_dump:
-        if k in out:
-            out[k]+=8
-        else:
-            out[k]=8
-
-    del rse_dump
-
-    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
-
-
-    for k in rucio_dump_after[0]:
-        if k in out:
-            out[k]+=4
-            if rucio_dump_after[1][i]=='A':
-                out[k]+=1
-        else:
-            out[k]=4
-        i+=1
-
-    del rucio_dump_after
-
-    missing_files = [k for k in out if out[k]==23]
-    dark_files = [k for k in out if out[k]==8]
-
-    results = (missing_files, dark_files)
-
-    return results
-    """
-
-
-    """
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
-
-    file_states = {}
-
-    for file, status in zip(rucio_dump_before[0], rucio_dump_before[1]):
-        file_states[file] = 16 + (2 if status == 'A' else 0)
-
-    del rucio_dump_before
-
-    rse_files = prepare_rse_dump(rse_dump_path)
-
-    for file in rse_files:
-        file_states[file] = file_states.get(file, 0) + 8
-
-    del rse_files
-    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
-
-    for file, status in zip(rucio_dump_after[0], rucio_dump_after[1]):
-        file_states[file] = file_states.get(file, 0) + 4 + (1 if status == 'A' else 0)
-
-    del rucio_dump_after
-
-    missing_files = [file for file, state in file_states.items() if state == 23]
-    dark_files = [file for file, state in file_states.items() if state == 8]
-
-    return missing_files, dark_files
-    """

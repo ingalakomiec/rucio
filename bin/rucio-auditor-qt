@@ -14,14 +14,17 @@
 # limitations under the License.
 
 """
-The auditor daemon is the one responsible for the detection of inconsistencies on storage.
+The auditor daemon is responsible for the detection of inconsistencies on storage:
+- fetching Rucio and RSE dumps for the 'atlas' profile; for the 'generic' profile
+  paths to dumps are given as strings,
+- making the consistency check (three algorithms are available),
+- reporting dark and missing replicas.
 """
 
 import argparse
 import signal
-from datetime import datetime
 
-from rucio.daemons.auditorqt.auditor_qt import run,stop
+from rucio.daemons.auditorqt.auditor_qt import parse_date, run, stop
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -29,9 +32,9 @@ def get_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog="""
+        epilog=r"""
         examples:
-            # Check all RSEs using only 1 thread
+            # Check all RSEs using 1 thread and "atlas" profile
             %(prog)s
 
             # Check all SCRATCHDISKs with 4 threads
@@ -48,20 +51,27 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--rses', default=None, type=str,
                         help='RSEs to check, specified as an RSE expression '
                         '(default: check all RSEs).')
-    parser.add_argument('--keep-dumps',action='store_true',
-                        help='Keep RSE and Rucio Replica Dumps on cache '
-                         '(default: False).')
+    parser.add_argument('--keep-dumps', action='store_true',
+                        help='Keep RSE and Rucio Replica Dumps on cache (location defined in the config file: '
+                        'config_get(\'auditor\', \'cache\') '
+                        '(default: False).')
     parser.add_argument('--delta', default=3, type=int,
                         help='How many days older/newer than the RSE dump must the Rucio replica dumps be '
                         '(default: 3).')
-    parser.add_argument('--date', default=None, type=lambda d: datetime.strptime(d, '%Y-%m-%d'),
+    parser.add_argument('--date', default=None, type=parse_date,
                         help='The date of the RSE dump, for which the consistency check should be done'
-                        '(default: None).')
+                        '(default: None; the newest RSE dump will be taken).')
     parser.add_argument('--profile', default="atlas", type=str,
                         help='Which profile to use '
                         '(default: atlas).')
-    parser.add_argument('--no-declaration',action='store_true',
+    parser.add_argument('--algorithm', default="reliable", type=str,
+                        help='Which algorithm to use to compare dumps '
+                        '(default: reliable).')
+    parser.add_argument('--no-declaration', action='store_true',
                         help='No action on output '
+                         '(default: False).')
+    parser.add_argument('--compress-results', action='store_true',
+                        help='Compress a file with results of the conssitency check'
                          '(default: False).')
     parser.add_argument('--run-once', dest='run_once', action='store_true',
                         help='One iteration only.')
@@ -70,7 +80,7 @@ def get_parser() -> argparse.ArgumentParser:
                         '(default: 1).')
     parser.add_argument('--sleep-time', dest='sleep_time', action='store',
                         default=86400, type=int,
-                        help='Concurrency control: thread sleep time after each'
+                        help='Concurrency control: thread sleep time (in seconds) after each'
                         ' chunk of work')
     return parser
 
@@ -85,7 +95,9 @@ if __name__ == '__main__':
         delta=args.delta,
         date=args.date,
         profile=args.profile,
+        algorithm=args.algorithm,
         no_declaration=args.no_declaration,
+        compress_results=args.compress_results,
         once=args.run_once,
         threads=args.threads,
         sleep_time=args.sleep_time)

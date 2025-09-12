@@ -14,37 +14,40 @@
 
 """action on RSE and Rucio dumps: fetching, removing cached dumps"""
 
-import gfal2
-import glob
+from __future__ import annotations
+
 import hashlib
-import io
 import logging
 import operator
 import os
 import re
-
-
-from configparser import RawConfigParser
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
+from typing import IO, TYPE_CHECKING
+
+import gfal2  # pyright: ignore[reportMissingImports]
+import requests
 from magic import Magic
-from typing import IO, Optional
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file, is_plaintext
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, temp_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
-CHUNK_SIZE = 4194304 # 4MiB
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+CHUNK_SIZE = 4194304  # 4MiB
+
 
 class _LinkCollector(HTMLParser):
-    def __init__(self):
+    def __init__(self) -> None:
         super(_LinkCollector, self).__init__()
-        self.links = []
+        self.links: list[str] = []
 
     def handle_starttag(
             self, tag: str,
-            attrs: "Iterable[tuple[str, str]]"
+            attrs: Iterable[tuple[str, str]]
     ) -> None:
         if tag == 'a':
             self.links.append(
@@ -61,6 +64,7 @@ def gfal_links(base_url: str) -> list[str]:
 
     return dumps
 
+
 def http_links(base_url: str) -> list[str]:
     '''
     Returns a list of the urls contained in `base_url`.
@@ -72,7 +76,7 @@ def http_links(base_url: str) -> list[str]:
     links = []
     for link in link_collector.links:
         if not link.startswith('http://') and not link.startswith('https://'):
-            links.append({base_url}/{link})
+            links.append(f"{base_url}/{link}")
         else:
             links.append(link)
     return links
@@ -80,10 +84,10 @@ def http_links(base_url: str) -> list[str]:
 
 def gfal_download_to_file_with_decoding(
     url: str,
-    file_: "IO"
-) -> None:
+    file_: IO
+) -> bool:
     '''
-    Download the file from 'url', store it in the file-like object 'file_' 
+    Download the file from 'url', store it in the file-like object 'file_'
     '''
 
     logger = logging.getLogger('auditorqt.atlas_specific.dumps.gfal_download_to_file_auditor')
@@ -94,6 +98,7 @@ def gfal_download_to_file_with_decoding(
         gfal_file = ctx.open(url, 'r')
     except gfal2.GError as e:
         logger.error(f"Failed to open {url}: {str(e)}")
+        return False
 
     try:
         chunk = gfal_file.read(CHUNK_SIZE)
@@ -108,15 +113,15 @@ def gfal_download_to_file_with_decoding(
         decode = True
 
     if not decode:
-            while chunk:
-                file_.write(chunk)
-                chunk = gfal_file.read(CHUNK_SIZE)
+        while chunk:
+            file_.write(chunk)
+            chunk = gfal_file.read(CHUNK_SIZE)
 
     else:
         gfal_file_bytes = ctx.open(url, 'r')
         chunk = gfal_file_bytes.read_bytes(CHUNK_SIZE)
         while chunk:
-            m = Magic(mime_encoding = True)
+            m = Magic(mime_encoding=True)
             encoding = m.from_buffer(chunk)
             chunk = chunk.decode(encoding)
             file_.write(chunk)
@@ -146,29 +151,32 @@ protocol_funcs = {
     },
 }
 
+
 def download(url: str, filename: IO) -> None:
     """
     Given the URL 'url' downloads its contents on 'filename'
     """
 
-    return protocol_funcs[protocol(url)]['download'](url, filename)
+    protocol_funcs[protocol(url)]['download'](url, filename)
+
 
 def download_rucio_dump(
     url: str,
     cache_dir: str,
     filename: str
-) -> None:
+) -> bool:
 
     with temp_file(cache_dir, final_name=filename) as (f, _):
         http_download_to_file(url, f)
 
     return True
 
+
 def fetch_object_store(
     rse: str,
     base_url: str,
     cache_dir: str,
-    date: Optional[datetime] = None,
+    date: datetime | None = None,
 ) -> tuple[str, datetime]:
 
     # on objectstores can't list dump files, so try the last N dates
@@ -215,7 +223,7 @@ def fetch_no_object_store(
     rse: str,
     base_url: str,
     cache_dir: str,
-    date: Optional[datetime] = None,
+    date: datetime | None = None,
 ) -> tuple[str, datetime]:
 
     logger = logging.getLogger('auditor.fetch_no_object_store')
@@ -223,7 +231,7 @@ def fetch_no_object_store(
     if date is None:
         logger.debug('Looking for site dumps in: "%s"', base_url)
         dumps = get_all_dumps(base_url)
-        url, date =  get_newest_dump(base_url, dumps)
+        url, date = get_newest_dump(base_url, dumps)
     else:
         url = f"{base_url}/dump_{date:%Y%m%d}"
 
@@ -245,29 +253,17 @@ def fetch_no_object_store(
 
 def generate_url(
     rse: str
-#    config: RawConfigParser
 ) -> str:
-
-    site = rse.split('_')[0]
-#    uncomment the line below when the config part is added
-#    if site not in config.sections():
 
     base_url = f"{ddmendpoint_url(rse)}/dumps"
 
-    """
-    else:
-
-    url_components = config.get(site, rse).split('/')
-    pattern_index = next(idx for idx, comp in enumerate(url_components) if '%m' in comp)
-    base_url = '/'.join(url_components[:pattern_index])
-    url_pattern = '/'.join(url_components[pattern_index:])
-    """
-
     return base_url
+
 
 def get_all_dumps(base_url: str) -> list[str]:
 
     return protocol_funcs[protocol(base_url)]['links'](base_url)
+
 
 def get_newest_dump(
         base_url: str,
@@ -300,6 +296,7 @@ def get_newest_dump(
 
     return max(times, key=operator.itemgetter(1))
 
+
 def protocol(url: str) -> str:
     '''
     Given the URL `url` returns a string with the protocol part.
@@ -309,13 +306,3 @@ def protocol(url: str) -> str:
         raise RuntimeError(f"Protocol {proto} not supported")
 
     return proto
-
-def remove_cached_dumps(paths: []) -> None:
-
-    logger = logging.getLogger('auditor: atlas_specific.dumps.remove_cached_dump')
-
-    for path in paths:
-        os.remove(path)
-        logger.debug(f"Removing dump: {path}")
-
-    return True

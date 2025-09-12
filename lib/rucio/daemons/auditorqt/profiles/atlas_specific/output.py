@@ -17,7 +17,6 @@
 import bz2
 import logging
 import os
-
 from typing import Optional
 
 from rucio.common import config
@@ -72,8 +71,8 @@ def process_output(
                 else:
                     raise ValueError('unexpected label')
 
-   # Since the file is read immediately after its creation, any error
-   # exposes a bug in the Auditor.
+    # Since the file is read immediately after its creation, any error
+    # exposes a bug in the Auditor.
     except Exception as error:
         logger.critical(f"Error processing {results_path}", exc_info=True)
         raise error
@@ -101,14 +100,14 @@ def process_output(
     # While converting MISSING replicas to PFNs, entries that do not
     # correspond to a replica registered in Rucio are silently dropped.
 
-    missed_pfns = [r['rses'][rse_id][0] for chunk in chunks(missed_replicas, 1000) for r in list_replicas(chunk) if rse_id in r['rses']]
+    missing_pfns = [r['rses'][rse_id][0] for chunk in chunks(missing_replicas, 1000) for r in list_replicas(chunk) if rse_id in r['rses']]
 
     for chunk in chunks(dark_replicas, 1000):
         add_quarantined_replicas(rse_id=rse_id, replicas=chunk)
 
     logger.debug(f"Processed {len(dark_replicas)} DARK files from {results_path}")
 
-    declare_bad_file_replicas(missed_pfns, reason='Reported by Auditor',
+    declare_bad_file_replicas(missing_pfns, reason='Reported by Auditor',
                               issuer=InternalAccount('root'), status=BadFilesStatus.SUSPICIOUS)
 
     logger.debug(f"Processed {len(missing_replicas)} MISSING files from {results_path}")
@@ -117,7 +116,6 @@ def process_output(
         final_path = bz2_compress_file(results_path)
         logger.debug(f"Compressed {final_path}")
 
-    return True
 
 def bz2_compress_file(
         source_path: str,
@@ -154,7 +152,6 @@ def guess_replica_info(
     path: str
 ) -> tuple[Optional[str], str]:
 
-
     """Try to extract the scope and name from a path.
 
     ``path``: relative path to the file on the RSE.
@@ -170,6 +167,3 @@ def guess_replica_info(
         return '.'.join(items[0:2]), items[-1]
     else:
         return items[0], items[-1]
-
-
-
