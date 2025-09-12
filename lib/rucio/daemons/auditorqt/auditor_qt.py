@@ -90,7 +90,7 @@ def auditor_qt(
         )
     )
 
-@profile
+#@profile
 def run_once(
     rses: str,
     keep_dumps: bool,
