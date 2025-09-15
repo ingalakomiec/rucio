@@ -29,7 +29,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
 #for benchmarking
-from memory_profiler import profile
+#from memory_profiler import profile
 
 from rucio.common.logging import setup_logging
 from rucio.common.config import config_get, config_has_section
