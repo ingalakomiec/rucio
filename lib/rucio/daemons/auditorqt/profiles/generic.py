@@ -16,6 +16,7 @@
 
 import logging
 import hashlib
+import numpy
 import os
 import re
 import shutil
@@ -24,7 +25,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 #for benchmarking
-from memory_profiler import profile
+#from memory_profiler import profile
 
 from rucio.common.dumper import smart_open
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
@@ -89,18 +90,26 @@ def generic_auditor(
             remove_cached_dumps(cached_dumps)
         return results_path
 
-    missing_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+#    missing_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_path)
 
-    file_results = open(results_path, 'w')
+    consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_path)
 
-    for k in range(len(dark_files)):
-        file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
+#    file_results = open(results_path, 'w')
+
+    #for k in range(len(dark_files)):
+        #file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
+
+#    for h in dark_files:
+#        file_results.write('DARK,' + h.hex() + '\n')
 
 #missing
-    for k in range(len(missing_files)):
-        file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
+    #for k in range(len(missing_files)):
+        #file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
 
-    file_results.close()
+#    for h in missing_files:
+#        file_results.write('MISSING,' + h.hex() + '\n')
+
+#    file_results.close()
 
     """
     if no_declaration:
@@ -195,40 +204,195 @@ def prepare_rucio_dump(
 
     return rucio_dump
 
+class SlottedRecord:
+    __slots__ = ['value']
+    def __init__(self, value):
+        self.value = value
+
+"""
+class Entry:
+    __slots__ = ['key', 'value']
+
+    def __init__(self, key: str, value: int):
+        self.key = key
+        self.value = value
+
+class MyHashTable:
+    def __init__(self, initial_capacity=2**22):  # ~1 million slots - 2**20
+        self.capacity = initial_capacity
+        self.table = [None] * self.capacity
+        self.size = 0
+
+    def _hash(self, key):
+        # Use Python's built-in hash function and confine to table size
+        return hash(key) % self.capacity
+
+    def set(self, key, value):
+        idx = self._hash(key)
+        start_idx = idx
+        while True:
+            entry = self.table[idx]
+            if entry is None or entry.key == key:
+                self.table[idx] = Entry(key, value)
+                return
+            idx = (idx + 1) % self.capacity
+            if idx == start_idx:
+                raise RuntimeError("Hash table is full")
+
+    def get(self, key):
+        idx = self._hash(key)
+        start_idx = idx
+        while True:
+            entry = self.table[idx]
+            if entry is None:
+                raise KeyError(key)
+            if entry.key == key:
+                return entry.value
+            idx = (idx + 1) % self.capacity
+            if idx == start_idx:
+                raise KeyError(key)
+
+    def update(self, key, delta):
+        idx = self._hash(key)
+        start_idx = idx
+        while True:
+            entry = self.table[idx]
+            if entry is None:
+                raise KeyError(key)
+            if entry.key == key:
+                entry.value += delta
+                return
+            idx = (idx + 1) % self.capacity
+            if idx == start_idx:
+                raise KeyError(key)
+
+    def delete(self, key):
+        idx = self._hash(key)
+        start_idx = idx
+        while True:
+            entry = self.table[idx]
+            if entry is None:
+                return  # Key not present
+            if entry.key == key:
+                self.table[idx] = None
+                return
+            idx = (idx + 1) % self.capacity
+            if idx == start_idx:
+                return
+
+    def contains(self, key):
+        idx = self._hash(key)
+        start_idx = idx
+        while True:
+            entry = self.table[idx]
+            if entry is None:
+                return False
+            if entry.key == key:
+                return True
+            idx = (idx + 1) % self.capacity
+            if idx == start_idx:
+                return False
+
+    def items(self):
+        for entry in self.table:
+            if entry is not None:
+                yield entry.key, entry.value
+"""
+
+#def hash_key(s):
+#    return hashlib.md5(s.encode()).digest()
+
+#def hash_key(s: str) -> bytes:
+#    return hashlib.blake2b(s.encode('utf-8'), digest_size=8).digest()
+
+entry_dtype = numpy.dtype([
+    ('hash', numpy.uint64),
+    ('value', numpy.uint8)
+], align=False)
+
+MAX_ENTRIES = 250_000_000
+hash_table = numpy.zeros(MAX_ENTRIES, dtype = entry_dtype)
+entry_count = 0
+
+def hash_key(key_str: str) -> int:
+    return int.from_bytes(
+        hashlib.blake2b(key_str.encode('utf-8'), digest_size=8).digest(), 'big'
+)
+
+hash_index_map = {}
+
+def insert_or_update(key_str, value_delta):
+    global entry_count
+
+    h = hash_key(key_str)
+
+    if h in hash_index_map:
+        idx = hash_index_map[h]
+        hash_table[idx]['value'] += value_delta
+        if hash_table[idx]['value'] == 0:
+            # Remove if value becomes 0
+            hash_table[idx]['value'] = 0
+            del hash_index_map[h]
+    else:
+        if entry_count >= MAX_ENTRIES:
+            raise MemoryError("Exceeded preallocated table size")
+
+        idx = entry_count
+        hash_table[idx] = (h, value_delta)
+        hash_index_map[h] = idx
+        entry_count += 1
+
+
 #@profile
 def consistency_check(
     rucio_dump_before_path: str,
     rse_dump_path: str,
-    rucio_dump_after_path: str
-) -> ([],[]):
-
+    rucio_dump_after_path: str,
+    results_path: str
+#) -> ([],[]):
+) -> None:
     logger = logging.getLogger('auditor.consistency_check')
     logger.debug("Consistency check")
 
-    out = dict()
+#    entry_dtype = numpy.dtype([
+#        ('hash', numpy.uint64),
+#        ('value', numpy.uint8)
+#    ])
 
-    print("rucio dump before")
+#    MAX_ENTRIES = 25_000_000
+    hash_table = numpy.zeros(MAX_ENTRIES, dtype = entry_dtype)
+
+    print("Pre-entry size:", entry_dtype.itemsize)
+
+
+    """
+
     with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
 
         for line in file_rucio_dump_before:
             parts = line.strip().split()
             key = parts[7]+'\n'
-            out[key] = 16
+            value = 16
             if parts[10]=='A':
-                out[key]+=2
-            else:
-                del out[key]
+                value += 2
+            insert_or_update(key, value)
 
-    print("rse dump")
+    """
+
+    """
     with smart_open(rse_dump_path) as file_rse_dump:
 
         for line in file_rse_dump:
-            if line in out:
-                del out[line]
+            key = line
+            hkey = hash_key(key)
+            if hkey in hash_index_map:
+                idx = hash_index_map[hkey]
+                del hash_index_map[hkey]
             else:
-                out[line]=8
+                insert_or_update(key, 8)
 
-    print("rucio dump after")
+    """
+    """
     with smart_open(rucio_dump_after_path) as file_rucio_dump_after:
 
         for line in file_rucio_dump_after:
@@ -238,15 +402,140 @@ def consistency_check(
                 out[key]+=4
                 if parts[10]=='A':
                     out[key]+=1
-                else:
-                    del out[key]
 
     missing_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
+    """
+    return True
+
+    """
+
+    in_rucio_dump_before = set()
+    #in_rucio_dump_after = set()
+    #in_all_rucio_dumps = set()
+    #in_rse_dump = set()
+
+    print("rucio dump before")
+    with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
+        for line in file_rucio_dump_before:
+            parts = line.strip().split()
+            key = parts[7]
+            hkey = hash_key(key)
+            #in_all_rucio_dumps.add(hkey)
+            if parts[10] == 'A':
+                in_rucio_dump_before.add(hkey)
+
+    print("rucio dump after")
+
+    with smart_open(rucio_dump_after_path) as file_rucio_dump_after:
+        for line in file_rucio_dump_after:
+            parts = line.strip().split()
+            key = parts[7]
+            hkey = hash_key(key)
+            in_all_rucio_dumps.add(hkey)
+            if parts[10] == 'A':
+                in_rucio_dump_after.add(hkey)
+
+    print("rse dump")
+    with smart_open(rse_dump_path) as file_rse_dump:
+        for line in file_rse_dump:
+            key = line.strip()
+            hkey = hash_key(key)
+            in_rse_dump.add(hkey)
+
+    with open(results_path, 'w') as file_out:
+        for h in in_rse_dump:
+            if h not in in_all_rucio_dumps:
+                file_out.write("DARK," + h.hex() + "\n")
+
+        for h in in_rucio_dump_before:
+            if h in in_rucio_dump_after and h not in in_rse_dump:
+                file_out.write("MISSING," + h.hex() + "\n")
+
+    return True
+
+    """
+    """
+
+    #out = dict()
+    out = {}
+   # out = MyHashTable()
+
+    print("rucio dump before")
+    with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
+
+        for line in file_rucio_dump_before:
+            parts = line.strip().split()
+            #key = parts[7]+'\n'
+            key = parts[7]
+            hkey = hash_key(key)
+            #out[key] = 16
+            #out[key] = SlottedRecord(16)
+            out[hkey] = SlottedRecord(16)
+            #out.set(key, 16)
+            if parts[10]=='A':
+                #out[key]+=2
+                #out[key].value += 2
+                out[hkey].value += 2
+                #out.update(key, 2)
+            else:
+                #del out[key]
+                del out[hkey]
+                #out.delete(key)
+
+    print("rse dump")
+    with smart_open(rse_dump_path) as file_rse_dump:
+
+        for line in file_rse_dump:
+            hkey = hash_key(line.strip())
+            #if line in out:
+            if hkey in out:
+            #if out.contains(line):
+                #del out[line]
+                del out[hkey]
+                #out.delete(line)
+            else:
+                #out[line]=8
+                #out[line] = SlottedRecord(8)
+                out[hkey] = SlottedRecord(8)
+                #out.set(line, 8)
+
+    print("rucio dump after")
+    with smart_open(rucio_dump_after_path) as file_rucio_dump_after:
+
+        for line in file_rucio_dump_after:
+            parts = line.strip().split()
+            #key = parts[7]+'\n'
+            key = parts[7]
+            hkey = hash_key(key)
+            #if key in out:
+            if hkey in out:
+            #if out.contains(key):
+                #out[key]+=4
+                #out[key].value += 4
+                out[hkey].value += 4
+                #out.update(key, 4)
+                if parts[10]=='A':
+                    #out[key]+=1
+                    #out[key].value += 1
+                    out[hkey].value += 1
+                    #out.update(key,1)
+                else:
+                    #del out[key]
+                    del out[hkey]
+                    #out.delete(key)
+
+    #missing_files = [k for k in out if out[k]==23]
+    #dark_files = [k for k in out if out[k]==8]
+
+
+    missing_files = [k for k, v in out.items() if v.value == 23]
+    dark_files = [k for k, v in out.items() if v.value == 8]
 
     results = (missing_files, dark_files)
 
     return results
+    """
 
 
     """
