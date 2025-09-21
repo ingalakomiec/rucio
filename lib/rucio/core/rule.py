@@ -37,7 +37,7 @@ import rucio.core.lock  # import get_replica_locks, get_files_and_replica_locks_
 import rucio.core.replica  # import get_and_lock_file_replicas, get_and_lock_file_replicas_for_dataset
 from rucio.common.cache import MemcacheRegion
 from rucio.common.config import config_get
-from rucio.common.constants import DEFAULT_VO, RseAttr
+from rucio.common.constants import DEFAULT_ACTIVITY, DEFAULT_VO, POLICY_ALGORITHM_TYPES_LITERAL, RseAttr
 from rucio.common.exception import (
     DataIdentifierNotFound,
     DuplicateRule,
@@ -98,7 +98,7 @@ class AutoApprove(PolicyPackageAlgorithms):
     Handle automatic approval algorithms for replication rules
     """
 
-    _algorithm_type = 'auto_approve'
+    _algorithm_type: POLICY_ALGORITHM_TYPES_LITERAL = 'auto_approve'
 
     def __init__(self, rule: models.ReplicationRule, did: models.DataIdentifier, session: 'Session', vo: str = DEFAULT_VO) -> None:
         super().__init__()
@@ -180,7 +180,7 @@ def add_rule(
     locked: bool,
     subscription_id: Optional[str],
     source_replica_expression: Optional[str] = None,
-    activity: str = 'User Subscriptions',
+    activity: Optional[str] = None,
     notify: Optional[Literal['Y', 'N', 'C', 'P']] = None,
     purge_replicas: bool = False,
     ignore_availability: bool = False,
@@ -231,6 +231,9 @@ def add_rule(
     """
     if copies <= 0:
         raise InvalidValueForKey("The number of copies for a replication rule should be greater than 0.")
+
+    if not activity:
+        activity = DEFAULT_ACTIVITY
 
     rule_ids = []
 

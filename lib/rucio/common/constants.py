@@ -29,6 +29,8 @@ RESERVED_KEYS = ['scope', 'name', 'account', 'did_type', 'is_open', 'monotonic',
 
 DEFAULT_VO = 'def'
 
+DEFAULT_ACTIVITY = 'User Subscriptions'
+
 KEY_TYPES = ['ALL', 'COLLECTION', 'FILE', 'DERIVED']
 # all(container, dataset, file), collection(dataset or container), file, derived(compute from file for collection)
 
@@ -219,3 +221,6 @@ SUPPORTED_SIGN_URL_SERVICES = list(get_args(SUPPORTED_SIGN_URL_SERVICES_LITERAL)
 
 OPENDATA_DID_STATE_LITERAL = Literal['draft', 'public', 'suspended']
 OPENDATA_DID_STATE_LITERAL_LIST = list(get_args(OPENDATA_DID_STATE_LITERAL))
+
+POLICY_ALGORITHM_TYPES_LITERAL = Literal['non_deterministic_pfn', 'scope', 'lfn2pfn', 'pfn2lfn', 'fts3_tape_metadata_plugins', 'fts3_plugins_init', 'auto_approve']
+POLICY_ALGORITHM_TYPES = list(get_args(POLICY_ALGORITHM_TYPES_LITERAL))
