@@ -16,7 +16,7 @@
 
 import logging
 import hashlib
-import numpy
+#import numpy
 import os
 import re
 import shutil
@@ -306,6 +306,7 @@ class MyHashTable:
 #def hash_key(s: str) -> bytes:
 #    return hashlib.blake2b(s.encode('utf-8'), digest_size=8).digest()
 
+"""
 entry_dtype = numpy.dtype([
     ('hash', numpy.uint64),
     ('value', numpy.uint8)
@@ -314,7 +315,7 @@ entry_dtype = numpy.dtype([
 MAX_ENTRIES = 250_000_000
 hash_table = numpy.zeros(MAX_ENTRIES, dtype = entry_dtype)
 entry_count = 0
-
+"""
 def hash_key(key_str: str) -> int:
     return int.from_bytes(
         hashlib.blake2b(key_str.encode('utf-8'), digest_size=8).digest(), 'big'
