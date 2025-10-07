@@ -95,20 +95,14 @@ def generic_auditor(
 
 #    consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_path)
 
+    #commented - taking missing and dark replicas and writing to a file
     file_results = open(results_path, 'w')
 
     for k in range(len(dark_files)):
         file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
-#    for h in dark_files:
-#        file_results.write('DARK,' + h.hex() + '\n')
-
-#missing
     for k in range(len(missing_files)):
         file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
-
-#    for h in missing_files:
-#        file_results.write('MISSING,' + h.hex() + '\n')
 
     file_results.close()
 
@@ -205,182 +199,17 @@ def prepare_rucio_dump(
 
     return rucio_dump
 
-class SlottedRecord:
-    __slots__ = ['value']
-    def __init__(self, value):
-        self.value = value
-
-"""
-class Entry:
-    __slots__ = ['key', 'value']
-
-    def __init__(self, key: str, value: int):
-        self.key = key
-        self.value = value
-
-class MyHashTable:
-    def __init__(self, initial_capacity=2**22):  # ~1 million slots - 2**20
-        self.capacity = initial_capacity
-        self.table = [None] * self.capacity
-        self.size = 0
-
-    def _hash(self, key):
-        # Use Python's built-in hash function and confine to table size
-        return hash(key) % self.capacity
-
-    def set(self, key, value):
-        idx = self._hash(key)
-        start_idx = idx
-        while True:
-            entry = self.table[idx]
-            if entry is None or entry.key == key:
-                self.table[idx] = Entry(key, value)
-                return
-            idx = (idx + 1) % self.capacity
-            if idx == start_idx:
-                raise RuntimeError("Hash table is full")
-
-    def get(self, key):
-        idx = self._hash(key)
-        start_idx = idx
-        while True:
-            entry = self.table[idx]
-            if entry is None:
-                raise KeyError(key)
-            if entry.key == key:
-                return entry.value
-            idx = (idx + 1) % self.capacity
-            if idx == start_idx:
-                raise KeyError(key)
-
-    def update(self, key, delta):
-        idx = self._hash(key)
-        start_idx = idx
-        while True:
-            entry = self.table[idx]
-            if entry is None:
-                raise KeyError(key)
-            if entry.key == key:
-                entry.value += delta
-                return
-            idx = (idx + 1) % self.capacity
-            if idx == start_idx:
-                raise KeyError(key)
-
-    def delete(self, key):
-        idx = self._hash(key)
-        start_idx = idx
-        while True:
-            entry = self.table[idx]
-            if entry is None:
-                return  # Key not present
-            if entry.key == key:
-                self.table[idx] = None
-                return
-            idx = (idx + 1) % self.capacity
-            if idx == start_idx:
-                return
-
-    def contains(self, key):
-        idx = self._hash(key)
-        start_idx = idx
-        while True:
-            entry = self.table[idx]
-            if entry is None:
-                return False
-            if entry.key == key:
-                return True
-            idx = (idx + 1) % self.capacity
-            if idx == start_idx:
-                return False
-
-    def items(self):
-        for entry in self.table:
-            if entry is not None:
-                yield entry.key, entry.value
-"""
-
-#def hash_key(s):
-#    return hashlib.md5(s.encode()).digest()
-
-#def hash_key(s: str) -> bytes:
-#    return hashlib.blake2b(s.encode('utf-8'), digest_size=8).digest()
-
-"""
-entry_dtype = numpy.dtype([
-    ('hash', numpy.uint64),
-    ('value', numpy.uint8)
-], align=False)
-
-MAX_ENTRIES = 250_000_000
-hash_table = numpy.zeros(MAX_ENTRIES, dtype = entry_dtype)
-entry_count = 0
-"""
-def hash_key(key_str: str) -> int:
-    return int.from_bytes(
-        hashlib.blake2b(key_str.encode('utf-8'), digest_size=8).digest(), 'big'
-)
-
-hash_index_map = {}
-
-def insert_or_update(key_str, value_delta):
-    global entry_count
-
-    h = hash_key(key_str)
-
-    if h in hash_index_map:
-        idx = hash_index_map[h]
-        hash_table[idx]['value'] += value_delta
-        if hash_table[idx]['value'] == 0:
-            # Remove if value becomes 0
-            hash_table[idx]['value'] = 0
-            del hash_index_map[h]
-    else:
-        if entry_count >= MAX_ENTRIES:
-            raise MemoryError("Exceeded preallocated table size")
-
-        idx = entry_count
-        hash_table[idx] = (h, value_delta)
-        hash_index_map[h] = idx
-        entry_count += 1
-
-
 #@profile
 def consistency_check(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
     results_path: str
-#) -> ([],[]):
-) -> None:
+) -> [[],[]]:
+#) -> None:
     logger = logging.getLogger('auditor.consistency_check')
     logger.debug("Consistency check")
 
-#    entry_dtype = numpy.dtype([
-#        ('hash', numpy.uint64),
-#        ('value', numpy.uint8)
-#    ])
-
-#    MAX_ENTRIES = 25_000_000
-
-    """
-    hash_table = numpy.zeros(MAX_ENTRIES, dtype = entry_dtype)
-
-    print("Pre-entry size:", entry_dtype.itemsize)
-
-    with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
-
-        for line in file_rucio_dump_before:
-            parts = line.strip().split()
-            key = parts[7]+'\n'
-            value = 16
-            if parts[10]=='A':
-                value += 2
-            insert_or_update(key, value)
-
-    print("done")
-
-    """
     """
     with smart_open(rse_dump_path) as file_rse_dump:
 
@@ -554,6 +383,10 @@ def consistency_check(
                     value+=2
                 out_file.write(f"{key}\t{value}\n")
     """
+    #    ALGORITHM 2
+    #    an algorithm with open dump files and a dictionary:
+    #    fast, faster than ALGORITHM 1, 6.5 min for DESY dumps
+    #    not suitable for big (>4GB) dumps
 
     out = dict()
 
@@ -593,8 +426,12 @@ def consistency_check(
 
     return results
 
-    """
+    #    ALGORITHM 1
+    #    an algorithm with lists and a dictionary:
+    #    fast (7 min for DESY dumps),
+    #    not suitable for big (>4GB) dumps
 
+    """
     rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
 
@@ -642,33 +479,4 @@ def consistency_check(
     results = (missing_files, dark_files)
 
     return results
-    """
-
-    """
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
-
-    file_states = {}
-
-    for file, status in zip(rucio_dump_before[0], rucio_dump_before[1]):
-        file_states[file] = 16 + (2 if status == 'A' else 0)
-
-    del rucio_dump_before
-
-    rse_files = prepare_rse_dump(rse_dump_path)
-
-    for file in rse_files:
-        file_states[file] = file_states.get(file, 0) + 8
-
-    del rse_files
-    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
-
-    for file, status in zip(rucio_dump_after[0], rucio_dump_after[1]):
-        file_states[file] = file_states.get(file, 0) + 4 + (1 if status == 'A' else 0)
-
-    del rucio_dump_after
-
-    missing_files = [file for file, state in file_states.items() if state == 23]
-    dark_files = [file for file, state in file_states.items() if state == 8]
-
-    return missing_files, dark_files
     """
