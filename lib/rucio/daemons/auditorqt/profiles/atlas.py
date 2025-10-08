@@ -277,10 +277,12 @@ def consistency_check(
     logger = logging.getLogger('auditor.consistency_check')
     logger.debug("Consistency check")
 
-#    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
+#    ALGORITHM 1
+#    fast, not suitable for big (>4GB) dumps
+
+    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
     out = dict()
-    """
 
     i = 0
 
@@ -315,8 +317,6 @@ def consistency_check(
         i+=1
 
     del rucio_dump_after
-
-    """
 
     missing_files = [k for k in out if out[k]==23]
     dark_files = [k for k in out if out[k]==8]
