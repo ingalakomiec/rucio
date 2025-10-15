@@ -27,6 +27,10 @@ from typing import Optional
 #for benchmarking
 #from memory_profiler import profile
 
+# for ALGORITHM 3 - the old one
+from rucio.common.dumper import mkdir, temp_file
+from rucio.common.dumper.consistency import Consistency
+
 from rucio.common.dumper import smart_open
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
 #from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
@@ -67,14 +71,14 @@ def generic_auditor(
     delta = timedelta(delta)
 
 #   paths to rse and rucio dumps
-    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
-    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
-    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
+#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
+#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
+#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
 
 # big dumps
-#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK.dump_20250805'
-#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-02.bz2'
-#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-08.bz2'
+    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK.dump_20250805'
+    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-02.bz2'
+    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-08.bz2'
 
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse_dump_path, rse, cache_dir, date)
     rucio_dump_before_path_cache = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - delta, cache_dir)
@@ -90,13 +94,18 @@ def generic_auditor(
         if not keep_dumps:
             remove_cached_dumps(cached_dumps)
         return results_path
+    # for ALGORITHM 1 AND 2
+#    missing_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_path)
 
-    missing_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_path)
+    # FOR ALGORITHM 3
+    consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
+
 
 #    consistency_check with writing results immediately to a file
 #    consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_path)
 
 #    consistency_check with taking missing and dark replicas from two lists and writing to a file
+    """
     file_results = open(results_path, 'w')
 
     for k in range(len(dark_files)):
@@ -106,7 +115,7 @@ def generic_auditor(
         file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
 
     file_results.close()
-
+    """
     """
     if no_declaration:
         logger.warning(f"No action on output performed")
@@ -205,17 +214,47 @@ def consistency_check(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
-    results_path: str
-) -> [[],[]]:
+    results_path: str,
+    rse: str,
+    date: datetime,
+    cache_dir: str
+# for ALGORITHMS 1 and 2
+#) -> [[],[]]:
+# for ALGORITHM 3
+):
 #) -> None:
     logger = logging.getLogger('auditor.consistency_check')
     logger.debug("Consistency check")
+
+
+    #    ALGORITHM 3
+    #    old algorithm
+
+    results = Consistency.dump(
+        'consistency-manual',
+        rse,
+        rse_dump_path,
+        rucio_dump_before_path,
+        rucio_dump_after_path,
+        date,
+        cache_dir=cache_dir,
+    )
+
+    result_file_name = f"result.{rse}_{date:%Y%m%d}"
+
+    with temp_file(results_path, final_name=result_file_name) as (output, _):
+        for result in results:
+            output.write('{0}\n'.format(result.csv()))
+
+
 
     #    ALGORITHM 2
     #    an algorithm with open dump files and a dictionary:
     #    fast, faster than ALGORITHM 1, 6.5 min for DESY dumps
     #    not suitable for big (>4GB) dumps
 
+
+    """
     out = dict()
 
     with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
@@ -253,6 +292,8 @@ def consistency_check(
     results = (missing_files, dark_files)
 
     return results
+
+    """
 
     #    ALGORITHM 1
     #    an algorithm with lists and a dictionary:
