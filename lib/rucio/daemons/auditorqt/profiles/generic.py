@@ -14,6 +14,7 @@
 
 """Generic auditor profiles."""
 
+import glob
 import logging
 import hashlib
 #import numpy
@@ -71,14 +72,14 @@ def generic_auditor(
     delta = timedelta(delta)
 
 #   paths to rse and rucio dumps
-#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
-#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
-#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
+    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
+    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
+    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
 
 # big dumps
-    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK.dump_20250805'
-    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-02.bz2'
-    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-08.bz2'
+#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK.dump_20250805'
+#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-02.bz2'
+#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-08.bz2'
 
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse_dump_path, rse, cache_dir, date)
     rucio_dump_before_path_cache = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - delta, cache_dir)
@@ -124,8 +125,10 @@ def generic_auditor(
     """
 
     if not keep_dumps:
-        # taken from the atlas profile
-        remove_cached_dumps(cached_dumps)
+        remove = glob.glob(f"{cache_dir}/*{rse}*")
+
+        for fil in remove:
+            os.remove(fil)
 
     return results_path
 
@@ -229,7 +232,11 @@ def consistency_check(
 
     #    ALGORITHM 3
     #    old algorithm
+    #    three dump files sorted opened
+    #    slow, 10.5 min for DESY dumps
+    #    suitable for big (>4GB) dumps
 
+    """
     results = Consistency.dump(
         'consistency-manual',
         rse,
@@ -245,7 +252,7 @@ def consistency_check(
     with temp_file(results_path, final_name=result_file_name) as (output, _):
         for result in results:
             output.write('{0}\n'.format(result.csv()))
-
+    """
 
 
     #    ALGORITHM 2
