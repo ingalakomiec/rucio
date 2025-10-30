@@ -52,6 +52,7 @@ ResponseTypeVar = TypeVar('ResponseTypeVar', bound=flask.wrappers.Response)
 
 RUCIO_HTTPD_ENCODED_SLASHES_NO_DECODE = os.environ.get('RUCIO_HTTPD_ENCODED_SLASHES_NO_DECODE',
                                                        'false').lower() == 'true'
+_DEFAULT = object()
 
 
 class CORSMiddleware:
@@ -410,9 +411,9 @@ def json_parse(types: tuple, json_loads: "Callable[[str], Any]" = json.loads, **
         )
 
 
-def param_get(parameters: dict[str, Any], name: str, **kwargs) -> Any:
-    if 'default' in kwargs:
-        return parameters.get(name, kwargs['default'])
+def param_get(parameters: dict[str, Any], name: str, default: Optional[Any] = _DEFAULT) -> Any:
+    if default is not _DEFAULT:
+        return parameters.get(name, default)
     else:
         if name not in parameters:
             flask.abort(
@@ -423,6 +424,47 @@ def param_get(parameters: dict[str, Any], name: str, **kwargs) -> Any:
                 )
             )
         return parameters[name]
+
+
+def param_get_bool(parameters: dict[str, Any], name: str, default: Optional[bool] = None) -> bool:
+    """
+        Get a boolean parameter from the passed parameters. Converts to True/False.
+    """
+    def _str_to_bool(option: Union[str, bool]) -> bool:
+        # TODO remove warning and replace with error in v40 - #8156
+        try:
+            int(option)
+            logging.warning("Booleans should only accept true/false. Please change 0/1 to true/false.")
+        except (TypeError, ValueError):
+            pass
+
+        if isinstance(option, int):
+            option = f"{option}"
+
+        if isinstance(option, bool):
+            return option
+        elif option.lower() in ['true', '1']:
+            return True
+        elif option.lower() in ['false', '0']:
+            return False
+        else:
+            flask.abort(
+                generate_http_error_flask(
+                    status_code=400,
+                    exc=TypeError.__name__,
+                    exc_msg=f"'{name}' must be a boolean type."
+                )
+            )
+    value = parameters.get(name, default)
+    if value is None:
+        flask.abort(
+                generate_http_error_flask(
+                    status_code=400,
+                    exc=KeyError.__name__,
+                    exc_msg=f"'{name}' not defined"
+                )
+            )
+    return _str_to_bool(value)
 
 
 def extract_vo(headers: Headers) -> str:
