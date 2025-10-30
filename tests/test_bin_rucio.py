@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 import random
 import re
+import shlex
 import tempfile
 from datetime import datetime, timedelta, timezone
 
@@ -1292,3 +1294,80 @@ def test_download_file_check_by_size(rse_factory, mock_scope, did_factory):
         exitcode, out, err = execute(cmd)
         assert exitcode == 0
         assert "File with same name exists locally, but filesize mismatches" in err
+
+
+@pytest.mark.parametrize(
+    ("cli", "lfn"),
+    [
+        ("new", True),
+        ("old", True),
+        ("new", False),
+        ("old", False),
+    ]
+)
+def test_cli_declare_bad_replicas(cli, lfn, rse_factory, mock_scope, did_factory, tmp_path, rucio_client):
+    """CLIENT(USER): Rucio declare bad replica"""
+    log = logging.getLogger("bad-replicas")
+
+    rse, _ = rse_factory.make_posix_rse()
+    scope = mock_scope.external
+
+    did = did_factory.upload_test_file(rse_name=rse, scope=scope)
+    # replace scope object with scope name str
+    did["scope"] = did["scope"].external
+
+    cmd = []
+    if cli == "new":
+        cmd = ["rucio", "replica", "state", "update", "bad"]
+    else:
+        cmd = ["rucio-admin", "replicas", "declare-bad"]
+
+    cmd.extend(["--reason", "test"])
+
+    bad_replicas = []
+
+    if lfn:
+        lfn_path = tmp_path / "lfns.txt"
+        lfn_path.write_text(did["name"] + "\n")
+
+        if cli == "new":
+            cmd.append("--lfn")
+            bad_replicas.append(str(lfn_path))
+        else:
+            cmd.extend(["--lfns", str(lfn_path)])
+
+        cmd.extend(["--rse", rse, "--scope", scope])
+    else:
+        bad_replicas.append(f"{did['scope']}:{did['name']}")
+
+    cmd.extend(bad_replicas)
+    cmd = shlex.join(cmd)
+
+    code, stdout, stderr = execute(cmd)
+    log.info("Command stdout:\n%s", stdout)
+    log.warning("Command stderr:\n%s", stderr)
+    assert code == 0, f"Running {cmd} failed. out:\n{stdout}\nerr\n{stderr}"
+
+    replicas = next(rucio_client.list_replicas([did], rse_expression=rse, all_states=True))
+    assert replicas["states"][rse] == "BAD"
+
+
+def test_cli_declare_bad_replicas_invalid_usage():
+    """CLIENT(USER): Rucio declare bad replica invalid argument handling"""
+    base_cmd = ["rucio", "replica", "state", "update", "bad"]
+
+    def run(expected_error, args=None, expected_code=1):
+        args = args or []
+        cmd = shlex.join(base_cmd + args)
+        code, stdout, stderr = execute(cmd)
+
+        assert code == expected_code, f"Running {cmd} did not fail as expected. out:\n{stdout}\nerr\n{stderr}"
+        assert expected_error in stderr, f"Expected error message not found in stderr:\n{stderr}"
+
+    run("Missing option '--reason'", expected_code=2)
+
+    args = ["--reason", "test", "--lfn", "foo"]
+    run("Scope and RSE are required", args=args, expected_code=1)
+
+    args = ["--reason", "test", "--scope", "test", "--rse", "test", "--lfn", "foo", "bar"]
+    run("Exactly one", args=args, expected_code=1)
