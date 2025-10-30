@@ -14,7 +14,11 @@
 # limitations under the License.
 
 """
-The auditor daemon is the one responsible for the detection of inconsistencies on storage.
+The auditor daemon is responsible for the detection of inconsistencies on storage:
+- fetching Rucio and RSE dumps for the 'atlas' profile; for the 'generic' profile
+  paths to dumps are given as strings,
+- making the consistency check (three algorithms are available),
+- reporting dark and missing replicas.
 """
 
 import argparse
@@ -48,15 +52,16 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--rses', default=None, type=str,
                         help='RSEs to check, specified as an RSE expression '
                         '(default: check all RSEs).')
-    parser.add_argument('--keep-dumps',action='store_true',
-                        help='Keep RSE and Rucio Replica Dumps on cache '
-                         '(default: False).')
+    parser.add_argument('--keep-dumps', action='store_true',
+                        help='Keep RSE and Rucio Replica Dumps on cache (location defined in the config file: '
+                        'config_get(\'auditor\', \'cache\') '
+                        '(default: False).')
     parser.add_argument('--delta', default=3, type=int,
                         help='How many days older/newer than the RSE dump must the Rucio replica dumps be '
                         '(default: 3).')
-    parser.add_argument('--date', default=None, type=lambda d: datetime.strptime(d, '%Y-%m-%d'),
+    parser.add_argument('--date', default = None, type=lambda d: datetime.strptime(d, '%Y-%m-%d'),
                         help='The date of the RSE dump, for which the consistency check should be done'
-                        '(default: None).')
+                        '(default: None; the newest RSE dump will be taken).')
     parser.add_argument('--profile', default="atlas", type=str,
                         help='Which profile to use '
                         '(default: atlas).')
