@@ -94,8 +94,8 @@ def atlas_auditor(
 
     'delta' How many days older/newer than the RSE dump must the Rucio replica dumps be
 
-    `date` is a datetime instance with the date of the desired dump or None
-    to download the latest available dump
+    `date` is a datetime instance with the date of the desired dump;
+    default: download the latest available dump
 
     'cache_dir' dierectory where the dumps are cached
 
