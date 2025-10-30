@@ -16,7 +16,16 @@
 
 import logging
 
-from rucio.common.dumper import smart_open
+from datetime import datetime
+
+from rucio.common.dumper import mkdir, smart_open, temp_file
+from rucio.common.dumper.consistency import Consistency
+
+
+#    ALGORITHM 1
+#    an algorithm with lists and a dictionary:
+#    fast (7 min for DESY dumps),
+#    not suitable for big (>4GB) dumps
 
 def consistency_check_fast(
     rucio_dump_before_path: str,
@@ -26,9 +35,6 @@ def consistency_check_fast(
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_fast')
     logger.debug("Consistency check - fast")
-
-#    ALGORITHM 1
-#    fast, not suitable for big (>4GB) dumps
 
     rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
 
@@ -75,6 +81,97 @@ def consistency_check_fast(
 
     return results
 
+
+#    ALGORITHM 2
+#    an algorithm with open dump files and a dictionary:
+#    fast, faster than ALGORITHM 1, 6.5 min for DESY dumps
+#    not suitable for big (>4GB) dumps
+
+
+def consistency_check_faster(
+    rucio_dump_before_path: str,
+    rse_dump_path: str,
+    rucio_dump_after_path: str
+) -> [[],[]]:
+
+    logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_faster')
+    logger.debug("Consistency check - faster")
+
+    out = dict()
+
+    with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
+
+        for line in file_rucio_dump_before:
+            parts = line.strip().split()
+            key = parts[7]+'\n'
+            out[key] = 16
+            if parts[10]=='A':
+                out[key]+=2
+
+    with smart_open(rse_dump_path) as file_rse_dump:
+
+        for line in file_rse_dump:
+            if line in out:
+                out[line]+=8
+            else:
+                out[line]=8
+
+    with smart_open(rucio_dump_after_path) as file_rucio_dump_after:
+
+        for line in file_rucio_dump_after:
+            parts = line.strip().split()
+            key = parts[7]+'\n'
+            if key in out:
+                out[key]+=4
+                if parts[10]=='A':
+                    out[key]+=1
+            else:
+                out[key]=4
+
+    missing_files = [k for k in out if out[k]==23]
+    dark_files = [k for k in out if out[k]==8]
+
+    results = (missing_files, dark_files)
+
+    return results
+
+#    ALGORITHM 3
+#    old algorithm
+#    three dump files sorted opened
+#    slow, 10.5 min for DESY dumps
+#    suitable for big (>4GB) dumps
+
+
+def consistency_check_slow_reliable(
+    rucio_dump_before_path: str,
+    rse_dump_path: str,
+    rucio_dump_after_path: str,
+    results_path: str,
+    rse: str,
+    date: datetime,
+    cache_dir: str
+) -> None:
+
+    logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
+    logger.debug("Consistency check - slow, reliable")
+
+    results = Consistency.dump(
+        'consistency-manual',
+        rse,
+        rse_dump_path,
+        rucio_dump_before_path,
+        rucio_dump_after_path,
+        date,
+        cache_dir=cache_dir,
+    )
+
+    result_file_name = f"result.{rse}_{date:%Y%m%d}"
+
+    with temp_file(results_path, final_name=result_file_name) as (output, _):
+        for result in results:
+            output.write('{0}\n'.format(result.csv()))
+
+    return True
 
 def prepare_rse_dump(
     dump_path: str
