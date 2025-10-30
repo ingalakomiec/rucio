@@ -25,18 +25,11 @@ import shutil
 from datetime import datetime, timedelta
 from typing import Optional
 
-#for benchmarking
-#from memory_profiler import profile
-
-# for ALGORITHM 3 - the old one
-from rucio.common.dumper import mkdir, temp_file
-from rucio.common.dumper.consistency import Consistency
-
 from rucio.common.dumper import smart_open
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
 #from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_slow_reliable
 
-#@profile
 def generic_auditor(
         rse: str,
         keep_dumps: bool,
@@ -99,7 +92,7 @@ def generic_auditor(
 #    missing_files, dark_files = consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_path)
 
     # FOR ALGORITHM 3
-    consistency_check(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
+    consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
 
 
 #    consistency_check with writing results immediately to a file
@@ -177,182 +170,3 @@ def fetch_rucio_dump(
 
     return final_path
 
-#@profile
-def prepare_rse_dump(
-    dump_path: str
-) -> []:
-
-    logger = logging.getLogger('auditor.prepare_rse_dump')
-    logger.debug("Preparing RSE dump")
-
-    file_rse_dump = smart_open(dump_path)
-    rse_dump = file_rse_dump.readlines()
-    file_rse_dump.close()
-
-    return rse_dump
-
-#@profile
-def prepare_rucio_dump(
-    dump_path: str
-) -> [[],[]]:
-
-    logger = logging.getLogger('auditor.prepare_rucio_dump')
-    logger.debug("Preparing Rucio dump")
-
-    rucio_dump = [[],[]]
-
-    with smart_open(dump_path) as file_rucio_dump:
-
-        for line in file_rucio_dump:
-            rucio_dump[0].append(line.split()[7]+'\n')
-            rucio_dump[1].append(line.split()[10])
-
-        file_rucio_dump.close()
-
-
-    return rucio_dump
-
-#@profile
-def consistency_check(
-    rucio_dump_before_path: str,
-    rse_dump_path: str,
-    rucio_dump_after_path: str,
-    results_path: str,
-    rse: str,
-    date: datetime,
-    cache_dir: str
-# for ALGORITHMS 1 and 2
-#) -> [[],[]]:
-# for ALGORITHM 3
-):
-#) -> None:
-    logger = logging.getLogger('auditor.consistency_check')
-    logger.debug("Consistency check")
-
-
-    #    ALGORITHM 3
-    #    old algorithm
-    #    three dump files sorted opened
-    #    slow, 10.5 min for DESY dumps
-    #    suitable for big (>4GB) dumps
-
-    """
-    results = Consistency.dump(
-        'consistency-manual',
-        rse,
-        rse_dump_path,
-        rucio_dump_before_path,
-        rucio_dump_after_path,
-        date,
-        cache_dir=cache_dir,
-    )
-
-    result_file_name = f"result.{rse}_{date:%Y%m%d}"
-
-    with temp_file(results_path, final_name=result_file_name) as (output, _):
-        for result in results:
-            output.write('{0}\n'.format(result.csv()))
-    """
-
-
-    #    ALGORITHM 2
-    #    an algorithm with open dump files and a dictionary:
-    #    fast, faster than ALGORITHM 1, 6.5 min for DESY dumps
-    #    not suitable for big (>4GB) dumps
-
-
-    """
-    out = dict()
-
-    with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
-
-        for line in file_rucio_dump_before:
-            parts = line.strip().split()
-            key = parts[7]+'\n'
-            out[key] = 16
-            if parts[10]=='A':
-                out[key]+=2
-
-    with smart_open(rse_dump_path) as file_rse_dump:
-
-        for line in file_rse_dump:
-            if line in out:
-                out[line]+=8
-            else:
-                out[line]=8
-
-    with smart_open(rucio_dump_after_path) as file_rucio_dump_after:
-
-        for line in file_rucio_dump_after:
-            parts = line.strip().split()
-            key = parts[7]+'\n'
-            if key in out:
-                out[key]+=4
-                if parts[10]=='A':
-                    out[key]+=1
-            else:
-                out[key]=4
-
-    missing_files = [k for k in out if out[k]==23]
-    dark_files = [k for k in out if out[k]==8]
-
-    results = (missing_files, dark_files)
-
-    return results
-
-    """
-
-    #    ALGORITHM 1
-    #    an algorithm with lists and a dictionary:
-    #    fast (7 min for DESY dumps),
-    #    not suitable for big (>4GB) dumps
-
-    """
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
-
-
-    out = dict()
-
-    i = 0
-
-    for k in rucio_dump_before[0]:
-        out[k]=16
-        if rucio_dump_before[1][i]=='A':
-            out[k]+=2
-        i+=1
-
-    del rucio_dump_before
-
-    rse_dump = prepare_rse_dump(rse_dump_path)
-
-
-    i = 0
-    for k in rse_dump:
-        if k in out:
-            out[k]+=8
-        else:
-            out[k]=8
-
-    del rse_dump
-
-    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
-
-
-    for k in rucio_dump_after[0]:
-        if k in out:
-            out[k]+=4
-            if rucio_dump_after[1][i]=='A':
-                out[k]+=1
-        else:
-            out[k]=4
-        i+=1
-
-    del rucio_dump_after
-
-    missing_files = [k for k in out if out[k]==23]
-    dark_files = [k for k in out if out[k]==8]
-
-    results = (missing_files, dark_files)
-
-    return results
-    """
