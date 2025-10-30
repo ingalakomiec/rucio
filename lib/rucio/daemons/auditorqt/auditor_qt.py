@@ -13,11 +13,16 @@
 # limitations under the License.
 
 """
-The auditor daemon is the one responsible for the detection of inconsistencies on storage.
+The auditor daemon is responsible for the detection of inconsistencies on storage:
+- fetching Rucio and RSE dumps for the 'atlas' profile; for the 'generic' profile
+  paths to dumps are given as strings,
+- making the consistency check (three algorithms are available),
+- reporting dark and missing replicas.
 """
 
 #for benchmarking
 import time
+#from memory_profiler import profile
 
 import functools
 import logging
@@ -27,9 +32,6 @@ import threading
 from configparser import NoSectionError
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
-
-#for benchmarking
-#from memory_profiler import profile
 
 from rucio.common.logging import setup_logging
 from rucio.common.config import config_get, config_has_section
@@ -67,7 +69,8 @@ def auditor_qt(
                            (default: False).
     :param delta:          How many days older/newer than the RSE dump
                            must the Rucio replica dumps be (default: 3).
-    :param date:           The date of the RSE dump, for which the consistency check should be done.
+    :param date:           The date of the RSE dump, for which the consistency check should be done
+                           (default: None; the newest RSE dump will be taken).
     :param profile:        Which profile to use (default: atlas).
     :param no_declaration: No action on output (default: False).
     :param once:           Whether to execute once and exit.
@@ -109,7 +112,8 @@ def run_once(
                               (default: False).
     :param delta:             How many days older/newer than the RSE dump
                               must the Rucio replica dumps be (default: 3).
-    :param date:              The date of the RSE dump, for which the consistency check should be done.
+    :param date:              The date of the RSE dump, for which the consistency check should be done
+                              (default: None; the newest RSE dump will be taken).
     :param profile:           Which profile to use (default: atlas).
     :param no_declaration:    No action on output (default: False).
 
@@ -158,8 +162,8 @@ def run_once(
     # for benchmarking
     end_time = time.perf_counter()
     execution_time = end_time - start_time
-
     print(f"Execution time: {execution_time:.6f} seconds")
+
     return True
 
 
@@ -184,7 +188,8 @@ def run(
                            (default: False).
     :param delta:          How many days older/newer than the RSE dump
                            must the Rucio replica dumps be (default: 3).
-    :param date:           The date of the RSE dump, for which the consistency check should be done.
+    :param date:           The date of the RSE dump, for which the consistency check should be done
+                           (default: None; the newest RSE dump will be taken).
     :param profile:        Which profile to use (default: atlas).
     :param no_declaration: No action on output (default: False).
     :param once:           Whether to execute once and exit.
