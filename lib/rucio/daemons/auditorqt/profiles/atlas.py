@@ -34,7 +34,7 @@ from rucio.common.dumper import smart_open
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
 
-from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast
+from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump, remove_cached_dumps
 #from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
@@ -128,7 +128,7 @@ def atlas_auditor(
             remove_cached_dumps(cached_dumps)
         return results_path
 
-    missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+    missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
 
     file_results = open(results_path, 'w')
 
