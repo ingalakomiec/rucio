@@ -35,7 +35,7 @@ def get_parser() -> argparse.ArgumentParser:
         description=__doc__,
         epilog="""
         examples:
-            # Check all RSEs using only 1 thread
+            # Check all RSEs using 1 thread and "atlas" profile
             %(prog)s
 
             # Check all SCRATCHDISKs with 4 threads
