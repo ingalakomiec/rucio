@@ -109,10 +109,7 @@ def fetch_rse_dump(
 
     logger = logging.getLogger('auditor.fetch_rse_dump')
 
-    print("HEJ 3")
-
     base_url = generate_url(rse)
-    print("HEJ 4")
 
     rse_id = get_rse_id(rse)
     rse_attr = list_rse_attributes(rse_id)
