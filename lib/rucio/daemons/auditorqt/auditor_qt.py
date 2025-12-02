@@ -22,7 +22,6 @@ The auditor daemon is responsible for the detection of inconsistencies on storag
 
 #for benchmarking
 import time
-#from memory_profiler import profile
 
 import functools
 import logging
@@ -93,7 +92,6 @@ def auditor_qt(
         )
     )
 
-#@profile
 def run_once(
     rses: str,
     keep_dumps: bool,
