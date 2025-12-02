@@ -81,7 +81,7 @@ def http_links(base_url: str) -> list[str]:
 def gfal_download_to_file_with_decoding(
     url: str,
     file_: "IO"
-) -> None:
+) -> bool:
     '''
     Download the file from 'url', store it in the file-like object 'file_' 
     '''
@@ -151,13 +151,13 @@ def download(url: str, filename: IO) -> None:
     Given the URL 'url' downloads its contents on 'filename'
     """
 
-    return protocol_funcs[protocol(url)]['download'](url, filename)
+    protocol_funcs[protocol(url)]['download'](url, filename)
 
 def download_rucio_dump(
     url: str,
     cache_dir: str,
     filename: str
-) -> None:
+) -> bool:
 
     with temp_file(cache_dir, final_name=filename) as (f, _):
         http_download_to_file(url, f)
@@ -296,7 +296,7 @@ def protocol(url: str) -> str:
 
     return proto
 
-def remove_cached_dumps(paths: []) -> None:
+def remove_cached_dumps(paths: []) -> bool:
 
     logger = logging.getLogger('auditor: atlas_specific.dumps.remove_cached_dump')
 
