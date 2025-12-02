@@ -30,7 +30,7 @@ import socket
 import threading
 from configparser import NoSectionError
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 from rucio.common.logging import setup_logging
 from rucio.common.config import config_get, config_has_section
@@ -127,9 +127,9 @@ def run_once(
 
     rses_to_process = get_rses_to_process(rses)
 
-    rses_names = [entry['rse'] for entry in rses_to_process]
+    rses_names = [entry.get('rse') for entry in rses_to_process if 'rse' in entry]
 
-    if len(rses_names) <= 0:
+    if not rses_names:
         raise RSENotFound("No RSE found to audit.")
 
     if not config_has_section('auditor'):
@@ -240,12 +240,10 @@ def stop(
     GRACEFUL_STOP.set()
 
 def get_rses_to_process(
-    rses: Optional["Iterable[str]"]
-    ) -> Optional[list[dict[str, Any]]]:
+    rses: Optional[Iterable[str]]
+    ) -> list[dict[str, Any]]:
 
     if rses:
-        rses_to_process = RSEClient().list_rses(rses)
+        return  RSEClient().list_rses(rses)
     else:
-        rses_to_process = RSEClient().list_rses()
-
-    return rses_to_process
+        return RSEClient().list_rses()
