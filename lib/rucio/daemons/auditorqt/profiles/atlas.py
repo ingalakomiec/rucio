@@ -21,62 +21,16 @@ import os
 import re
 import requests
 
-#from configparser import RawConfigParser
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
-#for benchmarking
-#from memory_profiler import profile
-
-#from rucio.common.config import get_config_dirs
 from rucio.common.constants import RseAttr
 from rucio.common.dumper import smart_open
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
-
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump, remove_cached_dumps
 #from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
-
-"""
-_DUMPERCONFIGDIRS = list(
-    filter(
-        os.path.exists,
-        (
-            os.path.join(confdir, 'auditor') for confdir in get_config_dirs()
-        )
-    )
-)
-
-
-class Parser(RawConfigParser):
-    '''
-    RawConfigParser subclass that doesn't modify the the name of the options
-    and removes any quotes around the string values.
-    '''
-    remove_quotes_re = re.compile(r"^'(.+)'$")
-    remove_double_quotes_re = re.compile(r'^"(.+)"$')
-
-    def optionxform(
-            self,
-            optionstr: str
-    ) -> str:
-        return optionstr
-
-    def get(
-            self,
-            section: str,
-            option: str
-    ) -> Any:
-        value = super(Parser, self).get(section, option)
-        if isinstance(value, str):
-            value = self.remove_quotes_re.sub(r'\1', value)
-            value = self.remove_double_quotes_re.sub(r'\1', value)
-        return value
-
-    def items(self, section):
-        return [(name, self.get(section, name)) for name in self.options(section)]
-"""
 
 def atlas_auditor(
         rse: str,
@@ -89,18 +43,18 @@ def atlas_auditor(
 ) -> Optional[str]:
 
     """
-    'rse' is the RSE name
+    'rse'- the RSE name
 
-    'keep_dumps' keep RSE and Rucio dumps on cache or not
+    'keep_dumps'-  keep RSE and Rucio dumps on cache or not
 
-    'delta' How many days older/newer than the RSE dump must the Rucio replica dumps be
+    'delta' - how many days older/newer than the RSE dump must the Rucio replica dumps be
 
-    'date' is a datetime instance with the date of the desired dump;
+    'date' - a datetime instance with the date of the desired dump;
     default: None; the latest RSE dump will be taken
 
-    'cache_dir' dierectory where the dumps are cached
+    'cache_dir' -  dierectory where the dumps are cached
 
-    'results_dir' is the directory where the results of the consistency check will be saved
+    'results_dir' - the directory where the results of the consistency check will be saved
 
     Return value: path to results
     """
@@ -108,9 +62,6 @@ def atlas_auditor(
     logger = logging.getLogger('atlas_auditor')
 
     delta = timedelta(delta)
-
-#    configuration = parse_configuration()
-#    rse_dump_path_tmp, date_rse = fetch_rse_dump(rse, configuration, cache_dir, date)
 
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
@@ -150,38 +101,18 @@ def atlas_auditor(
 
     return results_path
 
-"""
-def parse_configuration(conf_dirs: Optional[list[str]] = None) -> Parser:
-
-    conf_dirs = conf_dirs or _DUMPERCONFIGDIRS
-    logger = logging.getLogger('auditor.parse_configuration')
-
-    if len(conf_dirs) == 0:
-        logger.error('No configuration directory given to load RSE dump path')
-        raise Exeption('No configuration directory given to load RSE dump path')
-        print("conf_dirs: ", conf_dirs)
-
-    configuration = Parser({
-        'disabled': False,
-    })
-
-    for conf_dir in conf_dirs:
-        configuration.read(glob.glob(conf_dir + '/*.cfg'))
-
-    return configuration
-"""
-
 def fetch_rse_dump(
     rse: str,
-#    configuration: RawConfigParser,
     cache_dir: str,
     date: Optional[datetime] = None,
 ) -> tuple[str, datetime]:
 
     logger = logging.getLogger('auditor.fetch_rse_dump')
 
-#    base_url, url_pattern = generate_url(rse, configuration)
+    print("HEJ 3")
+
     base_url = generate_url(rse)
+    print("HEJ 4")
 
     rse_id = get_rse_id(rse)
     rse_attr = list_rse_attributes(rse_id)

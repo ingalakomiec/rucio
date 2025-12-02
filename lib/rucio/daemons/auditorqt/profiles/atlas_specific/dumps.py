@@ -245,23 +245,9 @@ def fetch_no_object_store(
 
 def generate_url(
     rse: str
-#    config: RawConfigParser
 ) -> str:
 
-    site = rse.split('_')[0]
-#    uncomment the line below when the config part is added
-#    if site not in config.sections():
-
     base_url = f"{ddmendpoint_url(rse)}/dumps"
-
-    """
-    else:
-
-    url_components = config.get(site, rse).split('/')
-    pattern_index = next(idx for idx, comp in enumerate(url_components) if '%m' in comp)
-    base_url = '/'.join(url_components[:pattern_index])
-    url_pattern = '/'.join(url_components[pattern_index:])
-    """
 
     return base_url
 
