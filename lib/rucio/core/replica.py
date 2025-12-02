@@ -896,10 +896,10 @@ def _get_list_replicas_protocols(
 
     rse_info = rsemgr.get_rse_info(rse_id=rse_id, session=session)
     # compute scheme priorities, and don't forget to exclude disabled protocols
-    # 0 or None in RSE protocol definition = disabled, 1 = highest priority
+    # None in RSE protocol definition = disabled, 0 = highest priority
     scheme_priorities = {
-        'wan': {p['scheme']: p['domains']['wan']['read'] for p in rse_info['protocols'] if p['domains']['wan']['read']},
-        'lan': {p['scheme']: p['domains']['lan']['read'] for p in rse_info['protocols'] if p['domains']['lan']['read']},
+        'wan': {p['scheme']: p['domains']['wan']['read'] for p in rse_info['protocols'] if p['domains']['wan']['read'] is not None},
+        'lan': {p['scheme']: p['domains']['lan']['read'] for p in rse_info['protocols'] if p['domains']['lan']['read'] is not None},
     }
 
     rse_schemes = copy.copy(schemes) if schemes else []
@@ -2873,7 +2873,11 @@ def touch_replica(
         ).prefix_with(
             '/*+ INDEX(DIDS DIDS_PK) */', dialect='oracle'
         ).values({
-            models.DataIdentifier.accessed_at: accessed_at
+            models.DataIdentifier.accessed_at: accessed_at,
+            models.DataIdentifier.access_cnt: case(
+                (models.DataIdentifier.access_cnt == none_value, 1),
+                else_=(models.DataIdentifier.access_cnt + 1)
+            )  # type: ignore
         }).execution_options(
             synchronize_session=False
         )

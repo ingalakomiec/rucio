@@ -11,21 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import and_, delete, select
 from sqlalchemy.exc import NoResultFound
 
 from rucio.common.exception import CounterNotFound
 from rucio.db.sqla import filter_thread_work, models
-from rucio.db.sqla.session import read_session, transactional_session
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from sqlalchemy.orm import Session
 
 
-@transactional_session
-def add_counter(rse_id, *, session: "Session"):
+def add_counter(
+        rse_id: str,
+        session: "Session"
+) -> None:
     """
     Creates the specified counter for a rse_id.
 
@@ -36,8 +39,12 @@ def add_counter(rse_id, *, session: "Session"):
         save(session=session)
 
 
-@transactional_session
-def increase(rse_id, files, bytes_, *, session: "Session"):
+def increase(
+        rse_id: str,
+        files: int,
+        bytes_: int,
+        session: "Session"
+) -> None:
     """
     Increments the specified counter by the specified amount.
 
@@ -50,8 +57,12 @@ def increase(rse_id, files, bytes_, *, session: "Session"):
         save(session=session)
 
 
-@transactional_session
-def decrease(rse_id, files, bytes_, *, session: "Session"):
+def decrease(
+        rse_id: str,
+        files: int,
+        bytes_: int,
+        session: "Session"
+) -> None:
     """
     Decreases the specified counter by the specified amount.
 
@@ -63,8 +74,10 @@ def decrease(rse_id, files, bytes_, *, session: "Session"):
     return increase(rse_id=rse_id, files=-files, bytes_=-bytes_, session=session)
 
 
-@transactional_session
-def del_counter(rse_id, *, session: "Session"):
+def del_counter(
+        rse_id: str,
+        session: "Session"
+) -> None:
     """
     Delete specified counter.
 
@@ -83,14 +96,15 @@ def del_counter(rse_id, *, session: "Session"):
     session.execute(stmt)
 
 
-@read_session
-def get_counter(rse_id, *, session: "Session"):
+def get_counter(
+        rse_id: str,
+        session: "Session"
+) -> dict[str, Any]:
     """
     Returns current values of the specified counter or raises CounterNotFound if the counter does not exist.
 
     :param rse_id:           The id of the RSE.
     :param session:          The database session in use.
-    :returns:                A dictionary with total and bytes.
     :raises CounterNotFound: If the counter does not exist.
     :returns:                A dictionary with total and bytes.
     """
@@ -114,8 +128,11 @@ def get_counter(rse_id, *, session: "Session"):
         raise CounterNotFound()
 
 
-@read_session
-def get_updated_rse_counters(total_workers, worker_number, *, session: "Session"):
+def get_updated_rse_counters(
+        total_workers: Optional[int],
+        worker_number: Optional[int],
+        session: "Session"
+) -> "Sequence[str]":
     """
     Get updated rse_counters.
 
@@ -133,8 +150,10 @@ def get_updated_rse_counters(total_workers, worker_number, *, session: "Session"
     return session.execute(stmt).scalars().all()
 
 
-@transactional_session
-def update_rse_counter(rse_id, *, session: "Session"):
+def update_rse_counter(
+        rse_id: str,
+        session: "Session"
+) -> None:
     """
     Read the updated_rse_counters and update the rse_counter.
 
@@ -171,8 +190,7 @@ def update_rse_counter(rse_id, *, session: "Session"):
         update.delete(flush=False, session=session)
 
 
-@transactional_session
-def fill_rse_counter_history_table(*, session: "Session"):
+def fill_rse_counter_history_table(session: "Session") -> None:
     """
     Fill the RSE usage history table with the current usage.
 

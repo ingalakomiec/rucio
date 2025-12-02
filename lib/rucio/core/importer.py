@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import Row, select
 
 from rucio.common.config import config_get
-from rucio.common.constants import DEFAULT_VO, RseAttr
+from rucio.common.constants import DEFAULT_VO, IMPORTER_SYNC_METHODS_LITERAL, RseAttr
 from rucio.common.exception import RSEOperationNotSupported
 from rucio.common.types import InternalAccount
 from rucio.core import account as account_module
@@ -26,16 +26,31 @@ from rucio.core import identity as identity_module
 from rucio.core import rse as rse_module
 from rucio.db.sqla import models
 from rucio.db.sqla.constants import AccountType, IdentityType, RSEType
-from rucio.db.sqla.session import transactional_session
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
 
     from sqlalchemy.orm import Session
 
 
-@transactional_session
-def import_rses(rses: dict[str, dict[str, Any]], rse_sync_method: str = 'edit', attr_sync_method: str = 'edit', protocol_sync_method: str = 'edit', vo: str = DEFAULT_VO, *, session: "Session") -> None:
+def import_rses(
+        rses: dict[str, dict[str, Any]],
+        session: "Session",
+        rse_sync_method: IMPORTER_SYNC_METHODS_LITERAL = 'edit',
+        attr_sync_method: IMPORTER_SYNC_METHODS_LITERAL = 'edit',
+        protocol_sync_method: IMPORTER_SYNC_METHODS_LITERAL = 'edit',
+        vo: str = DEFAULT_VO
+) -> None:
+    """
+    Import RSEs to add and update records in Rucio.
+
+    :param rses: RSEs to be imported as nested dictionary.
+    :param session: database session in use.
+    :param rse_sync_method: RSE synchronization method
+    :param attr_sync_method: RSE attribute synchronization method
+    :param protocol_sync_method: RSE protocol synchronization method
+    :param vo: VO to use.
+    """
     new_rses = []
     for rse_name in rses:
         rse = rses[rse_name]
@@ -142,8 +157,18 @@ def import_rses(rses: dict[str, dict[str, Any]], rse_sync_method: str = 'edit', 
                     pass
 
 
-@transactional_session
-def import_distances(distances, vo: str = DEFAULT_VO, *, session: "Session") -> None:
+def import_distances(
+        distances: dict[str, dict[str, dict[str, Any]]],
+        session: "Session",
+        vo: str = DEFAULT_VO
+) -> None:
+    """
+    Import distances to add and update records in Rucio.
+
+    :param distances: distances to be imported as nested dictionary.
+    :param session: database session in use.
+    :param vo: VO to use.
+    """
     for src_rse_name in distances:
         src = rse_module.get_rse_id(rse=src_rse_name, vo=vo, session=session)
         for dest_rse_name in distances[src_rse_name]:
@@ -162,14 +187,30 @@ def import_distances(distances, vo: str = DEFAULT_VO, *, session: "Session") -> 
                 distance_module.add_distance(src_rse_id=src, dest_rse_id=dest, distance=new_distance, session=session)
 
 
-@transactional_session
-def import_identities(identities: 'Iterable[dict[str, Any]]', account_name: str, old_identities: 'Iterable[tuple]', old_identity_account: tuple[str, str, str], account_email: str, *, session: "Session") -> None:
+def import_identities(
+        identities: 'Iterable[dict[str, Any]]',
+        account_name: str,
+        old_identities: 'Iterable[tuple[str, str]]',
+        old_identity_accounts: 'Sequence[Row[tuple[str, IdentityType, InternalAccount]]]',
+        account_email: str,
+        session: "Session"
+) -> None:
+    """
+    Import identities to add and update records in Rucio.
+
+    :param identities: identities to be imported as an iterable of dictionaries.
+    :param account_name: account name the identities are associated with.
+    :param old_identities: existing identities in the system as an iterable of tuples (identity, type).
+    :param old_identity_accounts: existing identity-account associations as an iterable of tuples (identity, type, account name).
+    :param account_email: email of the account.
+    :param session: database session in use.
+    """
     for identity in identities:
         identity['type'] = IdentityType[identity['type'].upper()]
 
     missing_identities = [identity for identity in identities if (identity['identity'], identity['type']) not in old_identities]
-    missing_identity_account = [identity for identity in identities if (identity['identity'], identity['type'], account_name) not in old_identity_account]
-    to_be_removed_identity_account = [old_identity for old_identity in old_identity_account if (old_identity[0], old_identity[1], old_identity[2]) not in
+    missing_identity_account = [identity for identity in identities if (identity['identity'], identity['type'], account_name) not in old_identity_accounts]
+    to_be_removed_identity_account = [old_identity for old_identity in old_identity_accounts if (old_identity[0], old_identity[1], old_identity[2]) not in
                                       [(identity['identity'], identity['type'], account_name) for identity in identities] and old_identity[2] == account_name]
 
     # add missing identities
@@ -191,8 +232,18 @@ def import_identities(identities: 'Iterable[dict[str, Any]]', account_name: str,
         identity_module.del_account_identity(identity=identity[0], type_=identity[1], account=identity[2], session=session)
 
 
-@transactional_session
-def import_accounts(accounts: 'Iterable[dict[str, Any]]', vo: str = DEFAULT_VO, *, session: "Session") -> None:
+def import_accounts(
+        accounts: 'Iterable[dict[str, Any]]',
+        session: "Session",
+        vo: str = DEFAULT_VO
+) -> None:
+    """
+    Import accounts to add and update records in Rucio.
+
+    :param accounts: accounts to be imported as an iterable of dictionaries.
+    :param session: database session in use.
+    :param vo: VO to use.
+    """
     vo_filter = {'account': InternalAccount(account='*', vo=vo)}
     old_accounts = {account['account']: account for account in account_module.list_accounts(filter_=vo_filter, session=session)}
     missing_accounts = [account for account in accounts if account['account'] not in old_accounts]
@@ -204,7 +255,7 @@ def import_accounts(accounts: 'Iterable[dict[str, Any]]', vo: str = DEFAULT_VO, 
         models.IdentityAccountAssociation.identity_type,
         models.IdentityAccountAssociation.account
     )
-    old_identity_account = session.execute(stmt).all()
+    old_identity_accounts = session.execute(stmt).all()
 
     # add missing accounts
     for account_dict in missing_accounts:
@@ -213,7 +264,7 @@ def import_accounts(accounts: 'Iterable[dict[str, Any]]', vo: str = DEFAULT_VO, 
         account_module.add_account(account=account, type_=AccountType.USER, email=email, session=session)
         identities = account_dict.get('identities', [])
         if identities:
-            import_identities(identities, account, old_identities, old_identity_account, email, session=session)
+            import_identities(identities, account, old_identities, old_identity_accounts, email, session=session)
 
     # remove left over accounts
     for account in to_be_removed_accounts:
@@ -230,11 +281,14 @@ def import_accounts(accounts: 'Iterable[dict[str, Any]]', vo: str = DEFAULT_VO, 
 
         identities = account_dict.get('identities', [])
         if identities:
-            import_identities(identities, account, old_identities, old_identity_account, email, session=session)
+            import_identities(identities, account, old_identities, old_identity_accounts, email, session=session)
 
 
-@transactional_session
-def import_data(data: dict[str, Any], vo: str = DEFAULT_VO, *, session: "Session") -> None:
+def import_data(
+        data: dict[str, Any],
+        session: "Session",
+        vo: str = DEFAULT_VO
+) -> None:
     """
     Import data to add and update records in Rucio.
 
@@ -244,6 +298,11 @@ def import_data(data: dict[str, Any], vo: str = DEFAULT_VO, *, session: "Session
     rse_sync_method = config_get('importer', 'rse_sync_method', False, 'edit')
     attr_sync_method = config_get('importer', 'attr_sync_method', False, 'edit')
     protocol_sync_method = config_get('importer', 'rse_sync_method', False, 'edit')
+
+    # TODO - Pending: https://github.com/rucio/rucio/issues/8190
+    rse_sync_method = cast('IMPORTER_SYNC_METHODS_LITERAL', rse_sync_method)
+    attr_sync_method = cast('IMPORTER_SYNC_METHODS_LITERAL', attr_sync_method)
+    protocol_sync_method = cast('IMPORTER_SYNC_METHODS_LITERAL', protocol_sync_method)
 
     rses = data.get('rses')
     if rses:

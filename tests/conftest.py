@@ -156,13 +156,16 @@ def vo() -> str:
 def second_vo() -> str:
     from rucio.common.config import config_get_bool
     from rucio.core.vo import add_vo, vo_exists
+    from rucio.db.sqla.constants import DatabaseOperationType
+    from rucio.db.sqla.session import db_session as db_session_context
     multi_vo = config_get_bool('common', 'multi_vo', raise_exception=False, default=False)
     if not multi_vo:
         pytest.skip('multi_vo mode is not enabled. Running multi_vo tests in single_vo mode would result in failures.')
 
     new_vo = 'new'
-    if not vo_exists(vo=new_vo):
-        add_vo(vo=new_vo, description='Test', email='rucio@email.com')
+    with db_session_context(DatabaseOperationType.WRITE) as session:
+        if not vo_exists(vo=new_vo, session=session):
+            add_vo(vo=new_vo, description='Test', email='rucio@email.com', session=session)
     return new_vo
 
 
@@ -464,6 +467,8 @@ def scope_factory() -> "Callable[[Iterable[str], Optional[str]], tuple[str, list
     from rucio.common.types import InternalAccount, InternalScope
     from rucio.common.utils import generate_uuid
     from rucio.core.scope import add_scope
+    from rucio.db.sqla.constants import DatabaseOperationType
+    from rucio.db.sqla.session import db_session
 
     def create_scopes(
             vos: "Iterable[str]",
@@ -474,7 +479,8 @@ def scope_factory() -> "Callable[[Iterable[str], Optional[str]], tuple[str, list
         created_scopes = []
         for vo in vos:
             scope = InternalScope(scope_name, vo=vo)
-            add_scope(scope, InternalAccount(account_name if account_name else 'root', vo=vo))
+            with db_session(DatabaseOperationType.WRITE) as session:
+                add_scope(scope, InternalAccount(account_name if account_name else 'root', vo=vo), session=session)
             created_scopes.append(scope)
         return scope_name, created_scopes
 
@@ -780,7 +786,7 @@ def rse_protocol() -> "Iterator[dict[str, Any]]":
         "prefix": "//defdatadisk/rucio/",
         "domains": {
             "wan": {
-                "read": 1,
+                "read": 0,
             }
         },
     }

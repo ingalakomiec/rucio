@@ -31,7 +31,8 @@ from rucio.core.identity import add_account_identity, add_identity, list_account
 from rucio.core.importer import import_data, import_rses
 from rucio.core.rse import add_protocol, add_rse, add_rse_attribute, del_rse, export_rse, get_rse, get_rse_attribute, get_rse_id, get_rse_limits, get_rse_name, get_rse_protocols, list_rse_attributes, list_rses, set_rse_limits
 from rucio.db.sqla import models, session
-from rucio.db.sqla.constants import AccountStatus, AccountType, IdentityType, RSEType
+from rucio.db.sqla.constants import AccountStatus, AccountType, DatabaseOperationType, IdentityType, RSEType
+from rucio.db.sqla.session import db_session
 from rucio.tests.common import auth, hdrdict, headers, rse_name_generator
 
 
@@ -304,7 +305,8 @@ def importer_example_data(vo, jdoe_account):
 @pytest.mark.noparallel(reason='resets pre-defined RSE, changes global configuration value')
 def test_importer_core(vo, importer_example_data, reset_rses):
     """ IMPORTER (CORE): test import. """
-    import_data(data=deepcopy(importer_example_data.data1), vo=vo)
+    with db_session(DatabaseOperationType.WRITE) as session:
+        import_data(data=deepcopy(importer_example_data.data1), vo=vo, session=session)
 
     # RSE that had not existed before
     check_rse(importer_example_data.new_rse, importer_example_data.data1['rses'], vo=vo)
@@ -347,8 +349,11 @@ def test_importer_core(vo, importer_example_data, reset_rses):
     with pytest.raises(RSENotFound):
         get_rse(rse_id=importer_example_data.old_rse_id_4)
 
-    import_data(data=importer_example_data.data2, vo=vo)
-    import_data(data=importer_example_data.data3, vo=vo)
+    with db_session(DatabaseOperationType.WRITE) as session:
+        import_data(data=importer_example_data.data2, vo=vo, session=session)
+
+    with db_session(DatabaseOperationType.WRITE) as session:
+        import_data(data=importer_example_data.data3, vo=vo, session=session)
 
 
 @pytest.mark.noparallel(reason='resets pre-defined RSE, changes global configuration value')
@@ -544,7 +549,8 @@ class TestImporterSyncModes:
             }
         }
 
-        import_rses(rses=deepcopy(data['rses']), rse_sync_method='append', vo=vo)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            import_rses(rses=deepcopy(data['rses']), rse_sync_method='append', vo=vo, session=session)
 
         # Check RSE that did not exist before exists now
         check_rse(new_rse, data['rses'], vo=vo)
@@ -645,7 +651,8 @@ class TestImporterSyncModes:
             }
         }
 
-        import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', vo=vo)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', vo=vo, session=session)
 
         # Check RSE that did not exist before exists now
         check_rse(new_rse, data['rses'], vo=vo)
@@ -702,7 +709,8 @@ class TestImporterSyncModes:
             }
         }
 
-        import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', attr_sync_method='append', vo=vo)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', attr_sync_method='append', vo=vo, session=session)
 
         # Check that attributes were added for less_attr_rse
         assert get_rse_attribute(less_attr_rse_id, 'attr2', use_cache=False) == 'test_new'
@@ -759,7 +767,8 @@ class TestImporterSyncModes:
             }
         }
 
-        import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', attr_sync_method='edit', vo=vo)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', attr_sync_method='edit', vo=vo, session=session)
 
         # Check that attributes were added for less_attr_rse
         assert get_rse_attribute(less_attr_rse_id, 'attr2', use_cache=False) == 'test_new'
@@ -816,7 +825,8 @@ class TestImporterSyncModes:
             }
         }
 
-        import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', attr_sync_method='hard', vo=vo)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', attr_sync_method='hard', vo=vo, session=session)
 
         # Check that attributes were added for less_attr_rse
         assert get_rse_attribute(less_attr_rse_id, 'attr2', use_cache=False) == 'test_new'
@@ -929,7 +939,8 @@ class TestImporterSyncModes:
             }
         }
 
-        import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', protocol_sync_method='append', vo=vo)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', protocol_sync_method='append', vo=vo, session=session)
 
         # Check that new protocol was added
         protocols = get_rse_protocols(less_prot_rse_id)
@@ -1052,7 +1063,8 @@ class TestImporterSyncModes:
             }
         }
 
-        import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', protocol_sync_method='edit', vo=vo)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', protocol_sync_method='edit', vo=vo, session=session)
 
         # Check that new protocol was added
         protocols = get_rse_protocols(less_prot_rse_id)
@@ -1175,7 +1187,8 @@ class TestImporterSyncModes:
             }
         }
 
-        import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', protocol_sync_method='hard', vo=vo)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            import_rses(rses=deepcopy(data['rses']), rse_sync_method='edit', protocol_sync_method='hard', vo=vo, session=session)
 
         # Check that new protocol was added
         protocols = get_rse_protocols(less_prot_rse_id)
@@ -1218,8 +1231,9 @@ def distances_data(vo):
 @pytest.mark.noparallel(reason='modifies distance on pre-defined RSE')
 def test_export_core(vo, distances_data):
     """ EXPORT (CORE): Test the export of data."""
-    data = export_data(vo=vo)
-    assert data['rses'] == export_rses(vo=vo)
+    with db_session(DatabaseOperationType.READ) as session:
+        data = export_data(vo=vo, session=session)
+        assert data['rses'] == export_rses(vo=vo, session=session)
     distances_cmp = {
         distances_data['rse_1_id']: {
             distances_data['rse_2_id']: distances_data['distances']
@@ -1254,11 +1268,12 @@ def test_export_rest(vo, rest_client, auth_token, distances_data):
     """ EXPORT (REST): Test the export of data."""
     headers_dict = {'X-Rucio-Type': 'user', 'X-Rucio-Account': 'root'}
 
-    rses = export_rses(vo=vo)
-    sanitised = {}
-    for rse_id in rses:
-        sanitised[get_rse_name(rse_id=rse_id)] = rses[rse_id]
-    rses = sanitised
+    with db_session(DatabaseOperationType.READ) as session:
+        rses = export_rses(vo=vo, session=session)
+        sanitised = {}
+        for rse_id in rses:
+            sanitised[get_rse_name(rse_id=rse_id, session=session)] = rses[rse_id]
+        rses = sanitised
 
     response = rest_client.get('/export/', headers=headers(auth(auth_token), hdrdict(headers_dict)))
     assert response.status_code == 200

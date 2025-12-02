@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import DatabaseError, IntegrityError, NoResultFound
@@ -24,7 +24,6 @@ from rucio.common.constants import DEFAULT_VO
 from rucio.common.types import InternalAccount
 from rucio.db.sqla import models
 from rucio.db.sqla.constants import AccountType, IdentityType
-from rucio.db.sqla.session import read_session, transactional_session
 
 # Format for long VO names
 LONG_VO_RE = re.compile(r"^[a-zA-Z0-9\.\-]+$")
@@ -33,8 +32,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
-@read_session
-def vo_exists(vo: str, *, session: "Session") -> bool:
+def vo_exists(vo: str, session: "Session") -> bool:
     """
     Verify that the vo exists.
 
@@ -51,8 +49,7 @@ def vo_exists(vo: str, *, session: "Session") -> bool:
     return bool(session.execute(stmt).scalar())
 
 
-@transactional_session
-def add_vo(vo: str, description: str, email: str, *, session: "Session") -> None:
+def add_vo(vo: str, description: Optional[str], email: Optional[str], session: "Session") -> None:
     """
     Add a VO and setup a new root user.
     New root user will have account name 'root' and a userpass identity with username: 'root@<vo>' and password: 'password'
@@ -93,8 +90,7 @@ def add_vo(vo: str, description: str, email: str, *, session: "Session") -> None
         add_account_identity(identity=ident['identity'], type_=ident['type'], account=new_root, email='', session=session)
 
 
-@read_session
-def list_vos(*, session: "Session") -> list[dict[str, Any]]:
+def list_vos(session: "Session") -> list[dict[str, Any]]:
     """
     List all the VOs in the db.
 
@@ -120,8 +116,7 @@ def list_vos(*, session: "Session") -> list[dict[str, Any]]:
     return vos
 
 
-@transactional_session
-def update_vo(vo: str, parameters: dict[str, Any], *, session: "Session") -> None:
+def update_vo(vo: str, parameters: dict[str, Any], session: "Session") -> None:
     """
     Update VO properties (email, description).
 

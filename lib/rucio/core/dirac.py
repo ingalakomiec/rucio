@@ -31,7 +31,6 @@ from rucio.core.rule import add_rule, list_rules, update_rule
 from rucio.core.scope import list_scopes
 from rucio.db.sqla import models
 from rucio.db.sqla.constants import DIDType
-from rucio.db.sqla.session import read_session, transactional_session
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -39,11 +38,9 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
-@read_session
 def _exists(
-    scope: str,
+    scope: InternalScope,
     name: str,
-    *,
     session: "Session"
 ) -> tuple[bool, Optional[DIDType]]:
     """
@@ -69,15 +66,13 @@ def _exists(
         return False, None
 
 
-@transactional_session
 def add_files(
     lfns: "Iterable[dict[str, Any]]",
     account: str,
     ignore_availability: bool,
+    session: "Session",
     parents_metadata: Optional[dict[str, Any]] = None,
     vo: str = DEFAULT_VO,
-    *,
-    session: "Session"
 ) -> None:
     """
     Bulk add files :
@@ -86,7 +81,6 @@ def add_files(
     - Create all the ascendants of the dataset if they do not exist
 
     :param lfns: List of lfn (dictionary {'lfn': <lfn>, 'rse': <rse>, 'bytes': <bytes>, 'adler32': <adler32>, 'guid': <guid>, 'pfn': <pfn>}
-    :param issuer: The issuer account.
     :param ignore_availability: A boolean to ignore blocklisted sites.
     :param parents_metadata: Metadata for selected hierarchy DIDs. (dictionary {'lpn': {key : value}})
     :param vo: The VO to act on
@@ -99,7 +93,7 @@ def add_files(
     # The list of scopes is necessary for the extract_scope
     filter_ = {'scope': InternalScope(scope='*', vo=vo)}
     scopes = list_scopes(filter_=filter_, session=session)
-    scopes = [scope['scope'].external for scope in scopes]
+    scopes = [scope.external for scope in scopes]
     exist_lfn = []
     try:
         config_lifetime: str = config_get(section='dirac', option='lifetime', default='{}', session=session)
@@ -114,10 +108,10 @@ def add_files(
     for lfn in lfns:
         # First check if the file exists
         filename = lfn['lfn']
-        lfn_scope, _ = extract_scope(filename, scopes, vo=vo)
+        lfn_scope, _ = extract_scope(filename, scopes, vo=vo)  # type: ignore (https://github.com/rucio/rucio/issues/8188)
         lfn_scope = InternalScope(lfn_scope, vo=vo)
 
-        exists, did_type = _exists(lfn_scope, filename)
+        exists, did_type = _exists(scope=lfn_scope, name=filename, session=session)
         if exists:
             continue
 
@@ -129,7 +123,7 @@ def add_files(
 
         # The parent must be a dataset. Register it as well as the rule
         dsn_name = lpns[0]
-        dsn_scope, _ = extract_scope(dsn_name, scopes, vo=vo)
+        dsn_scope, _ = extract_scope(dsn_name, scopes, vo=vo)  # type: ignore https://github.com/rucio/rucio/issues/8188
         dsn_scope = InternalScope(dsn_scope, vo=vo)
         dsn_meta = parents_metadata.get(dsn_name, {})
 
@@ -143,7 +137,7 @@ def add_files(
                     lifetime = lifetime_dict[pattern]
                     break
 
-        exists, did_type = _exists(dsn_scope, dsn_name)
+        exists, did_type = _exists(scope=dsn_scope, name=dsn_name, session=session)
         if exists and did_type == DIDType.CONTAINER:
             raise UnsupportedOperation('Cannot create %s as dataset' % dsn_name)
         if (dsn_name not in exist_lfn) and not exists:
@@ -162,7 +156,7 @@ def add_files(
                     session=session)
             exist_lfn.append(dsn_name)
             parent_name = lpns[1]
-            parent_scope, _ = extract_scope(parent_name, scopes, vo=vo)
+            parent_scope, _ = extract_scope(parent_name, scopes, vo=vo)  # type: ignore https://github.com/rucio/rucio/issues/8188
             parent_scope = InternalScope(parent_scope, vo=vo)
             attachments.append({'scope': parent_scope, 'name': parent_name, 'dids': [{'scope': dsn_scope, 'name': dsn_name}]})
             rule_extension_list.append((dsn_scope, dsn_name))
@@ -207,9 +201,9 @@ def add_files(
 
         # Now loop over the ascendants of the dataset and created them
         for lpn in lpns[1:]:
-            child_scope, _ = extract_scope(lpn, scopes, vo=vo)
+            child_scope, _ = extract_scope(lpn, scopes, vo=vo)  # type: ignore https://github.com/rucio/rucio/issues/8188
             child_scope = InternalScope(child_scope, vo=vo)
-            exists, did_type = _exists(child_scope, lpn)
+            exists, did_type = _exists(scope=child_scope, name=lpn, session=session)
             child_meta = parents_metadata.get(lpn, {})
             if exists and did_type == DIDType.DATASET:
                 raise UnsupportedOperation('Cannot create %s as container' % lpn)
@@ -228,7 +222,7 @@ def add_files(
                         session=session)
                 exist_lfn.append(lpn)
                 parent_name = lpns[lpns.index(lpn) + 1]
-                parent_scope, _ = extract_scope(parent_name, scopes, vo=vo)
+                parent_scope, _ = extract_scope(parent_name, scopes, vo=vo)  # type: ignore https://github.com/rucio/rucio/issues/8188
                 parent_scope = InternalScope(parent_scope, vo=vo)
                 attachments.append({'scope': parent_scope, 'name': parent_name, 'dids': [{'scope': child_scope, 'name': lpn}]})
     # Finally attach everything

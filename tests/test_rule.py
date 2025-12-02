@@ -694,7 +694,8 @@ class TestCore:
         """ REPLICATION RULE (CORE): Test if creating UNAVAILABLE replicas updates the RSE Counter correctly"""
 
         rse_update(once=True)
-        rse_counter_before = get_rse_counter(self.rse2_id)
+        with db_session(DatabaseOperationType.READ) as session:
+            rse_counter_before = get_rse_counter(self.rse2_id, session=session)
 
         files = create_files(3, mock_scope, self.rse1_id, bytes_=100)
         dataset = did_factory.random_dataset_did()
@@ -705,7 +706,8 @@ class TestCore:
 
         # Check if the rse has been updated correctly
         rse_update(once=True)
-        rse_counter_after = get_rse_counter(self.rse2_id)
+        with db_session(DatabaseOperationType.READ) as session:
+            rse_counter_after = get_rse_counter(self.rse2_id, session=session)
         assert (rse_counter_before['bytes'] + 3 * 100 == rse_counter_after['bytes'])
         assert (rse_counter_before['files'] + 3 == rse_counter_after['files'])
 
@@ -1259,7 +1261,8 @@ class TestCore:
 
         # test1 : ALL grouping -> select rse1 for all 3 datasets
         scope = InternalScope(('scope1_' + str(uuid()))[:21], vo=vo)  # scope field has max 25 chars including VO
-        add_scope(scope, account)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            add_scope(scope, account, session=session)
         mktree(scope, account)
         rule_ids = add_rule(dids=[{'scope': scope, 'name': 'container1213'}], copies=1, rse_expression=f'{self.rse1}|{self.rse2}|{self.rse3}|{self.rse4}',
                             grouping='ALL', account=account, weight=None, lifetime=None, locked=False, subscription_id=None)
@@ -1279,7 +1282,8 @@ class TestCore:
 
         # test2 : DATASET grouping -> select rse1 for ds1, rse3 for ds2 and rse1 for ds3
         scope = InternalScope(('scope2_' + str(uuid()))[:21], vo=vo)  # scope field has max 25 chars
-        add_scope(scope, account)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            add_scope(scope, account, session=session)
         mktree(scope, account)
         rule_ids = add_rule(dids=[{'scope': scope, 'name': 'container1213'}], copies=1, rse_expression=f'{self.rse1}|{self.rse2}|{self.rse3}|{self.rse4}',
                             grouping='DATASET', account=account, weight=None, lifetime=None, locked=False, subscription_id=None)
@@ -1299,7 +1303,8 @@ class TestCore:
 
         # test3 : NONE grouping
         scope = InternalScope(('scope3_' + str(uuid()))[:21], vo=vo)  # scope field has max 25 chars
-        add_scope(scope, account)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            add_scope(scope, account, session=session)
         mktree(scope, account)
         rule_ids = add_rule(dids=[{'scope': scope, 'name': 'container1213'}], copies=1, rse_expression=f'{self.rse1}|{self.rse2}|{self.rse3}|{self.rse4}',
                             grouping='NONE', account=account, weight=None, lifetime=None, locked=False, subscription_id=None)

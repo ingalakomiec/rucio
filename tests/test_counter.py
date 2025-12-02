@@ -22,6 +22,8 @@ from rucio.core.account import get_usage
 from rucio.daemons.abacus.account import account_update
 from rucio.daemons.abacus.rse import rse_update
 from rucio.db.sqla import models
+from rucio.db.sqla.constants import DatabaseOperationType
+from rucio.db.sqla.session import db_session as db_session_context
 
 
 @pytest.mark.noparallel(reason='runs abacus daemons')
@@ -31,46 +33,57 @@ class TestCoreRSECounter:
         """ RSE COUNTER (CORE): Increase, decrease and get counter """
         _, rse_id = rse_factory.make_mock_rse()
         rse_update(once=True)
-        rse_counter.del_counter(rse_id=rse_id)
-        rse_counter.add_counter(rse_id=rse_id)
-        cnt = rse_counter.get_counter(rse_id=rse_id)
+        with db_session_context(DatabaseOperationType.WRITE) as session:
+            rse_counter.del_counter(rse_id=rse_id, session=session)
+            rse_counter.add_counter(rse_id=rse_id, session=session)
+
+        with db_session_context(DatabaseOperationType.READ) as session:
+            cnt = rse_counter.get_counter(rse_id=rse_id, session=session)
         del cnt['updated_at']
         assert cnt == {'files': 0, 'bytes': 0}
 
         count, sum_ = 0, 0
         for i in range(10):
-            rse_counter.increase(rse_id=rse_id, files=1, bytes_=2.147e+9)
+            with db_session_context(DatabaseOperationType.WRITE) as session:
+                rse_counter.increase(rse_id=rse_id, files=1, bytes_=2147000000, session=session)
             rse_update(once=True)
             count += 1
-            sum_ += 2.147e+9
-            cnt = rse_counter.get_counter(rse_id=rse_id)
+            sum_ += 2147000000
+            with db_session_context(DatabaseOperationType.READ) as session:
+                cnt = rse_counter.get_counter(rse_id=rse_id, session=session)
             del cnt['updated_at']
             assert cnt == {'files': count, 'bytes': sum_}
 
         for i in range(4):
-            rse_counter.decrease(rse_id=rse_id, files=1, bytes_=2.147e+9)
+            with db_session_context(DatabaseOperationType.WRITE) as session:
+                rse_counter.decrease(rse_id=rse_id, files=1, bytes_=2147000000, session=session)
             rse_update(once=True)
             count -= 1
-            sum_ -= 2.147e+9
-            cnt = rse_counter.get_counter(rse_id=rse_id)
+            sum_ -= 2147000000
+            with db_session_context(DatabaseOperationType.READ) as session:
+                cnt = rse_counter.get_counter(rse_id=rse_id, session=session)
             del cnt['updated_at']
             assert cnt == {'files': count, 'bytes': sum_}
 
         for i in range(5):
-            rse_counter.increase(rse_id=rse_id, files=1, bytes_=2.147e+9)
+            with db_session_context(DatabaseOperationType.WRITE) as session:
+                rse_counter.increase(rse_id=rse_id, files=1, bytes_=2147000000, session=session)
             rse_update(once=True)
             count += 1
-            sum_ += 2.147e+9
-            cnt = rse_counter.get_counter(rse_id=rse_id)
+            sum_ += 2147000000
+            with db_session_context(DatabaseOperationType.READ) as session:
+                cnt = rse_counter.get_counter(rse_id=rse_id, session=session)
             del cnt['updated_at']
             assert cnt == {'files': count, 'bytes': sum_}
 
         for i in range(8):
-            rse_counter.decrease(rse_id=rse_id, files=1, bytes_=2.147e+9)
+            with db_session_context(DatabaseOperationType.WRITE) as session:
+                rse_counter.decrease(rse_id=rse_id, files=1, bytes_=2147000000, session=session)
             rse_update(once=True)
             count -= 1
-            sum_ -= 2.147e+9
-            cnt = rse_counter.get_counter(rse_id=rse_id)
+            sum_ -= 2147000000
+            with db_session_context(DatabaseOperationType.READ) as session:
+                cnt = rse_counter.get_counter(rse_id=rse_id, session=session)
             del cnt['updated_at']
             assert cnt == {'files': count, 'bytes': sum_}
 
@@ -79,7 +92,8 @@ class TestCoreRSECounter:
         stmt = delete(models.RSEUsageHistory)
         db_session.execute(stmt)
         db_session.commit()
-        rse_counter.fill_rse_counter_history_table()
+        with db_session_context(DatabaseOperationType.WRITE) as session:
+            rse_counter.fill_rse_counter_history_table(session=session)
         stmt = select(models.RSEUsageHistory)
         history_usage = [(usage['rse_id'], usage['files'], usage['source'], usage['used']) for usage in db_session.execute(stmt).scalars()]
         stmt = select(models.RSEUsage)
@@ -98,46 +112,57 @@ class TestCoreAccountCounter:
         _, rse_id = rse_factory.make_mock_rse(session=db_session)
         db_session.commit()
         account = jdoe_account
-        account_counter.del_counter(rse_id=rse_id, account=account)
-        account_counter.add_counter(rse_id=rse_id, account=account)
-        cnt = get_usage(rse_id=rse_id, account=account)
+        with db_session_context(DatabaseOperationType.WRITE) as session:
+            account_counter.del_counter(rse_id=rse_id, account=account, session=session)
+            account_counter.add_counter(rse_id=rse_id, account=account, session=session)
+
+        with db_session_context(DatabaseOperationType.READ) as session:
+            cnt = get_usage(rse_id=rse_id, account=account, session=session)
         del cnt['updated_at']
         assert cnt == {'files': 0, 'bytes': 0}
 
         count, sum_ = 0, 0
         for i in range(10):
-            account_counter.increase(rse_id=rse_id, account=account, files=1, bytes_=2.147e+9)
+            with db_session_context(DatabaseOperationType.WRITE) as session:
+                account_counter.increase(rse_id=rse_id, account=account, files=1, bytes_=2147000000, session=session)
             account_update(once=True)
             count += 1
-            sum_ += 2.147e+9
-            cnt = get_usage(rse_id=rse_id, account=account)
+            sum_ += 2147000000
+            with db_session_context(DatabaseOperationType.READ) as session:
+                cnt = get_usage(rse_id=rse_id, account=account, session=session)
             del cnt['updated_at']
             assert cnt == {'files': count, 'bytes': sum_}
 
         for i in range(4):
-            account_counter.decrease(rse_id=rse_id, account=account, files=1, bytes_=2.147e+9)
+            with db_session_context(DatabaseOperationType.WRITE) as session:
+                account_counter.decrease(rse_id=rse_id, account=account, files=1, bytes_=2147000000, session=session)
             account_update(once=True)
             count -= 1
-            sum_ -= 2.147e+9
-            cnt = get_usage(rse_id=rse_id, account=account)
+            sum_ -= 2147000000
+            with db_session_context(DatabaseOperationType.READ) as session:
+                cnt = get_usage(rse_id=rse_id, account=account, session=session)
             del cnt['updated_at']
             assert cnt == {'files': count, 'bytes': sum_}
 
         for i in range(5):
-            account_counter.increase(rse_id=rse_id, account=account, files=1, bytes_=2.147e+9)
+            with db_session_context(DatabaseOperationType.WRITE) as session:
+                account_counter.increase(rse_id=rse_id, account=account, files=1, bytes_=2147000000, session=session)
             account_update(once=True)
             count += 1
-            sum_ += 2.147e+9
-            cnt = get_usage(rse_id=rse_id, account=account)
+            sum_ += 2147000000
+            with db_session_context(DatabaseOperationType.READ) as session:
+                cnt = get_usage(rse_id=rse_id, account=account, session=session)
             del cnt['updated_at']
             assert cnt == {'files': count, 'bytes': sum_}
 
         for i in range(8):
-            account_counter.decrease(rse_id=rse_id, account=account, files=1, bytes_=2.147e+9)
+            with db_session_context(DatabaseOperationType.WRITE) as session:
+                account_counter.decrease(rse_id=rse_id, account=account, files=1, bytes_=2147000000, session=session)
             account_update(once=True)
             count -= 1
-            sum_ -= 2.147e+9
-            cnt = get_usage(rse_id=rse_id, account=account)
+            sum_ -= 2147000000
+            with db_session_context(DatabaseOperationType.READ) as session:
+                cnt = get_usage(rse_id=rse_id, account=account, session=session)
             del cnt['updated_at']
             assert cnt == {'files': count, 'bytes': sum_}
 
@@ -145,7 +170,8 @@ class TestCoreAccountCounter:
         stmt = delete(models.AccountUsageHistory)
         db_session.execute(stmt)
         db_session.commit()
-        account_counter.fill_account_counter_history_table()
+        with db_session_context(DatabaseOperationType.WRITE) as session:
+            account_counter.fill_account_counter_history_table(session=session)
         stmt = select(models.AccountUsageHistory)
         history_usage = {(usage['rse_id'], usage['files'], usage['account'], usage['bytes']) for usage in db_session.execute(stmt).scalars()}
         stmt = select(models.AccountUsage)
@@ -166,7 +192,8 @@ class TestCoreAccountCounter:
         })
         db_session.execute(stmt)
         db_session.commit()
-        account_counter.fill_account_counter_history_table()
+        with db_session_context(DatabaseOperationType.WRITE) as session:
+            account_counter.fill_account_counter_history_table(session=session)
         stmt = select(models.AccountUsageHistory)
         history_usage = {(usage['rse_id'], usage['files'], usage['account'], usage['bytes']) for usage in db_session.execute(stmt).scalars()}
         assert (rse_id, count, account, sum_) in history_usage

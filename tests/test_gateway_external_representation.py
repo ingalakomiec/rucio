@@ -31,6 +31,7 @@ from rucio.daemons.abacus import rse as abacus_rse
 from rucio.daemons.judge import cleaner
 from rucio.daemons.reaper import reaper
 from rucio.db.sqla import constants
+from rucio.db.sqla.session import db_session
 from rucio.gateway.account import add_account, get_account_info, list_accounts
 from rucio.gateway.did import add_did, add_did_to_followed, attach_dids_to_dids, get_users_following_did, scope_list
 from rucio.gateway.exporter import export_data
@@ -47,8 +48,9 @@ from rucio.tests.common import did_name_generator, rse_name_generator
 def vo2():
     if config_get_bool('common', 'multi_vo', raise_exception=False, default=False):
         vo2 = 'new'
-        if not vo_exists(vo=vo2):
-            add_vo(description='Test', email='rucio@email.com', vo=vo2)
+        with db_session(constants.DatabaseOperationType.WRITE) as session:
+            if not vo_exists(vo=vo2, session=session):
+                add_vo(description='Test', email='rucio@email.com', vo=vo2, session=session)
         return vo2
     else:
         return None
@@ -371,10 +373,11 @@ class TestGatewayExternalRepresentation:
 
         # add some account and RSE counters
         rse_mock, rse_mock_id = rse_factory.make_mock_rse()
-        account_counter.del_counter(rse_id=rse_mock_id, account=account)
-        account_counter.add_counter(rse_id=rse_mock_id, account=account)
-        account_counter.increase(rse_id=rse_mock_id, account=account, files=1, bytes_=10)
-        account_counter.update_account_counter(account, rse_mock_id)
+        with db_session(constants.DatabaseOperationType.WRITE) as session:
+            account_counter.del_counter(rse_id=rse_mock_id, account=account, session=session)
+            account_counter.add_counter(rse_id=rse_mock_id, account=account, session=session)
+            account_counter.increase(rse_id=rse_mock_id, account=account, files=1, bytes_=10, session=session)
+            account_counter.update_account_counter(account, rse_mock_id, session=session)
         did = did_name_generator('file')
         add_did(scope_name, did, 'DATASET', 'root', account=account_name, rse=rse_mock, vo=vo)
         abacus_rse.run(once=True)
@@ -407,7 +410,7 @@ class TestGatewayExternalRepresentation:
     def test_gateway_scope(self, vo, vo2, account_name, scope_name, scope):
         """ SCOPE (Gateway): Test external representation of scopes """
 
-        out = [s['scope'] for s in list_scopes()]
+        out = list_scopes()
         assert scope_name in out
         if vo2:
             assert scope.internal not in out

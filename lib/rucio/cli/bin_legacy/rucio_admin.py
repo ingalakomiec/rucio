@@ -780,15 +780,8 @@ def list_scopes(args, client, logger, console, spinner):
         spinner.stop()
         print_output(table, console=console, no_pager=args.no_pager)
     else:
-        if isinstance(scopes[0], str):  # TODO: Backwards compatibility - remove in v40 issue #8125
-            for scope in scopes:
-                print(scope)
-        elif args.csv:
-            for scope in scopes:
-                print(scope['scope'])
-        else:
-            scopes = [[s['scope'], s['account']] for s in scopes]
-            print(tabulate(scopes, tablefmt=tablefmt, headers=['SCOPE', 'ACCOUNT'], disable_numparse=True))
+        for scope in scopes:
+            print(scope)
     return SUCCESS
 
 
@@ -1811,15 +1804,11 @@ def get_parser():
                                                       '    $ rucio-admin rse info JDOE_DATADISK\n'
                                                       '    Settings:\n'
                                                       '    =========\n'
-                                                      '      third_party_copy_protocol: 1\n'
                                                       '      rse_type: DISK\n'
                                                       '      domain: [u\'lan\', u\'wan\']\n'
                                                       '      availability_delete: True\n'
-                                                      '      delete_protocol: 1\n'
                                                       '      rse: JDOE_DATADISK\n'
                                                       '      deterministic: True\n'
-                                                      '      write_protocol: 1\n'
-                                                      '      read_protocol: 1\n'
                                                       '      staging_area: False\n'
                                                       '      credentials: None\n'
                                                       '      availability_write: True\n'

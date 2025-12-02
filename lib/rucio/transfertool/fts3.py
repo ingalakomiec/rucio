@@ -302,7 +302,7 @@ def _pick_fts_checksum(
     return checksum_to_use
 
 
-def _use_tokens(transfer_hop: "DirectTransfer"):
+def _use_tokens(transfer_hop: "DirectTransfer") -> bool:
     """Whether a transfer can be performed with tokens.
 
     In order to be so, all the involved RSEs must have it explicitly enabled
@@ -501,48 +501,49 @@ def bulk_group_transfers(
         )
         logger(logging.DEBUG, 'bulk_group_transfers: Job parameters are: %s' % (job_params))
         if job_params['job_metadata'].get('multi_sources') or job_params['job_metadata'].get('multihop'):
-            # for multi-hop and multi-source transfers, no bulk submission.
+            # For multi-hop and multi-source transfers, no bulk submission.
             fts_jobs.append({'transfers': transfer_path[0:group_bulk], 'job_params': job_params})
         else:
-            # it's a single-hop, single-source, transfer. Hence, a candidate for bulk submission.
+            # It's a single-hop, single-source, transfer. Hence, a candidate
+            # for bulk submission.
             transfer = transfer_path[0]
+            group_key_segments = []
 
-            # we cannot group transfers together if their job_key differ
-            job_key = '%s,%s,%s,%s,%s,%s,%s,%s' % (
+            # Separate transfers based on the FTS job parameters.
+            group_key_segments += [
                 job_params['verify_checksum'],
-                job_params.get('spacetoken', ''),
+                job_params.get('spacetoken'),
                 job_params['copy_pin_lifetime'],
                 job_params['bring_online'],
-                job_params['job_metadata'],
+                str(job_params['job_metadata']),
                 job_params['overwrite'],
                 job_params['priority'],
-                job_params.get('max_time_in_queue', '')
-            )
+                job_params.get('max_time_in_queue')
+            ]
 
-            # Additionally, we don't want to group transfers together if their policy_key differ
-            policy_key = ''
+            # Separate transfers based on the authentication method.
+            group_key_segments += [_use_tokens(transfer)]
+
+            # Separate transfers based on the group policy.
             if policy == 'rule':
-                policy_key = '%s' % transfer.rws.rule_id
-            if policy == 'dest':
-                policy_key = '%s' % transfer.dst.rse.name
-            if policy == 'src_dest':
-                policy_key = '%s,%s' % (transfer.src.rse.name, transfer.dst.rse.name)
-            if policy == 'rule_src_dest':
-                policy_key = '%s,%s,%s' % (transfer.rws.rule_id, transfer.src.rse.name, transfer.dst.rse.name)
-            if policy == 'activity_dest':
-                policy_key = '%s %s' % (transfer.rws.activity, transfer.dst.rse.name)
-                policy_key = "_".join(policy_key.split(' '))
-            if policy == 'activity_src_dest':
-                policy_key = '%s %s %s' % (transfer.rws.activity, transfer.src.rse.name, transfer.dst.rse.name)
-                policy_key = "_".join(policy_key.split(' '))
-                # maybe here we need to hash the key if it's too long
+                group_key_segments += [transfer.rws.rule_id]
+            elif policy == 'dest':
+                group_key_segments += [transfer.dst.rse.name]
+            elif policy == 'src_dest':
+                group_key_segments += [transfer.src.rse.name, transfer.dst.rse.name]
+            elif policy == 'rule_src_dest':
+                group_key_segments += [transfer.rws.rule_id, transfer.src.rse.name, transfer.dst.rse.name]
+            elif policy == 'activity_dest':
+                group_key_segments += [transfer.rws.activity, transfer.dst.rse.name]
+            elif policy == 'activity_src_dest':
+                group_key_segments += [transfer.rws.activity, transfer.src.rse.name, transfer.dst.rse.name]
 
-            group_key = "%s_%s" % (job_key, policy_key)
+            group_key = tuple(group_key_segments)
             if group_key not in grouped_transfers:
                 grouped_transfers[group_key] = {'transfers': [], 'job_params': job_params}
             grouped_transfers[group_key]['transfers'].append(transfer)
 
-    # split transfer groups to have at most group_bulk elements in each one
+    # Split transfer groups to have at most group_bulk elements in each one.
     for group in grouped_transfers.values():
         job_params = group['job_params']
         logger(logging.DEBUG, 'bulk_group_transfers: grouped_transfers.values(): Job parameters are: %s' % (job_params))

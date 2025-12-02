@@ -217,7 +217,7 @@ class DownloadClient:
         if self.client.vo != DEFAULT_VO:
             self.trace_tpl['vo'] = self.client.vo
         self.trace_tpl['eventType'] = 'download'
-        self.trace_tpl['eventVersion'] = 'api_%s' % version.RUCIO_VERSION[0]
+        self.trace_tpl['eventVersion'] = 'api_%s' % version.RUCIO_VERSION
 
         self.use_cea_threshold = 10
         self.extraction_tools = []
@@ -1856,9 +1856,7 @@ class DownloadClient:
             did_name = did[1]
         elif len(did) == 1:
             if self.extract_scope_convention == 'belleii':
-                scopes = self.client.list_scopes()
-                if not isinstance(scopes, list):
-                    scopes = [scope['scope'] for scope in scopes]
+                scopes = [scope for scope in self.client.list_scopes()]
                 did_scope, did_name = extract_scope(did[0], scopes)
             else:
                 did = did_str.split('.')

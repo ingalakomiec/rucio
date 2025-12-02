@@ -24,6 +24,8 @@ import pytest
 
 from rucio.common.checksum import md5
 from rucio.common.utils import generate_uuid, render_json
+from rucio.db.sqla.constants import DatabaseOperationType
+from rucio.db.sqla.session import db_session
 from rucio.rse import rsemanager as rsemgr
 from rucio.tests.common import account_name_generator, execute, rse_name_generator, scope_name_generator
 
@@ -427,7 +429,7 @@ def test_list_blocklisted_replicas(rucio_client, rse_factory, did_factory):
             "prefix": "/rucio",
             "port": 0,
             "impl": "rucio.rse.protocols.posix.Default",
-            "domain_json": '{"wan": {"read": 1, "write": 1, "delete": 1, "third_party_copy_read": 1, "third_party_copy_write": 1}'
+            "domain_json": '{"wan": {"read": 0, "write": 0, "delete": 0, "third_party_copy_read": 0, "third_party_copy_write": 0}'
         })
 
     # Add a dataset with a file to the rse
@@ -858,7 +860,8 @@ def test_list_account_usage(rse_factory, rucio_client, random_account):
 
     rucio_client.set_local_account_limit(random_account.external, rse, local_limit)
     rucio_client.set_global_account_limit(random_account.external, rse_expression, global_limit)
-    increase(rse_id, random_account, 1, usage)
+    with db_session(DatabaseOperationType.WRITE) as session:
+        increase(rse_id, random_account, 1, usage, session=session)
     abacus_account.run(once=True)
     cmd = f'rucio list-account-usage {random_account}'
     exitcode, out, err = execute(cmd)

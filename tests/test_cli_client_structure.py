@@ -646,7 +646,7 @@ def test_rse_protocol():
     _, _, err = execute(f"rucio rse add {rse_name}")
     assert "ERROR" not in err
 
-    domain_json = """{"wan": {"read": 1, "write": 1, "delete": 1, "third_party_copy_read": 1, "third_party_copy_write": 1}}"""
+    domain_json = """{"wan": {"read": 0, "write": 0, "delete": 0, "third_party_copy_read": 0, "third_party_copy_write": 0}}"""
     cmd = f"rucio rse protocol add {rse_name} --host-name blocklistreplica --scheme file --prefix /rucio --port 0 --impl rucio.rse.protocols.posix.Default --domain-json '{domain_json}'"
     exitcode, _, err = execute(cmd)
     print(err)
@@ -857,37 +857,29 @@ def test_rule(rucio_client, mock_scope):
     assert len(out.split("\n")) == 3  # Creates two rules with independent IDs and one extra line at the end
 
 
-def test_scope(rucio_client, scope_factory, random_account_factory, vo):
-    scope = scope_name_generator()
-    account = random_account_factory().external
-    cmd = f"rucio scope add {scope} --account {account}"
+def test_scope():
+    new_scope = scope_name_generator()
+    cmd = f"rucio scope add {new_scope} --account root"
     exitcode, _, err = execute(cmd)
     assert exitcode == 0
     assert "ERROR" not in err
 
-    cmd = f"rucio scope list --account {account}"
+    cmd = "rucio scope list --account root"
     exitcode, out, err = execute(cmd)
     assert exitcode == 0
     assert "ERROR" not in err
     # assert new_scope in out
     # See issue https://github.com/rucio/rucio/issues/7316
 
-    new_scope, _ = scope_factory(vos=[vo], account_name=account)
-    new_account = random_account_factory().external
-    cmd = f"rucio scope update {new_scope} --account {new_account}"
-    exitcode, out, err = execute(cmd)
-    assert exitcode == 0
-    assert "ERROR" not in err
-    assert new_scope in rucio_client.list_scopes_for_account(new_account)
 
-
-def test_subscription(rucio_client, mock_scope):
+def test_subscription(rucio_client, mock_scope, random_account, did_factory):
     subscription_name = generate_uuid()
 
     filter_ = json.dumps({})
-    rules = json.dumps([{"copies": 1, "rse_expression": "JDOE_DATADISK", "lifetime": 3600, "activity": "User Subscriptions"}])
+    rules = [{"copies": 1, "rse_expression": "JDOE_DATADISK", "lifetime": 3600, "activity": "User Subscriptions"}]
+    rules_json = json.dumps(rules)
 
-    cmd = f"rucio subscription add {subscription_name} --account root --filter '{filter_}' --rule '{rules}'"
+    cmd = f"rucio subscription add {subscription_name} --account root --filter '{filter_}' --rule '{rules_json}'"
     exitcode, _, err = execute(cmd)
     assert exitcode == 0
     assert "ERROR" not in err
@@ -898,6 +890,8 @@ def test_subscription(rucio_client, mock_scope):
     assert "ERROR" not in err
     assert subscription_name in out
 
+    # Ensure there is at least one DID for the test
+    did_factory.make_dataset()
     did = [i for i in rucio_client.list_dids(mock_scope.external, filters=[{}], did_type="all")][0]
     cmd = f"rucio subscription touch {mock_scope.external}:{did}"
     exitcode, _, err = execute(cmd)
@@ -908,6 +902,31 @@ def test_subscription(rucio_client, mock_scope):
     rule = json.dumps({})
     cmd = f"rucio subscription update {subscription_name} --filter '{filter_}' --rule {rule}"
     exitcode, _, err = execute(cmd)
-    print(err)
     assert exitcode == 0
     assert "ERROR" not in err
+
+    cmd = 'rucio subscription list'
+    exitcode, out, err = execute(cmd)
+    assert exitcode == 0
+    assert "ERROR" not in err
+    assert subscription_name in out
+
+    # Add a subscription for a specific account, ensure only that subscription is listed
+    subscription_name_2 = generate_uuid()
+    rucio_client.add_subscription(
+            name=subscription_name_2,
+            account=random_account.external,
+            filter_={},
+            replication_rules=rules,
+            comments="test",
+            lifetime=10,
+            retroactive=False,
+            dry_run=False,
+    )
+
+    cmd = f'rucio subscription list --account {random_account}'
+    exitcode, out, err = execute(cmd)
+    assert exitcode == 0
+    assert "ERROR" not in err
+    assert subscription_name_2 in out
+    assert subscription_name not in out

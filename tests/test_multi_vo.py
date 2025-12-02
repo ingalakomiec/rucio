@@ -44,7 +44,8 @@ from rucio.core.rule import add_rule
 from rucio.core.vo import map_vo
 from rucio.daemons.automatix.automatix import automatix
 from rucio.db.sqla import models
-from rucio.db.sqla import session as db_session
+from rucio.db.sqla.constants import DatabaseOperationType
+from rucio.db.sqla.session import db_session
 from rucio.gateway import vo as vo_gateway
 from rucio.gateway.account import add_account, list_accounts
 from rucio.gateway.account_limit import set_local_account_limit
@@ -757,8 +758,8 @@ class TestMultiVoClients:
         scope_client.add_scope('root', shr)
         add_scope(new, 'root', 'root', vo=second_vo)
         add_scope(shr, 'root', 'root', vo=second_vo)
-        scope_list_tst = [s['scope'] for s in scope_client.list_scopes()]
-        scope_list_new = [s['scope'] for s in list_scopes(filter_={}, vo=second_vo)]
+        scope_list_tst = list(scope_client.list_scopes())
+        scope_list_new = list(list_scopes(filter_={}, vo=second_vo))
         assert tst in scope_list_tst
         assert new not in scope_list_tst
         assert shr in scope_list_tst
@@ -892,8 +893,6 @@ class TestMultiVoClients:
     def test_account_counters_at_different_vos(self, vo, second_vo, rse_client):
         """ MULTI VO (CLIENT): Test that account counters from 2nd vo don't interfere """
 
-        session = db_session.get_session()
-
         # add some RSEs to test create_counters_for_new_account
         rse_str = ''.join(choice(ascii_uppercase) for x in range(10))
         tst_rse1 = 'TST1_%s' % rse_str
@@ -911,19 +910,21 @@ class TestMultiVoClients:
         new_acc_vo2 = InternalAccount(new_acc_str, vo=second_vo)
 
         # Create counters
-        add_counter(new_rse1_vo1_id, new_acc_vo1)
-        add_counter(new_rse1_vo2_id, new_acc_vo2)
+        with db_session(DatabaseOperationType.WRITE) as session:
+            add_counter(new_rse1_vo1_id, new_acc_vo1, session=session)
+            add_counter(new_rse1_vo2_id, new_acc_vo2, session=session)
 
-        stmt = select(
-            models.AccountUsage.account,
-            models.AccountUsage.rse_id
-        ).distinct(
-        ).where(
-            models.AccountUsage.account == new_acc_vo2
-        )
-        acc_counters = session.execute(stmt).one()
-        rse_id = acc_counters[1]
-        vo = get_rse_vo(rse_id)
+        with db_session(DatabaseOperationType.READ) as session:
+            stmt = select(
+                models.AccountUsage.account,
+                models.AccountUsage.rse_id
+            ).distinct(
+            ).where(
+                models.AccountUsage.account == new_acc_vo2
+            )
+            acc_counters = session.execute(stmt).one()
+            rse_id = acc_counters[1]
+            vo = get_rse_vo(rse_id, session=session)
         assert vo == second_vo
 
 
@@ -1033,12 +1034,12 @@ class TestMultiVODaemons:
                          'prefix': '/test/automatix',
                          'impl': 'rucio.rse.protocols.mock.Default',
                          'domains': {
-                             'lan': {'read': 1,
-                                     'write': 1,
-                                     'delete': 1},
-                             'wan': {'read': 1,
-                                     'write': 1,
-                                     'delete': 1}}}
+                             'lan': {'read': 0,
+                                     'write': 0,
+                                     'delete': 0},
+                             'wan': {'read': 0,
+                                     'write': 0,
+                                     'delete': 0}}}
         rse_client.add_rse(shr_rse)
         rse_client.add_rse_attribute(rse=shr_rse, key=RseAttr.VERIFY_CHECKSUM, value=False)
         rse_client.add_rse_attribute(rse=shr_rse, key=RseAttr.SKIP_UPLOAD_STAT, value=True)

@@ -52,11 +52,11 @@ def add_files(
 
     with db_session(DatabaseOperationType.WRITE) as session:
         filter_ = {'scope': InternalScope(scope='*', vo=vo)}
-        scopes = [scope['scope'].external for scope in list_scopes(filter_=filter_, session=session)]
+        scopes = [scope.external for scope in list_scopes(filter_=filter_, session=session)]
         dids = []
         rses = {}
         for lfn in lfns:
-            scope, name = extract_scope(lfn['lfn'], scopes, vo=vo)
+            scope, name = extract_scope(lfn['lfn'], scopes, vo=vo)  # type: ignore (https://github.com/rucio/rucio/issues/8188)
             dids.append({'scope': scope, 'name': name})
             rse = lfn['rse']
             if rse not in rses:
