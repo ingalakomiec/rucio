@@ -76,6 +76,8 @@ Repository = "https://github.com/rucio/rucio.git"
 Changelog = "https://rucio.cern.ch/documentation/release-notes/"
 
 [tool.setuptools]
+include-package-data = true
+
 script-files = [
   "bin/rucio",
   "bin/rucio-abacus-account",
@@ -114,6 +116,25 @@ script-files = [
   "bin/rucio-storage-consistency-actions",
   "bin/rucio-transmogrifier",
   "bin/rucio-undertaker"
+]
+
+[tool.setuptools.data-files]
+"rucio/tools" = [
+  "tools/merge_rucio_configs.py",
+  "tools/bootstrap.py",
+  "tools/reset_database.py"
+]
+
+"rucio/etc" = [
+  "etc/*.template"
+]
+
+"rucio/etc/web" = [
+  "etc/web/*.template"
+]
+
+"rucio/etc/mail_templates" = [
+  "etc/mail_templates/*.tmpl"
 ]
 
 [tool.setuptools.package-dir]
