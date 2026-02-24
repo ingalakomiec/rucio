@@ -56,6 +56,7 @@ def auditor_qt(
     delta: int,
     date: datetime,
     profile: str,
+    algorithm: str,
     no_declaration: bool,
     once: bool,
     sleep_time: int
@@ -70,6 +71,7 @@ def auditor_qt(
     :param date:           The date of the RSE dump, for which the consistency check should be done
                            (default: None; the newest RSE dump will be taken).
     :param profile:        Which profile to use (default: atlas).
+    :param algorithm:      Which algorithm to use to compare dumps (default: reliable).
     :param no_declaration: No action on output (default: False).
     :param once:           Whether to execute once and exit.
     :param sleep_time:     Thread sleep time after each chunk of work.
@@ -87,6 +89,7 @@ def auditor_qt(
             delta=delta,
             date=date,
             profile=profile,
+            algorithm=algorithm,
             no_declaration=no_declaration
         )
     )
@@ -97,6 +100,7 @@ def run_once(
     delta: int,
     date: datetime,
     profile: str,
+    algorithm: str,
     no_declaration: bool,
     *,
     heartbeat_handler: 'HeartbeatHandler',
@@ -112,6 +116,7 @@ def run_once(
     :param date:              The date of the RSE dump, for which the consistency check should be done
                               (default: None; the newest RSE dump will be taken).
     :param profile:           Which profile to use (default: atlas).
+    :param algorithm:         Which algorithm to use to compare dumps (default: reliable).
     :param no_declaration:    No action on output (default: False).
 
     :param heartbeat_handler: A HeartbeatHandler instance.
@@ -147,7 +152,7 @@ def run_once(
     # loop over all rses
     for rse in rses_names:
         try:
-            profile_instance = profile_maker(rse, keep_dumps, delta, date, cache_dir, results_dir, no_declaration)
+            profile_instance = profile_maker(rse, keep_dumps, delta, date, algorithm, cache_dir, results_dir, no_declaration)
         except RucioException:
             logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
 
@@ -164,6 +169,7 @@ def run(
     delta: int = 3,
     date: datetime = None,
     profile: str = "atlas",
+    algorithm: str = "reliable",
     no_declaration: bool = False,
     once: bool = False,
     threads: int = 1,
@@ -182,6 +188,7 @@ def run(
     :param date:           The date of the RSE dump, for which the consistency check should be done
                            (default: None; the newest RSE dump will be taken).
     :param profile:        Which profile to use (default: atlas).
+    :param algorithm:      Which algorithm to use to compare dumps (default: reliable).
     :param no_declaration: No action on output (default: False).
     :param once:           Whether to execute once and exit.
     :param threads:        Number of threads for this process
@@ -204,6 +211,7 @@ def run(
             delta=delta,
             date=date,
             profile=profile,
+            algorithm=algorithm,
             no_declaration=no_declaration,
             once=once,
             sleep_time=sleep_time,
@@ -219,6 +227,7 @@ def run(
                     'delta': delta,
                     'date': date,
                     'profile': profile,
+                    'algorithm': algorithm,
                     'no_declaration': no_declaration,
                     'once': once,
                     'sleep_time': sleep_time

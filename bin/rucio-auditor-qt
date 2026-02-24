@@ -65,6 +65,9 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--profile', default="atlas", type=str,
                         help='Which profile to use '
                         '(default: atlas).')
+    parser.add_argument('--algorithm', default="reliable", type=str,
+                        help='Which algorithm to use to compare dumps '
+                        '(default: reliable).')
     parser.add_argument('--no-declaration',action='store_true',
                         help='No action on output '
                          '(default: False).')
@@ -90,6 +93,7 @@ if __name__ == '__main__':
         delta=args.delta,
         date=args.date,
         profile=args.profile,
+        algorithm=args.algorithm,
         no_declaration=args.no_declaration,
         once=args.run_once,
         threads=args.threads,
