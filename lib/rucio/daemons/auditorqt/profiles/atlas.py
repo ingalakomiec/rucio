@@ -37,6 +37,7 @@ def atlas_auditor(
         keep_dumps: bool,
         delta: timedelta,
         date: datetime,
+        algorithm: str,
         cache_dir: str,
         results_dir: str,
         no_declaration: bool
@@ -51,6 +52,10 @@ def atlas_auditor(
 
     'date' - a datetime instance with the date of the desired dump;
     default: None; the latest RSE dump will be taken
+
+    'algorithm' - which algorithm to use to compare dumps;
+    default: reliable
+
 
     'cache_dir' -  dierectory where the dumps are cached
 
