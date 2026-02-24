@@ -17,7 +17,6 @@
 import glob
 import logging
 import hashlib
-#import numpy
 import os
 import re
 import shutil
@@ -27,7 +26,7 @@ from typing import Optional
 
 from rucio.common.dumper import smart_open
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
-#from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_slow_reliable
 
 def generic_auditor(
@@ -35,6 +34,7 @@ def generic_auditor(
         keep_dumps: bool,
         delta: int,
         date: datetime,
+        algorithm: str,
         cache_dir: str,
         results_dir: str,
         no_declaration: bool
@@ -49,6 +49,9 @@ def generic_auditor(
 
     `date` is a datetime instance with the date of the desired dump or None
     to download the latest available dump
+
+    'algorithm' - which algorithm to use to compare dumps;
+    default: reliable
 
     'cache_dir' dierectory where the dumps are cached
 
