@@ -28,9 +28,9 @@ from rucio.common.constants import RseAttr
 from rucio.common.dumper import smart_open
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
-from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster
+from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump, remove_cached_dumps
-#from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
 
 def atlas_auditor(
         rse: str,
@@ -84,17 +84,25 @@ def atlas_auditor(
             remove_cached_dumps(cached_dumps)
         return results_path
 
-    missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+    if algorithm == "fast":
+        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
 
-    file_results = open(results_path, 'w')
+    if algorithm == "faster":
+        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
 
-    for k in range(len(dark_files)):
-        file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
+    if algorithm in ("fast", "faster"):
+        file_results = open(results_path, 'w')
 
-    for k in range(len(missing_files)):
-        file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
+        for k in range(len(dark_files)):
+            file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
 
-    file_results.close()
+        for k in range(len(missing_files)):
+            file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
+
+        file_results.close()
+
+    if algorithm == "reliable":
+        consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
 
     if no_declaration:
         logger.warning(f"No action on output performed")
