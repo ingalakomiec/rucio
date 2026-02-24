@@ -20,14 +20,12 @@ The auditor daemon is responsible for the detection of inconsistencies on storag
 - reporting dark and missing replicas.
 """
 
-#for benchmarking
-import time
-
 import argparse
 import functools
 import logging
 import os
 import socket
+import time
 import threading
 from configparser import NoSectionError
 from datetime import datetime
@@ -121,7 +119,6 @@ def run_once(
     :returns:                 A boolean flag indicating whether the daemon should go to sleep.
     """
 
-    # for benchmarking
     start_time = time.perf_counter()
 
     worker_number, total_workers, logger = heartbeat_handler.live()
@@ -139,29 +136,24 @@ def run_once(
     cache_dir = config_get('auditor', 'cache')
     results_dir = config_get('auditor', 'results')
 
-    if not os.path.isdir(cache_dir):
-        os.mkdir(cache_dir)
-
-    if not os.path.isdir(results_dir):
-        os.mkdir(results_dir)
+    os.makedirs(cache_dir, exist_ok=True)
+    os.makedirs(results_dir, exist_ok=True)
 
     try:
         profile_maker = PROFILE_MAP[profile]
-    except KeyError:
-        logger(logging.ERROR, f"Invalid auditor profile name '{profile}'")
+    except KeyError as exc:
+        raise ValueError(f"Invalid auditor profile name '{profile}'") from exc
 
     # loop over all rses
     for rse in rses_names:
         try:
-            profile = profile_maker(rse, keep_dumps, delta, date, cache_dir, results_dir, no_declaration)
+            profile_instance = profile_maker(rse, keep_dumps, delta, date, cache_dir, results_dir, no_declaration)
         except RucioException:
             logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
-            raise
 
-    # for benchmarking
     end_time = time.perf_counter()
     execution_time = end_time - start_time
-    print(f"Execution time: {execution_time:.6f} seconds")
+    logger(logging.INFO, f"Execution time: {execution_time:.6f} seconds")
 
     return True
 
