@@ -25,8 +25,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from rucio.common.dumper import smart_open
-from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import remove_cached_dumps
-from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.output import process_output, remove_cached_dumps
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 
 def generic_auditor(

@@ -295,13 +295,3 @@ def protocol(url: str) -> str:
         raise RuntimeError(f"Protocol {proto} not supported")
 
     return proto
-
-def remove_cached_dumps(paths: []) -> bool:
-
-    logger = logging.getLogger('auditor: atlas_specific.dumps.remove_cached_dump')
-
-    for path in paths:
-        os.remove(path)
-        logger.debug(f"Removing dump: {path}")
-
-    return True

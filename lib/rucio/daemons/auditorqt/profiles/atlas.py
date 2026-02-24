@@ -28,9 +28,9 @@ from rucio.common.constants import RseAttr
 from rucio.common.dumper import smart_open
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
+from rucio.daemons.auditorqt.output import process_output, remove_cached_dumps
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
-from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump, remove_cached_dumps
-from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump
 
 def atlas_auditor(
         rse: str,
