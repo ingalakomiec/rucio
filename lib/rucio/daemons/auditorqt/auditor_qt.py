@@ -39,6 +39,7 @@ from rucio.daemons.common import run_daemon
 from rucio.client.rseclient import RSEClient
 from rucio.common.exception import RSENotFound
 
+from .consistencycheck import ALGORITHM_MAP
 from .profiles import PROFILE_MAP
 
 GRACEFUL_STOP = threading.Event()
@@ -149,6 +150,12 @@ def run_once(
     except KeyError as exc:
         raise ValueError(f"Invalid auditor profile name '{profile}'") from exc
 
+    try:
+        algorithm_maker = ALGORITHM_MAP[algorithm]
+    except KeyError as exc:
+        raise ValueError(f"Invalid auditor algorithm name '{algorithm}'") from exc
+
+
     # loop over all rses
     for rse in rses_names:
         try:
@@ -251,7 +258,7 @@ def stop(
     GRACEFUL_STOP.set()
 
 def get_rses_to_process(
-    rses: Optional[Iterable[str]]
+    rses: Optional[str]
     ) -> list[dict[str, Any]]:
 
     if rses:
