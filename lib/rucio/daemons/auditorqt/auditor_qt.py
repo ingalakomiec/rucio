@@ -23,6 +23,7 @@ The auditor daemon is responsible for the detection of inconsistencies on storag
 #for benchmarking
 import time
 
+import argparse
 import functools
 import logging
 import os
@@ -205,7 +206,16 @@ def run(
 
     if once:
         logging.info('Auditor-QT: executing one iteration only')
-        auditor_qt(rses, keep_dumps, delta, date, profile, sleep_time, once, no_declaration)
+        auditor_qt(
+            rses=rses,
+            keep_dumps=keep_dumps,
+            delta=delta,
+            date=date,
+            profile=profile,
+            no_declaration=no_declaration,
+            once=once,
+            sleep_time=sleep_time,
+        )
     else:
         logging.info("Auditor-QT starting threads")
         thread_list = [
@@ -247,3 +257,11 @@ def get_rses_to_process(
         return  RSEClient().list_rses(rses)
     else:
         return RSEClient().list_rses()
+
+def parse_date(date: str) -> datetime:
+    try:
+        return datetime.strptime(date, '%Y-%m-%d')
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "Date must be in YYYY-MM-DD format"
+        ) from exc
