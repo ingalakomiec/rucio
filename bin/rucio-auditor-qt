@@ -25,7 +25,7 @@ import argparse
 import signal
 from datetime import datetime
 
-from rucio.daemons.auditorqt.auditor_qt import run,stop
+from rucio.daemons.auditorqt.auditor_qt import parse_date, run, stop
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -59,7 +59,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--delta', default=3, type=int,
                         help='How many days older/newer than the RSE dump must the Rucio replica dumps be '
                         '(default: 3).')
-    parser.add_argument('--date', default = None, type=lambda d: datetime.strptime(d, '%Y-%m-%d'),
+    parser.add_argument('--date', default=None, type=parse_date,
                         help='The date of the RSE dump, for which the consistency check should be done'
                         '(default: None; the newest RSE dump will be taken).')
     parser.add_argument('--profile', default="atlas", type=str,
@@ -75,7 +75,7 @@ def get_parser() -> argparse.ArgumentParser:
                         '(default: 1).')
     parser.add_argument('--sleep-time', dest='sleep_time', action='store',
                         default=86400, type=int,
-                        help='Concurrency control: thread sleep time after each'
+                        help='Concurrency control: thread sleep time (in seconds) after each'
                         ' chunk of work')
     return parser
 
