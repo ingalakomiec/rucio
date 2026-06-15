@@ -45,8 +45,6 @@ from .profiles import PROFILE_MAP
 GRACEFUL_STOP = threading.Event()
 DAEMON_NAME = 'auditorqt'
 
-#test
-
 if TYPE_CHECKING:
     from types import FrameType
 
