@@ -111,6 +111,8 @@ def generic_auditor(
 
     if algorithm == "reliable":
         consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
+        #consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, cache_dir)
+
 
     if no_declaration:
         logger.warning(f"No action on output performed")
