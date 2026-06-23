@@ -21,10 +21,9 @@ import subprocess # noqa: S404 -- subprocess used for external commands
 import tempfile
 
 from datetime import datetime
-from typing import Optional
+from typing import Iterator, Optional, Union, cast
 
 from rucio.common.dumper import ddmendpoint_url, mkdir, path_parsing, smart_open, temp_file
-#from rucio.common.dumper.consistency import Consistency
 
 #    ALGORITHM 1
 #    an algorithm with lists and a dictionary:
@@ -156,14 +155,7 @@ def consistency_check_slow_reliable(
     cache_dir: str
 ) -> None:
 
-    logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
-    logger.debug("Consistency check - slow, reliable")
-
-    print("RELIABLE START")
-
-    """
-    results = Consistency.dump(
-        'consistency-manual',
+    results = slow_reliable_algorithm(
         rse,
         rse_dump_path,
         rucio_dump_before_path,
@@ -171,99 +163,13 @@ def consistency_check_slow_reliable(
         date,
         cache_dir=cache_dir,
     )
-    """
-
-    results = consistency_check_slow_reliable_tmp(
-        rse,
-        rse_dump_path,
-        rucio_dump_before_path,
-        rucio_dump_after_path,
-        date,
-        cache_dir=cache_dir,
-    )
-    """
-    rucio_dump_before_path_sorted = gnu_sort(
-        parse_and_filter_file(rucio_dump_before_path, cache_dir=cache_dir, parser=parser),
-        cache_dir=cache_dir,
-        delimiter=',',
-        fieldspec='1',
-    )
-
-    print("rucio dump before sorted")
-    logger.debug("Rucio dump before sorted")
-
-
-    rucio_dump_after_path_sorted = gnu_sort(
-        parse_and_filter_file(rucio_dump_after_path, cache_dir=cache_dir, parser=parser),
-        cache_dir,
-        delimiter=',',
-        fieldspec='1',
-    )
-
-    print("rucio dump after sorted")
-    logger.debug("Rucio dump after sorted")
-
-    standard_name_re = r'(ddmendpoint_{0}_\d{{2}}-\d{{2}}-\d{{4}}_[0-9a-f]{{40}})$'.format(rse)
-    standard_name_match = re.search(standard_name_re, rse_dump_path)
-    if standard_name_match is not None:
-        # If the original filename was generated using the expected format,
-        # just use the name as prefix for the parsed file.
-        sd_prefix = standard_name_match.group(0)
-    elif date is not None:
-        # Otherwise try to use the date information and DDMEndpoint name to
-        # have a meaningful filename.
-        sd_prefix = 'ddmendpoint_{0}_{1}'.format(
-            rse,
-            date.strftime('%d-%m-%Y'),
-        )
-    else:
-        # As last resort use only the DDMEndpoint name, but this is error
-        # prone as old dumps may interfere with the checks.
-        sd_prefix = 'ddmendpoint_{0}_unknown_date'.format(
-            rse,
-        )
-        logger.warning(
-            'Using basic and error prune naming for RSE dump as no date '
-            'information was provided, %s dump will be named %s',
-            rse,
-            sd_prefix,
-        )
-
-    prefix_components = path_parsing.components(ddmendpoint_url(rse))
-
-    rse_dump_path_sorted = gnu_sort(
-        parse_and_filter_file(
-            rse_dump_path,
-            cache_dir=cache_dir,
-            parser=lambda line: strip_storage_dump(line, prefix_components),
-            prefix=sd_prefix,
-        ),
-        cache_dir=cache_dir,
-        prefix=sd_prefix,
-    )
-
-    print("rse dump sorted")
-    logger.debug("RSE dump sorted")
-
-    with open(rucio_dump_before_path_sorted) as prevf:
-        with open(rucio_dump_after_path_sorted ) as nextf:
-            with open(rse_dump_path_sorted) as sdump:
-                for path, where, status in compare3(prevf, sdump, nextf):
-                    prevstatus, nextstatus = status
-
-                    if where[0] and not where[1] and where[2]:
-                        if prevstatus == 'A' and nextstatus == 'A':
-                            yield cls('MISSING', path)
-
-                        if not where[0] and where[1] and not where[2]:
-                            yield cls('DARK', path)
-    """
 
     result_file_name = f"result.{rse}_{date:%Y%m%d}"
 
     with temp_file(results_path, final_name=result_file_name) as (output, _):
         for result in results:
-            output.write('{0}\n'.format(result.csv()))
+            status, path = result
+            output.write(f"{status},{path}\n")
 
     return True
 
@@ -431,18 +337,17 @@ def strip_storage_dump(line: str, prefix_components) -> str:
         relative = relative[1:]
     return '/'.join(relative)
 
-def consistency_check_slow_reliable_tmp(
-    rucio_dump_before_path: str,
-    rse_dump_path: str,
-    rucio_dump_after_path: str,
+def slow_reliable_algorithm(
     rse: str,
+    rse_dump_path: str,
+    rucio_dump_before_path: str,
+    rucio_dump_after_path: str,
     date: datetime,
     cache_dir: str
-    ):
-    SCHEMA = (
-        ('apparent_status', str),
-        ('path', str),
-    )
+) -> Iterator[tuple[str,str]]:
+
+    logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
+    logger.debug("Consistency check - slow, reliable")
 
     rucio_dump_before_path_sorted = gnu_sort(
         parse_and_filter_file(rucio_dump_before_path, cache_dir=cache_dir, parser=parser),
@@ -451,9 +356,7 @@ def consistency_check_slow_reliable_tmp(
         fieldspec='1',
     )
 
-    print("rucio dump before sorted")
     logger.debug("Rucio dump before sorted")
-
 
     rucio_dump_after_path_sorted = gnu_sort(
         parse_and_filter_file(rucio_dump_after_path, cache_dir=cache_dir, parser=parser),
@@ -462,7 +365,6 @@ def consistency_check_slow_reliable_tmp(
         fieldspec='1',
     )
 
-    print("rucio dump after sorted")
     logger.debug("Rucio dump after sorted")
 
     standard_name_re = r'(ddmendpoint_{0}_\d{{2}}-\d{{2}}-\d{{4}}_[0-9a-f]{{40}})$'.format(rse)
@@ -503,7 +405,6 @@ def consistency_check_slow_reliable_tmp(
         prefix=sd_prefix,
     )
 
-    print("rse dump sorted")
     logger.debug("RSE dump sorted")
 
     with open(rucio_dump_before_path_sorted) as prevf:
@@ -511,10 +412,102 @@ def consistency_check_slow_reliable_tmp(
             with open(rse_dump_path_sorted) as sdump:
                 for path, where, status in compare3(prevf, sdump, nextf):
                     prevstatus, nextstatus = status
-
                     if where[0] and not where[1] and where[2]:
                         if prevstatus == 'A' and nextstatus == 'A':
-                            yield cls('MISSING', path)
+                            yield ('MISSING', path)
+                    if not where[0] and where[1] and not where[2]:
+                        yield ('DARK', path)
 
-                        if not where[0] and where[1] and not where[2]:
-                            yield cls('DARK', path)
+def compare3(
+    it0: 'Iterable[str]',
+    it1: 'Iterable[str]',
+    it2: 'Iterable[str]'
+) -> 'Iterator[tuple[str, tuple[bool, bool, bool], tuple[Optional[str], Optional[str]]]]':
+    '''
+    Generator to compare 3 sorted iterables, in each
+    iteration it yields a tuple of the form (current, (bool, bool, bool))
+    where current is the current element checked and the
+    second element of the tuple is a triplet whose elements take
+    a true value if current is contained in the it0, it1 or it2
+    respectively.
+
+    This function can't compare the iterators properly if None is
+    a valid value.
+    '''
+
+    it0 = iter(it0)
+    it1 = iter(it1)
+    it2 = iter(it2)
+    v0 = _try_to_advance(it0)
+    v1 = _try_to_advance(it1)
+    v2 = _try_to_advance(it2)
+
+    while v0 is not None or v1 is not None or v2 is not None:
+        path0, status0 = split_if_not_none(v0)
+        path2, status2 = split_if_not_none(v2)
+
+        vmin = min_value(path0, v1, path2)
+        in0 = in1 = in2 = False
+        in0_status = in2_status = None
+
+        # Detect in which iterables the value is present
+        #   inN is True if the value is present on the N iterable.
+        #   sN  is the status of the path in the rucio replica
+        #       dumps (N is either 0 or 2).
+        if path0 is not None and path0 == vmin:
+            in0 = True
+            in0_status = status0
+
+        if v1 is not None and v1 == vmin:
+            in1 = True
+
+        if path2 is not None and path2 == vmin:
+            in2 = True
+            in2_status = status2
+
+        # yield the value, in which iterables is present, and the status
+        # in each rucio replica dumps (if it is present there, else None).
+        yield (vmin, (in0, in1, in2), (in0_status, in2_status))
+
+        # Discard duplicate entries (it shouldn't be duplicate entries
+        # anyways) and
+        # advance the iterators, if the iterator N is depleted vN is set
+
+     # to None.
+        while v0 is not None and path0 == vmin:
+            v0 = _try_to_advance(it0)
+            path0, status0 = split_if_not_none(v0)
+
+        while v1 is not None and v1 == vmin:
+            v1 = _try_to_advance(it1)
+
+        while v2 is not None and path2 == vmin:
+            v2 = _try_to_advance(it2)
+            path2, status2 = split_if_not_none(v2)
+
+
+def _try_to_advance(
+        it: 'SupportsNext[str]',
+        default: Optional[str] = None
+) -> Optional[str]:
+    try:
+        el = next(it)
+    except StopIteration:
+        return default
+    return el.strip()
+
+def split_if_not_none(
+        value: Optional[str],
+        sep: str = ',',
+        fields: int = 2
+) -> Union[str, list]:
+    return value.split(sep) if value is not None else ([None] * fields)
+
+def min_value(*values: Optional[str]) -> str:
+    '''
+    Minimum between the input values, ignoring None
+    '''
+    values_without_none = cast('list[str]', [value for value in values if value is not None])
+    if len(values_without_none) == 0:
+        raise ValueError("Input contains 0 non-null values.")
+    return min(values_without_none)
