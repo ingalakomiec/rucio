@@ -106,6 +106,8 @@ def consistency_check_faster(
 
         for line in file_rucio_dump_before:
             parts = line.strip().split()
+            # parts[7] - path
+            # parts[10] - status (if available -> 'A')
             key = parts[7]+'\n'
             out[key] = 16
             if parts[10]=='A':
@@ -123,6 +125,9 @@ def consistency_check_faster(
 
         for line in file_rucio_dump_after:
             parts = line.strip().split()
+            # parts[7] - path
+            # parts[10] - status (if available -> 'A')
+
             key = parts[7]+'\n'
             if key in out:
                 out[key]+=4
@@ -198,7 +203,9 @@ def prepare_rucio_dump(
     with smart_open(dump_path) as file_rucio_dump:
 
         for line in file_rucio_dump:
+            # rucio_dump[0] - path
             rucio_dump[0].append(line.split()[7]+'\n')
+            # rucio_dump[1] - status (if available -> 'A')
             rucio_dump[1].append(line.split()[10])
 
         file_rucio_dump.close()
