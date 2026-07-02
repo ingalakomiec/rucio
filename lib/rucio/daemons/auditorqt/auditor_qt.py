@@ -151,7 +151,7 @@ def run_once(
         raise ValueError(f"Invalid auditor profile name '{profile}'") from exc
 
     try:
-        algorithm_maker = ALGORITHM_MAP[algorithm]
+        ALGORITHM_MAP[algorithm]
     except KeyError as exc:
         raise ValueError(f"Invalid auditor algorithm name '{algorithm}'") from exc
 
