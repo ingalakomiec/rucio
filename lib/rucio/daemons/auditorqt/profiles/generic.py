@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from rucio.common.dumper import smart_open
-from rucio.daemons.auditorqt.output import remove_cached_dumps
+from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 
 def generic_auditor(
@@ -111,19 +111,9 @@ def generic_auditor(
 
     if algorithm == "reliable":
         consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
-        #consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, cache_dir)
-
-
-#    if no_declaration:
-#        logger.warning(f"No action on output performed")
-#    else:
-#        process_output(rse, results_path)
 
     if not keep_dumps:
-        remove = glob.glob(f"{cache_dir}/*{rse}*")
-
-        for fil in remove:
-            os.remove(fil)
+        remove_cached_dumps(cached_dumps)
 
     return results_path
 
