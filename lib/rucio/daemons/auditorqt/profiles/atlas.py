@@ -28,7 +28,8 @@ from rucio.common.constants import RseAttr
 from rucio.common.dumper import smart_open
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
-from rucio.daemons.auditorqt.output import process_output, remove_cached_dumps
+from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump
 
@@ -65,6 +66,9 @@ def atlas_auditor(
     """
 
     logger = logging.getLogger('atlas_auditor')
+
+    if date is None:
+        date = datetime.now()
 
     delta = timedelta(delta)
 
@@ -104,13 +108,13 @@ def atlas_auditor(
     if algorithm == "reliable":
         consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
 
+    if not keep_dumps:
+        remove_cached_dumps(cached_dumps)
+
     if no_declaration:
         logger.warning(f"No action on output performed")
     else:
         process_output(rse, results_path)
-
-    if not keep_dumps:
-        remove_cached_dumps(cached_dumps)
 
     return results_path
 
