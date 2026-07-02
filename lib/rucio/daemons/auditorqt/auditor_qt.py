@@ -59,23 +59,25 @@ def auditor_qt(
     profile: str,
     algorithm: str,
     no_declaration: bool,
+    compress_results: bool,
     once: bool,
     sleep_time: int
 ) -> None:
     """Daemon runner.
-    :param rses:           RSEs to check specified as an RSE expression
-                           (default: check all RSEs).
-    :param keep_dumps:     Keep RSE and Rucio Replica Dumps on cache
-                           (default: False).
-    :param delta:          How many days older/newer than the RSE dump
-                           must the Rucio replica dumps be (default: 3).
-    :param date:           The date of the RSE dump, for which the consistency check should be done
-                           (default: None; the newest RSE dump will be taken).
-    :param profile:        Which profile to use (default: atlas).
-    :param algorithm:      Which algorithm to use to compare dumps (default: reliable).
-    :param no_declaration: No action on output (default: False).
-    :param once:           Whether to execute once and exit.
-    :param sleep_time:     Thread sleep time after each chunk of work.
+    :param rses:             RSEs to check specified as an RSE expression
+                             (default: check all RSEs).
+    :param keep_dumps:       Keep RSE and Rucio Replica Dumps on cache
+                             (default: False).
+    :param delta:            How many days older/newer than the RSE dump
+                             must the Rucio replica dumps be (default: 3).
+    :param date:             The date of the RSE dump, for which the consistency check should be done
+                             (default: None; the newest RSE dump will be taken).
+    :param profile:          Which profile to use (default: atlas).
+    :param algorithm:        Which algorithm to use to compare dumps (default: reliable).
+    :param no_declaration:   No action on output (default: False).
+    :param compress_results: Compress result file (default: False).
+    :param once:             Whether to execute once and exit.
+    :param sleep_time:       Thread sleep time after each chunk of work.
     """
     run_daemon(
         once=once,
@@ -91,7 +93,8 @@ def auditor_qt(
             date=date,
             profile=profile,
             algorithm=algorithm,
-            no_declaration=no_declaration
+            no_declaration=no_declaration,
+            compress_results=compress_results
         )
     )
 
@@ -103,6 +106,7 @@ def run_once(
     profile: str,
     algorithm: str,
     no_declaration: bool,
+    compress_results: bool,
     *,
     heartbeat_handler: 'HeartbeatHandler',
     activity: Optional[str]
@@ -119,6 +123,7 @@ def run_once(
     :param profile:           Which profile to use (default: atlas).
     :param algorithm:         Which algorithm to use to compare dumps (default: reliable).
     :param no_declaration:    No action on output (default: False).
+    :param compress_results:  Compress result file (default: False).
 
     :param heartbeat_handler: A HeartbeatHandler instance.
     :param activity:          Activity to work on.
@@ -159,7 +164,7 @@ def run_once(
     # loop over all rses
     for rse in rses_names:
         try:
-            profile_instance = profile_maker(rse, keep_dumps, delta, date, algorithm, cache_dir, results_dir, no_declaration)
+            profile_instance = profile_maker(rse, keep_dumps, delta, date, algorithm, cache_dir, results_dir, no_declaration, compress_results)
         except RucioException:
             logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
 
@@ -178,6 +183,7 @@ def run(
     profile: str = "atlas",
     algorithm: str = "reliable",
     no_declaration: bool = False,
+    compress_results: bool = False,
     once: bool = False,
     threads: int = 1,
 #    sleep_time: int = 86400
@@ -186,21 +192,22 @@ def run(
     """
     Starts up the auditor-qt threads.
 
-    :param rses:           RSEs to check specified as an RSE expression
-                           (default: check all RSEs).
-    :param keep_dumps:     Keep RSE and Rucio Replica Dumps on cache
-                           (default: False).
-    :param delta:          How many days older/newer than the RSE dump
-                           must the Rucio replica dumps be (default: 3).
-    :param date:           The date of the RSE dump, for which the consistency check should be done
-                           (default: None; the newest RSE dump will be taken).
-    :param profile:        Which profile to use (default: atlas).
-    :param algorithm:      Which algorithm to use to compare dumps (default: reliable).
-    :param no_declaration: No action on output (default: False).
-    :param once:           Whether to execute once and exit.
-    :param threads:        Number of threads for this process
-                           (default: 1).
-    :param sleep_time:     Number of seconds to sleep before restarting.
+    :param rses:             RSEs to check specified as an RSE expression
+                             (default: check all RSEs).
+    :param keep_dumps:       Keep RSE and Rucio Replica Dumps on cache
+                             (default: False).
+    :param delta:            How many days older/newer than the RSE dump
+                             must the Rucio replica dumps be (default: 3).
+    :param date:             The date of the RSE dump, for which the consistency check should be done
+                             (default: None; the newest RSE dump will be taken).
+    :param profile:          Which profile to use (default: atlas).
+    :param algorithm:        Which algorithm to use to compare dumps (default: reliable).
+    :param no_declaration:   No action on output (default: False).
+    :param compress_results: Compress result file (default: False).
+    :param once:             Whether to execute once and exit.
+    :param threads:          Number of threads for this process
+                             (default: 1).
+    :param sleep_time:       Number of seconds to sleep before restarting.
     """
 
     setup_logging(process_name=DAEMON_NAME)
@@ -220,6 +227,7 @@ def run(
             profile=profile,
             algorithm=algorithm,
             no_declaration=no_declaration,
+            compress_results=compress_results,
             once=once,
             sleep_time=sleep_time,
         )
@@ -236,6 +244,7 @@ def run(
                     'profile': profile,
                     'algorithm': algorithm,
                     'no_declaration': no_declaration,
+                    'compress_results': compress_results,
                     'once': once,
                     'sleep_time': sleep_time
                 },
