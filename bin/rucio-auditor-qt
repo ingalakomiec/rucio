@@ -71,6 +71,9 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--no-declaration',action='store_true',
                         help='No action on output '
                          '(default: False).')
+    parser.add_argument('--compress-results',action='store_true',
+                        help='Compress a file with results of the conssitency check'
+                         '(default: False).')
     parser.add_argument('--run-once', dest='run_once', action='store_true',
                         help='One iteration only.')
     parser.add_argument('--threads', action='store', default=1, type=int,
@@ -95,6 +98,7 @@ if __name__ == '__main__':
         profile=args.profile,
         algorithm=args.algorithm,
         no_declaration=args.no_declaration,
+        compress_results=args.compress_results,
         once=args.run_once,
         threads=args.threads,
         sleep_time=args.sleep_time)

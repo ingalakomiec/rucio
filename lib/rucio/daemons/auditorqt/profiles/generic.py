@@ -26,6 +26,7 @@ from typing import Optional
 
 from rucio.common.dumper import smart_open
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
+from rucio.daemons.auditorqt.output import bz2_compress_file
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 
 def generic_auditor(
@@ -36,7 +37,8 @@ def generic_auditor(
         algorithm: str,
         cache_dir: str,
         results_dir: str,
-        no_declaration: bool
+        no_declaration: bool,
+        compress_results: bool
 ) -> Optional[str]:
 
     """
@@ -114,6 +116,10 @@ def generic_auditor(
 
     if not keep_dumps:
         remove_cached_dumps(cached_dumps)
+
+    if compress_results:
+        results_path = bz2_compress_file(results_path)
+        logger.debug(f"Compressed {results_path}")
 
     return results_path
 
