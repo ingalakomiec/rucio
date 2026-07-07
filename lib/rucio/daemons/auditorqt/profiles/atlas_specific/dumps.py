@@ -14,28 +14,27 @@
 
 """action on RSE and Rucio dumps: fetching, removing cached dumps"""
 
-import gfal2
-import glob
 import hashlib
-import io
 import logging
 import operator
 import os
 import re
-import requests
-
-from configparser import RawConfigParser
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
+from typing import IO, Optional
+
+import gfal2
+import requests
 from magic import Magic
-from typing import IO, Iterable, Optional
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file, is_plaintext
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, temp_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
-CHUNK_SIZE = 4194304 # 4MiB
+CHUNK_SIZE = 4194304  # 4MiB
+
 
 class _LinkCollector(HTMLParser):
     def __init__(self):
@@ -61,6 +60,7 @@ def gfal_links(base_url: str) -> list[str]:
 
     return dumps
 
+
 def http_links(base_url: str) -> list[str]:
     '''
     Returns a list of the urls contained in `base_url`.
@@ -72,7 +72,7 @@ def http_links(base_url: str) -> list[str]:
     links = []
     for link in link_collector.links:
         if not link.startswith('http://') and not link.startswith('https://'):
-            links.append({base_url}/{link})
+            links.append({base_url} / {link})
         else:
             links.append(link)
     return links
@@ -83,7 +83,7 @@ def gfal_download_to_file_with_decoding(
     file_: "IO"
 ) -> bool:
     '''
-    Download the file from 'url', store it in the file-like object 'file_' 
+    Download the file from 'url', store it in the file-like object 'file_'
     '''
 
     logger = logging.getLogger('auditorqt.atlas_specific.dumps.gfal_download_to_file_auditor')
@@ -116,7 +116,7 @@ def gfal_download_to_file_with_decoding(
         gfal_file_bytes = ctx.open(url, 'r')
         chunk = gfal_file_bytes.read_bytes(CHUNK_SIZE)
         while chunk:
-            m = Magic(mime_encoding = True)
+            m = Magic(mime_encoding=True)
             encoding = m.from_buffer(chunk)
             chunk = chunk.decode(encoding)
             file_.write(chunk)
@@ -146,12 +146,14 @@ protocol_funcs = {
     },
 }
 
+
 def download(url: str, filename: IO) -> None:
     """
     Given the URL 'url' downloads its contents on 'filename'
     """
 
     protocol_funcs[protocol(url)]['download'](url, filename)
+
 
 def download_rucio_dump(
     url: str,
@@ -163,6 +165,7 @@ def download_rucio_dump(
         http_download_to_file(url, f)
 
     return True
+
 
 def fetch_object_store(
     rse: str,
@@ -223,7 +226,7 @@ def fetch_no_object_store(
     if date is None:
         logger.debug('Looking for site dumps in: "%s"', base_url)
         dumps = get_all_dumps(base_url)
-        url, date =  get_newest_dump(base_url, dumps)
+        url, date = get_newest_dump(base_url, dumps)
     else:
         url = f"{base_url}/dump_{date:%Y%m%d}"
 
@@ -251,9 +254,11 @@ def generate_url(
 
     return base_url
 
+
 def get_all_dumps(base_url: str) -> list[str]:
 
     return protocol_funcs[protocol(base_url)]['links'](base_url)
+
 
 def get_newest_dump(
         base_url: str,
@@ -285,6 +290,7 @@ def get_newest_dump(
         raise RuntimeError(msg)
 
     return max(times, key=operator.itemgetter(1))
+
 
 def protocol(url: str) -> str:
     '''
