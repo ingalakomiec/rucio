@@ -22,13 +22,13 @@ import logging
 import operator
 import os
 import re
-
+import requests
 
 from configparser import RawConfigParser
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
 from magic import Magic
-from typing import IO, Optional
+from typing import IO, Iterable, Optional
 
 from rucio.common.constants import RseAttr
 from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file, is_plaintext
@@ -108,9 +108,9 @@ def gfal_download_to_file_with_decoding(
         decode = True
 
     if not decode:
-            while chunk:
-                file_.write(chunk)
-                chunk = gfal_file.read(CHUNK_SIZE)
+        while chunk:
+            file_.write(chunk)
+            chunk = gfal_file.read(CHUNK_SIZE)
 
     else:
         gfal_file_bytes = ctx.open(url, 'r')
