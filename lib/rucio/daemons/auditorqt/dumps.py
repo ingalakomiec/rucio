@@ -29,6 +29,3 @@ def remove_cached_dumps(paths: []) -> bool:
         for fil in remove:
             os.remove(fil)
     return True
-
-
-

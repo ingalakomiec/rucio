@@ -14,9 +14,7 @@
 
 """Auditor algorithm definitions."""
 
-from .consistency_check import consistency_check_fast
-from .consistency_check import consistency_check_faster
-from .consistency_check import consistency_check_slow_reliable
+from .consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 
 ALGORITHM_MAP = {
     'fast': consistency_check_fast,
