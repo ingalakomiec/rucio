@@ -21,7 +21,7 @@ import os
 
 def remove_cached_dumps(paths: []) -> bool:
 
-    logger = logging.getLogger('auditor: output.remove_cached_dump')
+    logging.getLogger('auditor: output.remove_cached_dump')
 
     for path in paths:
         # remove all dumps, also sorted and parsed
