@@ -17,13 +17,13 @@
 import logging
 import os
 import re
-import subprocess # noqa: S404 -- subprocess used for external commands
+import subprocess  # noqa: S404 -- subprocess used for external commands
 import tempfile
-
+from collections.abc import Iterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Iterator, Optional, Union, cast
+from typing import TYPE_CHECKING, Optional, Union, cast
 
-from rucio.common.dumper import ddmendpoint_url, mkdir, path_parsing, smart_open, temp_file
+from rucio.common.dumper import ddmendpoint_url, path_parsing, smart_open, temp_file
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
@@ -34,11 +34,12 @@ if TYPE_CHECKING:
 #    fast (7 min for DESY dumps),
 #    not suitable for big (>4GB) dumps
 
+
 def consistency_check_fast(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str
-) -> ([],[]):
+) -> ([], []):
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_fast')
     logger.debug("Consistency check - fast")
@@ -50,10 +51,10 @@ def consistency_check_fast(
     i = 0
 
     for k in rucio_dump_before[0]:
-        out[k]=16
-        if rucio_dump_before[1][i]=='A':
-            out[k]+=2
-        i+=1
+        out[k] = 16
+        if rucio_dump_before[1][i] == 'A':
+            out[k] += 2
+        i += 1
 
     del rucio_dump_before
 
@@ -62,9 +63,9 @@ def consistency_check_fast(
     i = 0
     for k in rse_dump:
         if k in out:
-            out[k]+=8
+            out[k] += 8
         else:
-            out[k]=8
+            out[k] = 8
 
     del rse_dump
 
@@ -72,17 +73,17 @@ def consistency_check_fast(
 
     for k in rucio_dump_after[0]:
         if k in out:
-            out[k]+=4
-            if rucio_dump_after[1][i]=='A':
-                out[k]+=1
+            out[k] += 4
+            if rucio_dump_after[1][i] == 'A':
+                out[k] += 1
         else:
-            out[k]=4
-        i+=1
+            out[k] = 4
+        i += 1
 
     del rucio_dump_after
 
-    missing_files = [k for k in out if out[k]==23]
-    dark_files = [k for k in out if out[k]==8]
+    missing_files = [k for k in out if out[k] == 23]
+    dark_files = [k for k in out if out[k] == 8]
 
     results = (missing_files, dark_files)
 
@@ -99,7 +100,7 @@ def consistency_check_faster(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str
-) -> [[],[]]:
+) -> [[], []]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_faster')
     logger.debug("Consistency check - faster")
@@ -112,18 +113,18 @@ def consistency_check_faster(
             parts = line.strip().split()
             # parts[7] - path
             # parts[10] - status (if available -> 'A')
-            key = parts[7]+'\n'
+            key = parts[7] + '\n'
             out[key] = 16
-            if parts[10]=='A':
-                out[key]+=2
+            if parts[10] == 'A':
+                out[key] += 2
 
     with smart_open(rse_dump_path) as file_rse_dump:
 
         for line in file_rse_dump:
             if line in out:
-                out[line]+=8
+                out[line] += 8
             else:
-                out[line]=8
+                out[line] = 8
 
     with smart_open(rucio_dump_after_path) as file_rucio_dump_after:
 
@@ -132,16 +133,16 @@ def consistency_check_faster(
             # parts[7] - path
             # parts[10] - status (if available -> 'A')
 
-            key = parts[7]+'\n'
+            key = parts[7] + '\n'
             if key in out:
-                out[key]+=4
-                if parts[10]=='A':
-                    out[key]+=1
+                out[key] += 4
+                if parts[10] == 'A':
+                    out[key] += 1
             else:
-                out[key]=4
+                out[key] = 4
 
-    missing_files = [k for k in out if out[k]==23]
-    dark_files = [k for k in out if out[k]==8]
+    missing_files = [k for k in out if out[k] == 23]
+    dark_files = [k for k in out if out[k] == 8]
 
     results = (missing_files, dark_files)
 
@@ -182,6 +183,7 @@ def consistency_check_slow_reliable(
 
     return True
 
+
 def rucio_dump_before_pathprepare_rse_dump(
     dump_path: str
 ) -> []:
@@ -195,26 +197,28 @@ def rucio_dump_before_pathprepare_rse_dump(
 
     return rse_dump
 
+
 def prepare_rucio_dump(
     dump_path: str
-) -> [[],[]]:
+) -> [[], []]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
     logger.debug("Preparing Rucio dump")
 
-    rucio_dump = [[],[]]
+    rucio_dump = [[], []]
 
     with smart_open(dump_path) as file_rucio_dump:
 
         for line in file_rucio_dump:
             # rucio_dump[0] - path
-            rucio_dump[0].append(line.split()[7]+'\n')
+            rucio_dump[0].append(line.split()[7] + '\n')
             # rucio_dump[1] - status (if available -> 'A')
             rucio_dump[1].append(line.split()[10])
 
         file_rucio_dump.close()
 
     return rucio_dump
+
 
 def parser(line: str) -> str:
     '''
@@ -228,6 +232,7 @@ def parser(line: str) -> str:
     status = fields[8].strip()
 
     return ','.join((path, status))
+
 
 def parse_and_filter_file(
         filepath: str,
@@ -281,6 +286,7 @@ def parse_and_filter_file(
 
     return output_path
 
+
 def gnu_sort(
         file_path: str,
         cache_dir: str,
@@ -332,6 +338,7 @@ def gnu_sort(
 
     return sorted_path
 
+
 def strip_storage_dump(line: str, prefix_components) -> str:
     '''
     Parser to have consistent paths in storage dumps.
@@ -348,6 +355,7 @@ def strip_storage_dump(line: str, prefix_components) -> str:
         relative = relative[1:]
     return '/'.join(relative)
 
+
 def slow_reliable_algorithm(
     rse: str,
     rse_dump_path: str,
@@ -355,7 +363,7 @@ def slow_reliable_algorithm(
     rucio_dump_after_path: str,
     date: datetime,
     cache_dir: str
-) -> Iterator[tuple[str,str]]:
+) -> Iterator[tuple[str, str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
     logger.debug("Consistency check - slow, reliable")
@@ -419,7 +427,7 @@ def slow_reliable_algorithm(
     logger.debug("RSE dump sorted")
 
     with open(rucio_dump_before_path_sorted) as prevf:
-        with open(rucio_dump_after_path_sorted ) as nextf:
+        with open(rucio_dump_after_path_sorted) as nextf:
             with open(rse_dump_path_sorted) as sdump:
                 for path, where, status in compare3(prevf, sdump, nextf):
                     prevstatus, nextstatus = status
@@ -428,6 +436,7 @@ def slow_reliable_algorithm(
                             yield ('MISSING', path)
                     if not where[0] and where[1] and not where[2]:
                         yield ('DARK', path)
+
 
 def compare3(
     it0: 'Iterable[str]',
@@ -506,12 +515,14 @@ def _try_to_advance(
         return default
     return el.strip()
 
+
 def split_if_not_none(
         value: Optional[str],
         sep: str = ',',
         fields: int = 2
 ) -> Union[str, list]:
     return value.split(sep) if value is not None else ([None] * fields)
+
 
 def min_value(*values: Optional[str]) -> str:
     '''

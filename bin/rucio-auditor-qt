@@ -23,7 +23,6 @@ The auditor daemon is responsible for the detection of inconsistencies on storag
 
 import argparse
 import signal
-from datetime import datetime
 
 from rucio.daemons.auditorqt.auditor_qt import parse_date, run, stop
 
@@ -33,7 +32,7 @@ def get_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         description=__doc__,
-        epilog="""
+        epilog=r"""
         examples:
             # Check all RSEs using 1 thread and "atlas" profile
             %(prog)s
@@ -68,10 +67,10 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--algorithm', default="reliable", type=str,
                         help='Which algorithm to use to compare dumps '
                         '(default: reliable).')
-    parser.add_argument('--no-declaration',action='store_true',
+    parser.add_argument('--no-declaration', action='store_true',
                         help='No action on output '
                          '(default: False).')
-    parser.add_argument('--compress-results',action='store_true',
+    parser.add_argument('--compress-results', action='store_true',
                         help='Compress a file with results of the conssitency check'
                          '(default: False).')
     parser.add_argument('--run-once', dest='run_once', action='store_true',
