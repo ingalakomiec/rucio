@@ -130,7 +130,7 @@ def fetch_rse_dump(
     date: Optional[datetime] = None,
 ) -> tuple[str, datetime]:
 
-    logger = logging.getLogger('auditor.fetch_rse_dump')
+    logging.getLogger('auditor.fetch_rse_dump')
 
     base_url = generate_url(rse)
 

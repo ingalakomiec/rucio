@@ -164,7 +164,7 @@ def run_once(
     # loop over all rses
     for rse in rses_names:
         try:
-            profile_instance = profile_maker(rse, keep_dumps, delta, date, algorithm, cache_dir, results_dir, no_declaration, compress_results)
+            profile_maker(rse, keep_dumps, delta, date, algorithm, cache_dir, results_dir, no_declaration, compress_results)
         except RucioException:
             logger(logging.ERROR, f"Invalid configuration for profile '{profile}'")
 
