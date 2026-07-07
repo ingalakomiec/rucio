@@ -15,8 +15,8 @@
 """perform actions on output of the auditor consistency check"""
 
 import bz2
-import logging
 import os
+
 
 def bz2_compress_file(
         source_path: str,
@@ -47,5 +47,3 @@ def bz2_compress_file(
             compressed.write(chunk.encode())
     os.remove(source_path)
     return final_path
-
-

@@ -14,20 +14,18 @@
 
 """Generic auditor profiles."""
 
-import glob
-import logging
 import hashlib
+import logging
 import os
 import re
 import shutil
-
 from datetime import datetime, timedelta
 from typing import Optional
 
-from rucio.common.dumper import smart_open
+from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.output import bz2_compress_file
-from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
+
 
 def generic_auditor(
         rse: str,
@@ -103,13 +101,12 @@ def generic_auditor(
         file_results = open(results_path, 'w')
 
         for k in range(len(dark_files)):
-            file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
+            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1))
 
         for k in range(len(missing_files)):
-            file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
+            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1))
 
         file_results.close()
-
 
     if algorithm == "reliable":
         consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
@@ -122,6 +119,7 @@ def generic_auditor(
         logger.debug(f"Compressed {results_path}")
 
     return results_path
+
 
 def fetch_rse_dump(
     source_path: str,
@@ -147,6 +145,7 @@ def fetch_rse_dump(
 
     return (final_path, date)
 
+
 def fetch_rucio_dump(
     source_path: str,
     rse: str,
@@ -167,4 +166,3 @@ def fetch_rucio_dump(
     logger.debug(f"Rucio dump before taken from: {source_path} and cached in: {final_path}")
 
     return final_path
-
