@@ -21,10 +21,14 @@ import subprocess # noqa: S404 -- subprocess used for external commands
 import tempfile
 
 from datetime import datetime
-from typing import Iterator, Optional, Union, cast
+from typing import TYPE_CHECKING, Iterator, Optional, Union, cast
 
 from rucio.common.dumper import ddmendpoint_url, mkdir, path_parsing, smart_open, temp_file
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Iterator
+
+    from _typeshed import SupportsNext
 #    ALGORITHM 1
 #    an algorithm with lists and a dictionary:
 #    fast (7 min for DESY dumps),
@@ -479,8 +483,7 @@ def compare3(
         # Discard duplicate entries (it shouldn't be duplicate entries
         # anyways) and
         # advance the iterators, if the iterator N is depleted vN is set
-
-     # to None.
+        # to None.
         while v0 is not None and path0 == vmin:
             v0 = _try_to_advance(it0)
             path0, status0 = split_if_not_none(v0)
