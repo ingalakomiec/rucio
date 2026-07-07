@@ -17,7 +17,6 @@
 import bz2
 import logging
 import os
-
 from typing import Optional
 
 from rucio.common import config
@@ -119,6 +118,7 @@ def process_output(
 
     return True
 
+
 def bz2_compress_file(
         source_path: str,
         chunk_size: int = 65000
@@ -153,7 +153,6 @@ def bz2_compress_file(
 def guess_replica_info(
     path: str
 ) -> tuple[Optional[str], str]:
-
 
     """Try to extract the scope and name from a path.
 

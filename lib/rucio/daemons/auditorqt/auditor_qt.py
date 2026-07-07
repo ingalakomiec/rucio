@@ -25,19 +25,18 @@ import functools
 import logging
 import os
 import socket
-import time
 import threading
+import time
 from configparser import NoSectionError
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from rucio.common.logging import setup_logging
+from rucio.client.rseclient import RSEClient
 from rucio.common.config import config_get, config_has_section
-from rucio.common.exception import RucioException
+from rucio.common.exception import RSENotFound, RucioException
+from rucio.common.logging import setup_logging
 from rucio.core.heartbeat import sanity_check
 from rucio.daemons.common import run_daemon
-from rucio.client.rseclient import RSEClient
-from rucio.common.exception import RSENotFound
 
 from .consistencycheck import ALGORITHM_MAP
 from .profiles import PROFILE_MAP
@@ -48,8 +47,8 @@ DAEMON_NAME = 'auditorqt'
 if TYPE_CHECKING:
     from types import FrameType
 
-    from rucio.common.types import LoggerFunction
     from rucio.daemon.common import HeartbeatHandler
+
 
 def auditor_qt(
     rses: str,
@@ -97,6 +96,7 @@ def auditor_qt(
             compress_results=compress_results
         )
     )
+
 
 def run_once(
     rses: str,
@@ -159,7 +159,6 @@ def run_once(
         ALGORITHM_MAP[algorithm]
     except KeyError as exc:
         raise ValueError(f"Invalid auditor algorithm name '{algorithm}'") from exc
-
 
     # loop over all rses
     for rse in rses_names:
@@ -257,6 +256,7 @@ def run(
         while thread_list[0].is_alive():
             [thread.join(timeout=3.14) for thread in thread_list]
 
+
 def stop(
     signum: Optional[int] = None,
     frame: Optional["FrameType"] = None
@@ -266,14 +266,16 @@ def stop(
     """
     GRACEFUL_STOP.set()
 
+
 def get_rses_to_process(
     rses: Optional[str]
     ) -> list[dict[str, Any]]:
 
     if rses:
-        return  RSEClient().list_rses(rses)
+        return RSEClient().list_rses(rses)
     else:
         return RSEClient().list_rses()
+
 
 def parse_date(date: str) -> datetime:
     try:

@@ -14,25 +14,21 @@
 
 """ATLAS-specific auditor profile."""
 
-import glob
 import hashlib
 import logging
 import os
 import re
-import requests
-
 from datetime import datetime, timedelta
-from typing import Any, Optional, Union
+from typing import Optional
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import smart_open
 from rucio.core.rse import get_rse_id, list_rse_attributes
-
-from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.output import bz2_compress_file
-from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
-from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import generate_url, fetch_object_store, fetch_no_object_store, download_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import download_rucio_dump, fetch_no_object_store, fetch_object_store, generate_url
+from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+
 
 def atlas_auditor(
         rse: str,
@@ -100,10 +96,10 @@ def atlas_auditor(
         file_results = open(results_path, 'w')
 
         for k in range(len(dark_files)):
-            file_results.write('DARK'+(dark_files[k]).replace("/",",",1))
+            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1))
 
         for k in range(len(missing_files)):
-            file_results.write('MISSING'+(missing_files[k]).replace("/",",",1))
+            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1))
 
         file_results.close()
 
@@ -114,7 +110,7 @@ def atlas_auditor(
         remove_cached_dumps(cached_dumps)
 
     if no_declaration:
-        logger.warning(f"No action on output performed")
+        logger.warning("No action on output performed")
     else:
         process_output(rse, results_path)
 
@@ -123,6 +119,7 @@ def atlas_auditor(
         logger.debug(f"Compressed {results_path}")
 
     return results_path
+
 
 def fetch_rse_dump(
     rse: str,
@@ -144,6 +141,7 @@ def fetch_rse_dump(
         path, date = fetch_no_object_store(rse, base_url, cache_dir, date)
 
     return (path, date)
+
 
 def fetch_rucio_dump(
     rse: str,
@@ -173,11 +171,12 @@ def fetch_rucio_dump(
 
     return path
 
+
 def get_rucio_dump_url(
     date: datetime,
     rse: str
 ) -> str:
 
-    url  = f"https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{date:%Y-%m-%d}/replicas_per_rse/{rse}.replicas_per_rse.{date:%Y-%m-%d}.csv.bz2"
+    url = f"https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{date:%Y-%m-%d}/replicas_per_rse/{rse}.replicas_per_rse.{date:%Y-%m-%d}.csv.bz2"
 
     return url
