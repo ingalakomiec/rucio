@@ -14,20 +14,22 @@
 
 """Consistency check for the auditor daemon"""
 
+from __future__ import annotations
+
 import logging
 import os
 import re
 import subprocess  # noqa: S404 -- subprocess used for external commands
 import tempfile
 from collections.abc import Iterator
-from datetime import datetime
+#from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Union, cast
 
 from rucio.common.dumper import ddmendpoint_url, path_parsing, smart_open, temp_file
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
-
+    from datetime import datetime
     from _typeshed import SupportsNext
 #    ALGORITHM 1
 #    an algorithm with lists and a dictionary:
