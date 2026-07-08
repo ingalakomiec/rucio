@@ -22,7 +22,6 @@ import re
 import subprocess  # noqa: S404 -- subprocess used for external commands
 import tempfile
 from collections.abc import Iterator
-#from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Union, cast
 
 from rucio.common.dumper import ddmendpoint_url, path_parsing, smart_open, temp_file
@@ -30,6 +29,7 @@ from rucio.common.dumper import ddmendpoint_url, path_parsing, smart_open, temp_
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
     from datetime import datetime
+
     from _typeshed import SupportsNext
 #    ALGORITHM 1
 #    an algorithm with lists and a dictionary:
@@ -186,7 +186,7 @@ def consistency_check_slow_reliable(
     return True
 
 
-def rucio_dump_before_pathprepare_rse_dump(
+def prepare_rse_dump(
     dump_path: str
 ) -> []:
 
