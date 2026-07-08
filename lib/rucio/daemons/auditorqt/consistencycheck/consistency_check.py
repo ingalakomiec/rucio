@@ -21,7 +21,6 @@ import os
 import re
 import subprocess  # noqa: S404 -- subprocess used for external commands
 import tempfile
-from collections.abc import Iterator
 from typing import TYPE_CHECKING, cast
 
 from rucio.common.dumper import ddmendpoint_url, path_parsing, smart_open, temp_file
@@ -109,8 +108,12 @@ def consistency_check_faster(
 
     out = dict()
 
-    with smart_open(rucio_dump_before_path) as file_rucio_dump_before:
+    file_rucio_dump_before = smart_open(rucio_dump_before_path)
 
+    if file_rucio_dump_before is None:
+        raise RuntimeError(f"Cannot open {rucio_dump_before_path}")
+
+    with file_rucio_dump_before:
         for line in file_rucio_dump_before:
             parts = line.strip().split()
             # parts[7] - path
@@ -120,16 +123,24 @@ def consistency_check_faster(
             if parts[10] == 'A':
                 out[key] += 2
 
-    with smart_open(rse_dump_path) as file_rse_dump:
+    file_rse_dump = smart_open(rse_dump_path)
 
+    if file_rse_dump is None:
+        raise RuntimeError(f"Cannot open {rucio_dump_path}")
+
+    with file_rse_dump:
         for line in file_rse_dump:
             if line in out:
                 out[line] += 8
             else:
                 out[line] = 8
 
-    with smart_open(rucio_dump_after_path) as file_rucio_dump_after:
+    file_rucio_dump_after = smart_open(rucio_dump_after_path)
 
+    if file_rucio_dump_after is None:
+        raise RuntimeError(f"Cannot open {rucio_dump_after_path}")
+
+    with file_rucio_dump_after:
         for line in file_rucio_dump_after:
             parts = line.strip().split()
             # parts[7] - path
@@ -194,6 +205,10 @@ def prepare_rse_dump(
     logger.debug("Preparing RSE dump")
 
     file_rse_dump = smart_open(dump_path)
+
+    if file_rse_dump is None:
+        raise RuntimeError(f"Cannot open {dump_path}")
+
     rse_dump = file_rse_dump.readlines()
     file_rse_dump.close()
 
@@ -341,7 +356,7 @@ def gnu_sort(
     return sorted_path
 
 
-def strip_storage_dump(line: str, prefix_components) -> str:
+def strip_storage_dump(line: str, prefix_components: list[str]) -> str:
     '''
     Parser to have consistent paths in storage dumps.
 
