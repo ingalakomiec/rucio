@@ -19,10 +19,11 @@ import logging
 import operator
 import os
 import re
-from collections.abc import Iterable
+
+# from collections.abc import Iterable
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
-from typing import IO, Optional
+from typing import IO, TYPE_CHECKING, Optional
 
 import gfal2
 import requests
@@ -32,6 +33,9 @@ from rucio.common.constants import RseAttr
 from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, temp_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
+
+if TYPE_CHECKING:
+    from collections.abs import Iterable
 
 CHUNK_SIZE = 4194304  # 4MiB
 
