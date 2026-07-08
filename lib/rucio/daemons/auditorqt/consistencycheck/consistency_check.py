@@ -22,7 +22,7 @@ import re
 import subprocess  # noqa: S404 -- subprocess used for external commands
 import tempfile
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, cast
 
 from rucio.common.dumper import ddmendpoint_url, path_parsing, smart_open, temp_file
 
@@ -241,7 +241,7 @@ def parse_and_filter_file(
         cache_dir: str,
         parser: 'Callable' = lambda s: s,
         filter_: 'Callable' = lambda s: s,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         postfix: str = 'parsed'
 ) -> str:
     '''
@@ -292,9 +292,9 @@ def parse_and_filter_file(
 def gnu_sort(
         file_path: str,
         cache_dir: str,
-        prefix: Optional[str] = None,
-        delimiter: Optional[str] = None,
-        fieldspec: Optional[str] = None
+        prefix: str | None = None,
+        delimiter: str | None = None,
+        fieldspec: str | None = None
 ) -> str:
     '''
     Sort the file with path `file_path` using the GNU sort command, the
@@ -444,7 +444,7 @@ def compare3(
     it0: 'Iterable[str]',
     it1: 'Iterable[str]',
     it2: 'Iterable[str]'
-) -> 'Iterator[tuple[str, tuple[bool, bool, bool], tuple[Optional[str], Optional[str]]]]':
+) -> 'Iterator[tuple[str, tuple[bool, bool, bool], tuple[str | None, str | None]]]':
     '''
     Generator to compare 3 sorted iterables, in each
     iteration it yields a tuple of the form (current, (bool, bool, bool))
@@ -509,8 +509,8 @@ def compare3(
 
 def _try_to_advance(
         it: 'SupportsNext[str]',
-        default: Optional[str] = None
-) -> Optional[str]:
+        default: str | None = None
+) -> str | None:
     try:
         el = next(it)
     except StopIteration:
@@ -519,14 +519,14 @@ def _try_to_advance(
 
 
 def split_if_not_none(
-        value: Optional[str],
+        value: str | None,
         sep: str = ',',
         fields: int = 2
-) -> Union[str, list]:
+) -> str | list:
     return value.split(sep) if value is not None else ([None] * fields)
 
 
-def min_value(*values: Optional[str]) -> str:
+def min_value(*values: str | None) -> str:
     '''
     Minimum between the input values, ignoring None
     '''
