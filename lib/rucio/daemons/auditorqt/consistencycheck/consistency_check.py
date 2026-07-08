@@ -40,7 +40,7 @@ def consistency_check_fast(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str
-) -> ([], []):
+) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_fast')
     logger.debug("Consistency check - fast")
@@ -101,7 +101,7 @@ def consistency_check_faster(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str
-) -> [[], []]:
+) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_faster')
     logger.debug("Consistency check - faster")
@@ -126,7 +126,7 @@ def consistency_check_faster(
     file_rse_dump = smart_open(rse_dump_path)
 
     if file_rse_dump is None:
-        raise RuntimeError(f"Cannot open {rucio_dump_path}")
+        raise RuntimeError(f"Cannot open {rse_dump_path}")
 
     with file_rse_dump:
         for line in file_rse_dump:
@@ -194,12 +194,10 @@ def consistency_check_slow_reliable(
             status, path = result
             output.write(f"{status},{path}\n")
 
-    return True
-
 
 def prepare_rse_dump(
     dump_path: str
-) -> []:
+) -> list[str]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.prepare_rse_dump')
     logger.debug("Preparing RSE dump")
@@ -217,22 +215,24 @@ def prepare_rse_dump(
 
 def prepare_rucio_dump(
     dump_path: str
-) -> [[], []]:
+) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
     logger.debug("Preparing Rucio dump")
 
     rucio_dump = [[], []]
 
-    with smart_open(dump_path) as file_rucio_dump:
+    file_rucio_dump = smart_open(dump_path)
 
+    if file_rucio_dump is None:
+        raise RuntimeError(f"Cannot open {dump_path}")
+
+    with file_rucio_dump:
         for line in file_rucio_dump:
             # rucio_dump[0] - path
             rucio_dump[0].append(line.split()[7] + '\n')
             # rucio_dump[1] - status (if available -> 'A')
             rucio_dump[1].append(line.split()[10])
-
-        file_rucio_dump.close()
 
     return rucio_dump
 

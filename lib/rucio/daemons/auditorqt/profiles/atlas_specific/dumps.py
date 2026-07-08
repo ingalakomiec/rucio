@@ -44,7 +44,7 @@ CHUNK_SIZE = 4194304  # 4MiB
 class _LinkCollector(HTMLParser):
     def __init__(self) -> None:
         super(_LinkCollector, self).__init__()
-        self.links = []
+        self.links = list[str] = []
 
     def handle_starttag(
             self, tag: str,
@@ -77,7 +77,7 @@ def http_links(base_url: str) -> list[str]:
     links = []
     for link in link_collector.links:
         if not link.startswith('http://') and not link.startswith('https://'):
-            links.append({base_url} / {link})
+            links.append(f"{base_url}/{link}")
         else:
             links.append(link)
     return links
@@ -99,6 +99,7 @@ def gfal_download_to_file_with_decoding(
         gfal_file = ctx.open(url, 'r')
     except gfal2.GError as e:
         logger.error(f"Failed to open {url}: {str(e)}")
+        return False
 
     try:
         chunk = gfal_file.read(CHUNK_SIZE)
