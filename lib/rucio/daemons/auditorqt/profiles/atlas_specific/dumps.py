@@ -14,16 +14,17 @@
 
 """action on RSE and Rucio dumps: fetching, removing cached dumps"""
 
+from __future__ import annotations
+
 import hashlib
 import logging
 import operator
 import os
 import re
 
-# from collections.abc import Iterable
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
-from typing import IO, TYPE_CHECKING, Optional
+from typing import IO, TYPE_CHECKING
 
 import gfal2
 import requests
@@ -35,13 +36,13 @@ from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
 if TYPE_CHECKING:
-    from collections.abs import Iterable
+    from collections.abc import Iterable
 
 CHUNK_SIZE = 4194304  # 4MiB
 
 
 class _LinkCollector(HTMLParser):
-    def __init__(self):
+    def __init__(self) -> None:
         super(_LinkCollector, self).__init__()
         self.links = []
 
@@ -175,7 +176,7 @@ def fetch_object_store(
     rse: str,
     base_url: str,
     cache_dir: str,
-    date: Optional[datetime] = None,
+    date: datetime | None = None,
 ) -> tuple[str, datetime]:
 
     # on objectstores can't list dump files, so try the last N dates
@@ -222,7 +223,7 @@ def fetch_no_object_store(
     rse: str,
     base_url: str,
     cache_dir: str,
-    date: Optional[datetime] = None,
+    date: datetime | None = None,
 ) -> tuple[str, datetime]:
 
     logger = logging.getLogger('auditor.fetch_no_object_store')
