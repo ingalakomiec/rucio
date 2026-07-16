@@ -21,7 +21,6 @@ import logging
 import operator
 import os
 import re
-
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
 from typing import IO, TYPE_CHECKING
