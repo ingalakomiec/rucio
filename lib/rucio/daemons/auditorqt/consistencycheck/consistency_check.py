@@ -220,7 +220,7 @@ def prepare_rucio_dump(
     logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
     logger.debug("Preparing Rucio dump")
 
-    rucio_dump = [[], []]
+    rucio_dump: tuple[list[str], list[str]] = ([], [])
 
     file_rucio_dump = smart_open(dump_path)
 
