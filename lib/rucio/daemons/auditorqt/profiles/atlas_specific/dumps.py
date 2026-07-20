@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 from html.parser import HTMLParser
 from typing import IO, TYPE_CHECKING
 
-import gfal2 # pyright: ignore[reportMissingImports]
+import gfal2  # pyright: ignore[reportMissingImports]
 import requests
 from magic import Magic
 

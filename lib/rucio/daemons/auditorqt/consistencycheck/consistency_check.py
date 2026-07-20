@@ -19,11 +19,10 @@ from __future__ import annotations
 import logging
 import os
 import re
-import subprocess  # noqa: S404 -- subprocess used for external commands
-import tempfile
 from typing import TYPE_CHECKING, cast
 
-from rucio.common.dumper import ddmendpoint_url, path_parsing, smart_open, temp_file
+from rucio.common.dumper import ddmendpoint_url, smart_open, temp_file
+from rucio.daemons.auditorqt.dumps import gnu_sort, path_parsing_components, path_parsing_remove_prefix
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
@@ -304,58 +303,6 @@ def parse_and_filter_file(
     return output_path
 
 
-def gnu_sort(
-        file_path: str,
-        cache_dir: str,
-        prefix: str | None = None,
-        delimiter: str | None = None,
-        fieldspec: str | None = None
-) -> str:
-    '''
-    Sort the file with path `file_path` using the GNU sort command, the
-    original file is unchanged, the output file is saved with path
-    <cache_dir>/<prefix>_sorted.
-
-    :param prefix: If given the output file will be named <prefix>_sorted.
-    Otherwise the prefix is the name of the input file.
-    :param delimiter: Delimiter character if the data is formatted in
-    columns (argument of -t in the sort command).
-    :param fieldspec: String with the specification of column or columns
-    to be used to sort (argument -k in the sort command).
-    :param cachedir: Working dir where the output file will be placed.
-
-    Note: Using GNU sort to sort large files is convenient as it has low
-    memory and it is relatively fast if used with the environment variable
-    LC_ALL set to C as in this function.
-    '''
-    if (delimiter is not None) ^ (fieldspec is not None):
-        raise ValueError("Either both delimiter and fieldspec is set, or neither are.")
-    if delimiter is None:
-        cmd_line = 'LC_ALL=C sort {0} > {1}'
-    else:
-        cmd_line = 'LC_ALL=C sort -t {0} -k {1} {{0}} > {{1}}'.format(delimiter, fieldspec)
-
-    prefix = os.path.basename(file_path) if prefix is None else prefix
-
-    sorted_name = '_'.join((prefix, 'sorted'))
-    sorted_path = os.path.join(cache_dir, sorted_name)
-
-    if os.path.exists(sorted_path):
-        return sorted_path
-
-    tfile = tempfile.NamedTemporaryFile(dir=cache_dir, delete=False)
-
-    subprocess.check_call(
-        cmd_line.format(file_path, tfile.name),
-        shell=True,
-    )
-
-    os.link(tfile.name, sorted_path)
-    os.unlink(tfile.name)
-
-    return sorted_path
-
-
 def strip_storage_dump(line: str, prefix_components: list[str]) -> str:
     '''
     Parser to have consistent paths in storage dumps.
@@ -364,9 +311,9 @@ def strip_storage_dump(line: str, prefix_components: list[str]) -> str:
     :returns: Path formatted as in the Rucio Replica Dumps.
     '''
 
-    relative = path_parsing.remove_prefix(
+    relative = path_parsing_remove_prefix(
         prefix_components,
-        path_parsing.components(line),
+        path_parsing_components(line),
     )
     if relative[0] == 'rucio':
         relative = relative[1:]
@@ -429,7 +376,7 @@ def slow_reliable_algorithm(
             sd_prefix,
         )
 
-    prefix_components = path_parsing.components(ddmendpoint_url(rse))
+    prefix_components = path_parsing_components(ddmendpoint_url(rse))
     rse_dump_path_sorted = gnu_sort(
         parse_and_filter_file(
             rse_dump_path,
