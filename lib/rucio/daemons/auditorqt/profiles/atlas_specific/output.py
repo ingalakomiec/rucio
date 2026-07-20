@@ -116,8 +116,6 @@ def process_output(
         final_path = bz2_compress_file(results_path)
         logger.debug(f"Compressed {final_path}")
 
-    return True
-
 
 def bz2_compress_file(
         source_path: str,

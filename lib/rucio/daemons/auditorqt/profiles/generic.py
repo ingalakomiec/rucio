@@ -14,6 +14,8 @@
 
 """Generic auditor profiles."""
 
+from __future__ import annotations
+
 import hashlib
 import logging
 import os
@@ -31,7 +33,7 @@ def generic_auditor(
         rse: str,
         keep_dumps: bool,
         delta: int,
-        date: datetime,
+        date: datetime | None,
         algorithm: str,
         cache_dir: str,
         results_dir: str,
@@ -64,7 +66,7 @@ def generic_auditor(
     if date is None:
         date = datetime.now()
 
-    delta = timedelta(delta)
+    days = timedelta(delta)
 
 #   paths to rse and rucio dumps
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
@@ -77,8 +79,8 @@ def generic_auditor(
 #    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-08.bz2'
 
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse_dump_path, rse, cache_dir, date)
-    rucio_dump_before_path_cache = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - delta, cache_dir)
-    rucio_dump_after_path_cache = fetch_rucio_dump(rucio_dump_after_path, rse, date_rse + delta, cache_dir)
+    rucio_dump_before_path_cache = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - days, cache_dir)
+    rucio_dump_after_path_cache = fetch_rucio_dump(rucio_dump_after_path, rse, date_rse + days, cache_dir)
 
     cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 

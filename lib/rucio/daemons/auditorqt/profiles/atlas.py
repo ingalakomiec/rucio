@@ -14,6 +14,8 @@
 
 """ATLAS-specific auditor profile."""
 
+from __future__ import annotations
+
 import hashlib
 import logging
 import os
@@ -33,8 +35,8 @@ from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_outpu
 def atlas_auditor(
         rse: str,
         keep_dumps: bool,
-        delta: timedelta,
-        date: datetime,
+        delta: int,
+        date: datetime | None,
         algorithm: str,
         cache_dir: str,
         results_dir: str,
@@ -68,12 +70,12 @@ def atlas_auditor(
     if date is None:
         date = datetime.now()
 
-    delta = timedelta(delta)
+    days = timedelta(delta)
 
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse, cache_dir, date)
 
-    rucio_dump_before_path_cache = fetch_rucio_dump(rse, date_rse - delta, cache_dir)
-    rucio_dump_after_path_cache = fetch_rucio_dump(rse, date_rse + delta, cache_dir)
+    rucio_dump_before_path_cache = fetch_rucio_dump(rse, date_rse - days, cache_dir)
+    rucio_dump_after_path_cache = fetch_rucio_dump(rse, date_rse + days, cache_dir)
 
     cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 
