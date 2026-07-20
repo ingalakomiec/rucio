@@ -19,7 +19,7 @@ import logging
 import os
 
 
-def remove_cached_dumps(paths: []) -> bool:
+def remove_cached_dumps(paths: list[str]) -> bool:
 
     logging.getLogger('auditor: output.remove_cached_dump')
 
