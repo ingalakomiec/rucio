@@ -22,7 +22,6 @@ import os
 import re
 import shutil
 from datetime import datetime, timedelta
-from typing import Optional
 
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
@@ -39,7 +38,7 @@ def generic_auditor(
         results_dir: str,
         no_declaration: bool,
         compress_results: bool
-) -> Optional[str]:
+) -> str | None:
 
     """
     `rse` is the RSE name
@@ -127,7 +126,7 @@ def fetch_rse_dump(
     source_path: str,
     rse: str,
     cache_dir: str,
-    date: Optional[datetime] = None,
+    date: datetime | None = None,
     ) -> tuple[str, datetime]:
 
     logger = logging.getLogger('auditor.fetch_rse_dump')

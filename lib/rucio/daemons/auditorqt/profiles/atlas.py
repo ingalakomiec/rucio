@@ -21,7 +21,6 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Optional
 
 from rucio.common.constants import RseAttr
 from rucio.core.rse import get_rse_id, list_rse_attributes
@@ -42,7 +41,7 @@ def atlas_auditor(
         results_dir: str,
         no_declaration: bool,
         compress_results: bool
-) -> Optional[str]:
+) -> str | None:
 
     """
     'rse'- the RSE name
@@ -126,7 +125,7 @@ def atlas_auditor(
 def fetch_rse_dump(
     rse: str,
     cache_dir: str,
-    date: Optional[datetime] = None,
+    date: datetime | None = None,
 ) -> tuple[str, datetime]:
 
     logging.getLogger('auditor.fetch_rse_dump')
