@@ -30,7 +30,7 @@ import threading
 import time
 from configparser import NoSectionError
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from rucio.client.rseclient import RSEClient
 from rucio.common.config import config_get, config_has_section
@@ -110,7 +110,7 @@ def run_once(
     compress_results: bool,
     *,
     heartbeat_handler: 'HeartbeatHandler',
-    activity: Optional[str]
+    activity: str | None
 ) -> bool:
     """
     :param rses:              RSEs to check specified as an RSE expression
@@ -259,8 +259,8 @@ def run(
 
 
 def stop(
-    signum: Optional[int] = None,
-    frame: Optional["FrameType"] = None
+    signum: int | None = None,
+    frame: "FrameType" | None = None
 ) -> None:
     """
     Graceful exit.
