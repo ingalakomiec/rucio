@@ -137,7 +137,7 @@ def run_once(
 
     rses_to_process = get_rses_to_process(rses)
 
-    rses_names = [entry.get('rse') for entry in rses_to_process if 'rse' in entry]
+    rses_names = [entry['rse'] for entry in rses_to_process if 'rse' in entry]
 
     if not rses_names:
         raise RSENotFound("No RSE found to audit.")
@@ -260,7 +260,7 @@ def run(
 
 def stop(
     signum: int | None = None,
-    frame: "FrameType" | None = None
+    frame: FrameType | None = None
 ) -> None:
     """
     Graceful exit.
