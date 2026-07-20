@@ -46,15 +46,14 @@ DAEMON_NAME = 'auditorqt'
 
 if TYPE_CHECKING:
     from types import FrameType
-
-    from rucio.daemon.common import HeartbeatHandler
+    from rucio.daemons.common import HeartbeatHandler
 
 
 def auditor_qt(
     rses: str,
     keep_dumps: bool,
     delta: int,
-    date: datetime,
+    date: datetime | None,
     profile: str,
     algorithm: str,
     no_declaration: bool,
@@ -102,7 +101,7 @@ def run_once(
     rses: str,
     keep_dumps: bool,
     delta: int,
-    date: datetime,
+    date: datetime | None,
     profile: str,
     algorithm: str,
     no_declaration: bool,
@@ -178,7 +177,7 @@ def run(
     rses: str,
     keep_dumps: bool = False,
     delta: int = 3,
-    date: datetime = None,
+    date: datetime | None = None,
     profile: str = "atlas",
     algorithm: str = "reliable",
     no_declaration: bool = False,
@@ -268,13 +267,12 @@ def stop(
 
 
 def get_rses_to_process(
-    rses: Optional[str]
+    rses: str | None,
     ) -> list[dict[str, Any]]:
-
     if rses:
-        return RSEClient().list_rses(rses)
+        return list(RSEClient().list_rses(rses))
     else:
-        return RSEClient().list_rses()
+        return list(RSEClient().list_rses())
 
 
 def parse_date(date: str) -> datetime:
