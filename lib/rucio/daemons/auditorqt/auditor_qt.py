@@ -19,6 +19,7 @@ The auditor daemon is responsible for the detection of inconsistencies on storag
 - making the consistency check (three algorithms are available),
 - reporting dark and missing replicas.
 """
+from __future__ import annotations
 
 import argparse
 import functools
@@ -46,6 +47,7 @@ DAEMON_NAME = 'auditorqt'
 
 if TYPE_CHECKING:
     from types import FrameType
+
     from rucio.daemons.common import HeartbeatHandler
 
 
