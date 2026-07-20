@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 from html.parser import HTMLParser
 from typing import IO, TYPE_CHECKING
 
-import gfal2
+import gfal2 # pyright: ignore[reportMissingImports]
 import requests
 from magic import Magic
 
@@ -43,11 +43,11 @@ CHUNK_SIZE = 4194304  # 4MiB
 class _LinkCollector(HTMLParser):
     def __init__(self) -> None:
         super(_LinkCollector, self).__init__()
-        self.links = list[str] = []
+        self.links: list[str] = []
 
     def handle_starttag(
             self, tag: str,
-            attrs: "Iterable[tuple[str, str]]"
+            attrs: Iterable[tuple[str, str]]
     ) -> None:
         if tag == 'a':
             self.links.append(
@@ -84,7 +84,7 @@ def http_links(base_url: str) -> list[str]:
 
 def gfal_download_to_file_with_decoding(
     url: str,
-    file_: "IO"
+    file_: IO
 ) -> bool:
     '''
     Download the file from 'url', store it in the file-like object 'file_'
