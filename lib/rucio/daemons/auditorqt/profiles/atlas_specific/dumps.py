@@ -191,12 +191,8 @@ def fetch_object_store(
 
     while tries > 0:
         url = f"{base_url}/dump_{date:%Y%m%d}"
-        # hash added to the file name to get a distinct name
-        hash = hashlib.sha1(url.encode()).hexdigest()
 
-        filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
-        filename = re.sub(r'\W', '-', filename)
-
+        filename = make_rse_dump_filename(rse, date, url)
         path = f"{cache_dir}/{filename}"
 
         rse_id = get_rse_id(rse)
@@ -235,10 +231,8 @@ def fetch_no_object_store(
     else:
         url = f"{base_url}/dump_{date:%Y%m%d}"
 
-    # hash added to get a distinct file name
-    hash = hashlib.sha1(url.encode()).hexdigest()
-    filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
-    filename = re.sub(r'\W', '-', filename)
+    filename = make_rse_dump_filename(rse, date, url)
+
     path = f"{cache_dir}/{filename}"
 
     if not os.path.exists(path):
@@ -249,6 +243,19 @@ def fetch_no_object_store(
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
 
     return path, date
+
+
+def make_rse_dump_filename(
+    rse: str,
+    date: datetime,
+    url: str,
+) -> str:
+    # hash added to get a distinct file name
+    hash = hashlib.sha1(url.encode()).hexdigest()
+    filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
+    filename = re.sub(r'\W', '-', filename)
+
+    return filename
 
 
 def generate_url(
