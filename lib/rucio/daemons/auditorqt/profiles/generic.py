@@ -27,6 +27,7 @@ from rucio.common.dumper import temp_file
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.output import bz2_compress_file
+from rucio.daemons.auditorqt.profiles.generic_specific.dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
 
 
 def generic_auditor(
@@ -68,10 +69,15 @@ def generic_auditor(
 
     days = timedelta(delta)
 
+#   paths to rse and rucio test dumps
+    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/dump_20260722'
+    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2026-07-19'
+    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2026-07-25'
+
 #   paths to rse and rucio dumps
-    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
-    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
-    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
+#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
+#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
+#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
 
 # big dumps
 #    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK.dump_20250805'
@@ -94,19 +100,19 @@ def generic_auditor(
         return results_path
 
     if algorithm == "fast":
-        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, prepare_rucio_dump)
 
     if algorithm == "faster":
-        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump)
 
     if algorithm in ("fast", "faster"):
         file_results = open(results_path, 'w')
 
         for k in range(len(dark_files)):
-            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1))
+            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1) + '\n')
 
         for k in range(len(missing_files)):
-            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1))
+            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1) + '\n')
 
         file_results.close()
 
@@ -115,16 +121,15 @@ def generic_auditor(
             rucio_dump_before_path_cache,
             rse_dump_path_cache,
             rucio_dump_after_path_cache,
-            results_dir,
             rse,
-            date,
             cache_dir=cache_dir,
+            parser=prepare_path_and_status_to_sort
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
             for result in results:
                 status, path = result
-                output.write(f"{status},{path}\n")
+                output.write(status + (path).replace("/", ",", 1) + '\n')
 
     if not keep_dumps:
         remove_cached_dumps(cached_dumps)

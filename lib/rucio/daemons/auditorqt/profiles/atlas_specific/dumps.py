@@ -30,7 +30,7 @@ import requests
 from magic import Magic
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, temp_file
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
@@ -191,12 +191,8 @@ def fetch_object_store(
 
     while tries > 0:
         url = f"{base_url}/dump_{date:%Y%m%d}"
-        # hash added to the file name to get a distinct name
-        hash = hashlib.sha1(url.encode()).hexdigest()
 
-        filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
-        filename = re.sub(r'\W', '-', filename)
-
+        filename = make_rse_dump_filename(rse, date, url)
         path = f"{cache_dir}/{filename}"
 
         rse_id = get_rse_id(rse)
@@ -235,10 +231,8 @@ def fetch_no_object_store(
     else:
         url = f"{base_url}/dump_{date:%Y%m%d}"
 
-    # hash added to get a distinct file name
-    hash = hashlib.sha1(url.encode()).hexdigest()
-    filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
-    filename = re.sub(r'\W', '-', filename)
+    filename = make_rse_dump_filename(rse, date, url)
+
     path = f"{cache_dir}/{filename}"
 
     if not os.path.exists(path):
@@ -249,6 +243,19 @@ def fetch_no_object_store(
         logger.debug('Taking RSE Dump %s for %s from cache', path, rse)
 
     return path, date
+
+
+def make_rse_dump_filename(
+    rse: str,
+    date: datetime,
+    url: str,
+) -> str:
+    # hash added to get a distinct file name
+    hash = hashlib.sha1(url.encode()).hexdigest()
+    filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
+    filename = re.sub(r'\W', '-', filename)
+
+    return filename
 
 
 def generate_url(
@@ -306,3 +313,50 @@ def protocol(url: str) -> str:
         raise RuntimeError(f"Protocol {proto} not supported")
 
     return proto
+
+
+def parse_rucio_dump(line: str) -> tuple[str, str]:
+    '''
+    Parse one line from Rucio replica dump.
+
+    :param line: String with one line of a dump.
+    :returns: (path, status)
+    '''
+
+    parts = line.strip().split()
+
+    path = parts[7]
+    status = parts[10]
+
+    return path, status
+
+
+def prepare_path_and_status_to_sort(line: str) -> str:
+
+    path, status = parse_rucio_dump(line)
+
+    return ','.join((path.strip(), status))
+
+
+def prepare_rucio_dump(
+    dump_path: str
+) -> tuple[list[str], list[str]]:
+
+    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
+    logger.debug("Preparing Rucio dump")
+
+    paths = []
+    statuses = []
+
+    file_rucio_dump = smart_open(dump_path)
+
+    if file_rucio_dump is None:
+        raise RuntimeError(f"Cannot open {dump_path}")
+
+    with file_rucio_dump:
+        for line in file_rucio_dump:
+            path, status = parse_rucio_dump(line)
+            paths.append(path)
+            statuses.append(status)
+
+    return paths, statuses
