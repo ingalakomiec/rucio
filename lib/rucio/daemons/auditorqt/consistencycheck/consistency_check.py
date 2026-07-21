@@ -17,18 +17,15 @@
 from __future__ import annotations
 
 import logging
-import os
-import re
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
-from rucio.common.dumper import ddmendpoint_url, smart_open, temp_file
-from rucio.daemons.auditorqt.dumps import gnu_sort, path_parsing_components, path_parsing_remove_prefix
+from rucio.common.dumper import ddmendpoint_url, smart_open
+from rucio.daemons.auditorqt.consistencycheck.algorithm3 import compare3
+from rucio.daemons.auditorqt.dumps import gnu_sort, parse_and_filter_file, parse_rse_dump, path_parsing_components, prepare_rse_dump
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator
-    from datetime import datetime
+    from collections.abc import Callable, Iterator
 
-    from _typeshed import SupportsNext
 #    ALGORITHM 1
 #    an algorithm with lists and a dictionary:
 #    fast (7 min for DESY dumps),
@@ -38,13 +35,14 @@ if TYPE_CHECKING:
 def consistency_check_fast(
     rucio_dump_before_path: str,
     rse_dump_path: str,
-    rucio_dump_after_path: str
+    rucio_dump_after_path: str,
+    parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_fast')
     logger.debug("Consistency check - fast")
 
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
+    rucio_dump_before = parser(rucio_dump_before_path)
 
     out = dict()
 
@@ -52,6 +50,7 @@ def consistency_check_fast(
 
     for k in rucio_dump_before[0]:
         out[k] = 16
+
         if rucio_dump_before[1][i] == 'A':
             out[k] += 2
         i += 1
@@ -69,7 +68,7 @@ def consistency_check_fast(
 
     del rse_dump
 
-    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
+    rucio_dump_after = parser(rucio_dump_after_path)
 
     for k in rucio_dump_after[0]:
         if k in out:
@@ -99,7 +98,8 @@ def consistency_check_fast(
 def consistency_check_faster(
     rucio_dump_before_path: str,
     rse_dump_path: str,
-    rucio_dump_after_path: str
+    rucio_dump_after_path: str,
+    parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_faster')
@@ -114,12 +114,9 @@ def consistency_check_faster(
 
     with file_rucio_dump_before:
         for line in file_rucio_dump_before:
-            parts = line.strip().split()
-            # parts[7] - path
-            # parts[10] - status (if available -> 'A')
-            key = parts[7] + '\n'
+            key, status = parser(line)
             out[key] = 16
-            if parts[10] == 'A':
+            if status == 'A':
                 out[key] += 2
 
     file_rse_dump = smart_open(rse_dump_path)
@@ -129,6 +126,8 @@ def consistency_check_faster(
 
     with file_rse_dump:
         for line in file_rse_dump:
+            line = line.strip()
+
             if line in out:
                 out[line] += 8
             else:
@@ -141,17 +140,14 @@ def consistency_check_faster(
 
     with file_rucio_dump_after:
         for line in file_rucio_dump_after:
-            parts = line.strip().split()
-            # parts[7] - path
-            # parts[10] - status (if available -> 'A')
+            key, status = parser(line)
 
-            key = parts[7] + '\n'
             if key in out:
                 out[key] += 4
-                if parts[10] == 'A':
+                if status == 'A':
                     out[key] += 1
-            else:
-                out[key] = 4
+                else:
+                    out[key] = 4
 
     missing_files = [k for k in out if out[k] == 23]
     dark_files = [k for k in out if out[k] == 8]
@@ -171,10 +167,9 @@ def consistency_check_slow_reliable(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
-    results_path: str,
     rse: str,
-    date: datetime,
-    cache_dir: str
+    cache_dir: str,
+    parser: 'Callable' = lambda s: s
 ) -> Iterator[tuple[str, str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
@@ -193,47 +188,20 @@ def consistency_check_slow_reliable(
         parse_and_filter_file(rucio_dump_after_path, cache_dir=cache_dir, parser=parser),
         cache_dir,
         delimiter=',',
-       fieldspec='1',
+        fieldspec='1',
     )
 
     logger.debug("Rucio dump after sorted")
 
-    standard_name_re = r'(ddmendpoint_{0}_\d{{2}}-\d{{2}}-\d{{4}}_[0-9a-f]{{40}})$'.format(rse)
-    standard_name_match = re.search(standard_name_re, rse_dump_path)
-    if standard_name_match is not None:
-        # If the original filename was generated using the expected format,
-        # just use the name as prefix for the parsed file.
-        sd_prefix = standard_name_match.group(0)
-    elif date is not None:
-        # Otherwise try to use the date information and DDMEndpoint name to
-        # have a meaningful filename.
-        sd_prefix = 'ddmendpoint_{0}_{1}'.format(
-            rse,
-            date.strftime('%d-%m-%Y'),
-        )
-    else:
-        # As last resort use only the DDMEndpoint name, but this is error
-        # prone as old dumps may interfere with the checks.
-        sd_prefix = 'ddmendpoint_{0}_unknown_date'.format(
-            rse,
-        )
-        logger.warning(
-            'Using basic and error prune naming for RSE dump as no date '
-            'information was provided, %s dump will be named %s',
-            rse,
-            sd_prefix,
-        )
-
     prefix_components = path_parsing_components(ddmendpoint_url(rse))
+
     rse_dump_path_sorted = gnu_sort(
         parse_and_filter_file(
             rse_dump_path,
             cache_dir=cache_dir,
-            parser=lambda line: strip_storage_dump(line, prefix_components),
-            prefix=sd_prefix,
+            parser=lambda line: parse_rse_dump(line, prefix_components),
         ),
         cache_dir=cache_dir,
-        prefix=sd_prefix,
     )
 
     logger.debug("RSE dump sorted")
@@ -248,225 +216,3 @@ def consistency_check_slow_reliable(
                             yield ('MISSING', path)
                     if not where[0] and where[1] and not where[2]:
                         yield ('DARK', path)
-
-
-def prepare_rse_dump(
-    dump_path: str
-) -> list[str]:
-
-    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rse_dump')
-    logger.debug("Preparing RSE dump")
-
-    file_rse_dump = smart_open(dump_path)
-
-    if file_rse_dump is None:
-        raise RuntimeError(f"Cannot open {dump_path}")
-
-    rse_dump = file_rse_dump.readlines()
-    file_rse_dump.close()
-
-    return rse_dump
-
-
-def prepare_rucio_dump(
-    dump_path: str
-) -> tuple[list[str], list[str]]:
-
-    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
-    logger.debug("Preparing Rucio dump")
-
-    rucio_dump: tuple[list[str], list[str]] = ([], [])
-
-    file_rucio_dump = smart_open(dump_path)
-
-    if file_rucio_dump is None:
-        raise RuntimeError(f"Cannot open {dump_path}")
-
-    with file_rucio_dump:
-        for line in file_rucio_dump:
-            # rucio_dump[0] - path
-            rucio_dump[0].append(line.split()[7] + '\n')
-            # rucio_dump[1] - status (if available -> 'A')
-            rucio_dump[1].append(line.split()[10])
-
-    return rucio_dump
-
-
-def parser(line: str) -> str:
-    '''
-    Simple parser for Rucio replica dumps.
-
-    :param line: String with one line of a dump.
-    :returns: A tuple with the path and status of the replica.
-    '''
-    fields = line.split('\t')
-    path = fields[6].strip().lstrip('/')
-    status = fields[8].strip()
-
-    return ','.join((path, status))
-
-
-def parse_and_filter_file(
-        filepath: str,
-        cache_dir: str,
-        parser: 'Callable' = lambda s: s,
-        filter_: 'Callable' = lambda s: s,
-        prefix: str | None = None,
-        postfix: str = 'parsed'
-) -> str:
-    '''
-    Opens `filepath` as a read-only file, and for each line of the file
-    for which the `filter_` function returns True, it writes a version
-    parsed with the `parser` function.
-
-    The name of the output file is generated appending '_' + `postfix` to
-    the filename in `filepath`. If `prefix` is given it is used instead
-    of `filepath`.
-
-    The output file (and temporary files while processing are stored in
-    `cache_dir`.
-
-    Default values for the arguments:
-        - `parser`: returns the same string.
-        - `filter_`: returns True for any argument.
-        - `prefix`: None (the name of the input file is used as prefix).
-        - `postfix`: 'parsed'.
-        - `cache_dir`: DUMPS_CACHE_DIR.
-
-    The output file is created with a random name and renamed atomically
-    when it is complete.
-
-    '\n' is appended to each line, therefore if the input is 'a\nb\n' and `parser`
-    is not especified the output will be 'a\n\nb\n\n'
-    '''
-
-    prefix = os.path.basename(filepath) if prefix is None else prefix
-    output_name = '_'.join((prefix, postfix))
-    output_path = os.path.join(cache_dir, output_name)
-
-    if os.path.exists(output_path):
-        return output_path
-
-    with temp_file(cache_dir, final_name=output_name) as (output, _):
-        input_ = smart_open(filepath)
-        if input_ is not None:
-            for line in input_:
-                if filter_(line):
-                    output.write(parser(line) + '\n')
-
-            input_.close()
-
-    return output_path
-
-
-def strip_storage_dump(line: str, prefix_components: list[str]) -> str:
-    '''
-    Parser to have consistent paths in storage dumps.
-
-    :param line: String with one line of a dump.
-    :returns: Path formatted as in the Rucio Replica Dumps.
-    '''
-
-    relative = path_parsing_remove_prefix(
-        prefix_components,
-        path_parsing_components(line),
-    )
-    if relative[0] == 'rucio':
-        relative = relative[1:]
-    return '/'.join(relative)
-
-
-def compare3(
-    it0: 'Iterable[str]',
-    it1: 'Iterable[str]',
-    it2: 'Iterable[str]'
-) -> 'Iterator[tuple[str, tuple[bool, bool, bool], tuple[str | None, str | None]]]':
-    '''
-    Generator to compare 3 sorted iterables, in each
-    iteration it yields a tuple of the form (current, (bool, bool, bool))
-    where current is the current element checked and the
-    second element of the tuple is a triplet whose elements take
-    a true value if current is contained in the it0, it1 or it2
-    respectively.
-
-    This function can't compare the iterators properly if None is
-    a valid value.
-    '''
-
-    it0 = iter(it0)
-    it1 = iter(it1)
-    it2 = iter(it2)
-    v0 = _try_to_advance(it0)
-    v1 = _try_to_advance(it1)
-    v2 = _try_to_advance(it2)
-
-    while v0 is not None or v1 is not None or v2 is not None:
-        path0, status0 = split_if_not_none(v0)
-        path2, status2 = split_if_not_none(v2)
-
-        vmin = min_value(path0, v1, path2)
-        in0 = in1 = in2 = False
-        in0_status = in2_status = None
-
-        # Detect in which iterables the value is present
-        #   inN is True if the value is present on the N iterable.
-        #   sN  is the status of the path in the rucio replica
-        #       dumps (N is either 0 or 2).
-        if path0 is not None and path0 == vmin:
-            in0 = True
-            in0_status = status0
-
-        if v1 is not None and v1 == vmin:
-            in1 = True
-
-        if path2 is not None and path2 == vmin:
-            in2 = True
-            in2_status = status2
-
-        # yield the value, in which iterables is present, and the status
-        # in each rucio replica dumps (if it is present there, else None).
-        yield (vmin, (in0, in1, in2), (in0_status, in2_status))
-
-        # Discard duplicate entries (it shouldn't be duplicate entries
-        # anyways) and
-        # advance the iterators, if the iterator N is depleted vN is set
-        # to None.
-        while v0 is not None and path0 == vmin:
-            v0 = _try_to_advance(it0)
-            path0, status0 = split_if_not_none(v0)
-
-        while v1 is not None and v1 == vmin:
-            v1 = _try_to_advance(it1)
-
-        while v2 is not None and path2 == vmin:
-            v2 = _try_to_advance(it2)
-            path2, status2 = split_if_not_none(v2)
-
-
-def _try_to_advance(
-        it: 'SupportsNext[str]',
-        default: str | None = None
-) -> str | None:
-    try:
-        el = next(it)
-    except StopIteration:
-        return default
-    return el.strip()
-
-
-def split_if_not_none(
-        value: str | None,
-        sep: str = ',',
-        fields: int = 2
-) -> str | list:
-    return value.split(sep) if value is not None else ([None] * fields)
-
-
-def min_value(*values: str | None) -> str:
-    '''
-    Minimum between the input values, ignoring None
-    '''
-    values_without_none = cast('list[str]', [value for value in values if value is not None])
-    if len(values_without_none) == 0:
-        raise ValueError("Input contains 0 non-null values.")
-    return min(values_without_none)

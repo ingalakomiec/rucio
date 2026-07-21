@@ -21,6 +21,12 @@ import logging
 import os
 import subprocess  # noqa: S404 -- subprocess used for external commands
 import tempfile
+from typing import TYPE_CHECKING
+
+from rucio.common.dumper import smart_open, temp_file
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def gnu_sort(
@@ -141,5 +147,92 @@ def path_parsing_components(path: str) -> list[str]:
     :return: list of non-empty components of the path.
     """
 
-    components = path.strip().strip('/').split('/')
+    components = path.strip().strip().split()
     return [component for component in components if component != '']
+
+
+def prepare_rse_dump(
+    dump_path: str
+) -> list[str]:
+
+    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rse_dump')
+    logger.debug("Preparing RSE dump")
+
+    file_rse_dump = smart_open(dump_path)
+
+    if file_rse_dump is None:
+        raise RuntimeError(f"Cannot open {dump_path}")
+
+    rse_dump = [line.strip() for line in file_rse_dump]
+    file_rse_dump.close()
+
+    return rse_dump
+
+
+def parse_and_filter_file(
+        filepath: str,
+        cache_dir: str,
+        parser: 'Callable' = lambda s: s,
+        filter_: 'Callable' = lambda s: s,
+        postfix: str = 'parsed'
+) -> str:
+    '''
+    Opens `filepath` as a read-only file, and for each line of the file
+    for which the `filter_` function returns True, it writes a version
+    parsed with the `parser` function.
+
+    The name of the output file is generated appending '_' + `postfix` to
+    the filename in `filepath`. If `prefix` is given it is used instead
+    of `filepath`.
+
+    The output file (and temporary files while processing are stored in
+    `cache_dir`.
+
+    Default values for the arguments:
+        - `parser`: returns the same string.
+        - `filter_`: returns True for any argument.
+        - `prefix`: None (the name of the input file is used as prefix).
+        - `postfix`: 'parsed'.
+        - `cache_dir`: DUMPS_CACHE_DIR.
+
+    The output file is created with a random name and renamed atomically
+    when it is complete.
+
+    '\n' is appended to each line, therefore if the input is 'a\nb\n' and `parser`
+    is not especified the output will be 'a\n\nb\n\n'
+    '''
+
+    prefix = os.path.basename(filepath)
+    output_name = '_'.join((prefix, postfix))
+    output_path = os.path.join(cache_dir, output_name)
+
+    if os.path.exists(output_path):
+        return output_path
+
+    with temp_file(cache_dir, final_name=output_name) as (output, _):
+        input_ = smart_open(filepath)
+        if input_ is not None:
+            for line in input_:
+                if filter_(line):
+                    output.write(parser(line) + '\n')
+
+            input_.close()
+
+    return output_path
+
+
+def parse_rse_dump(line: str, prefix_components: list[str]) -> str:
+    '''
+    Parser to have consistent paths in storage dumps.
+
+    :param line: String with one line of a dump.
+    :returns: Path formatted as in the Rucio Replica Dumps.
+    '''
+
+    relative = path_parsing_remove_prefix(
+        prefix_components,
+        path_parsing_components(line),
+    )
+    if relative[0] == 'rucio':
+        relative = relative[1:]
+    return '/'.join(relative)
