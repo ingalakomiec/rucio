@@ -175,23 +175,79 @@ def consistency_check_slow_reliable(
     rse: str,
     date: datetime,
     cache_dir: str
-) -> None:
+) -> Iterator[tuple[str, str]]:
 
-    results = slow_reliable_algorithm(
-        rse,
-        rse_dump_path,
-        rucio_dump_before_path,
-        rucio_dump_after_path,
-        date,
+    logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
+    logger.debug("Consistency check - slow, reliable")
+
+    rucio_dump_before_path_sorted = gnu_sort(
+        parse_and_filter_file(rucio_dump_before_path, cache_dir=cache_dir, parser=parser),
         cache_dir=cache_dir,
+        delimiter=',',
+        fieldspec='1',
     )
 
-    result_file_name = f"result.{rse}_{date:%Y%m%d}"
+    logger.debug("Rucio dump before sorted")
 
-    with temp_file(results_path, final_name=result_file_name) as (output, _):
-        for result in results:
-            status, path = result
-            output.write(f"{status},{path}\n")
+    rucio_dump_after_path_sorted = gnu_sort(
+        parse_and_filter_file(rucio_dump_after_path, cache_dir=cache_dir, parser=parser),
+        cache_dir,
+        delimiter=',',
+       fieldspec='1',
+    )
+
+    logger.debug("Rucio dump after sorted")
+
+    standard_name_re = r'(ddmendpoint_{0}_\d{{2}}-\d{{2}}-\d{{4}}_[0-9a-f]{{40}})$'.format(rse)
+    standard_name_match = re.search(standard_name_re, rse_dump_path)
+    if standard_name_match is not None:
+        # If the original filename was generated using the expected format,
+        # just use the name as prefix for the parsed file.
+        sd_prefix = standard_name_match.group(0)
+    elif date is not None:
+        # Otherwise try to use the date information and DDMEndpoint name to
+        # have a meaningful filename.
+        sd_prefix = 'ddmendpoint_{0}_{1}'.format(
+            rse,
+            date.strftime('%d-%m-%Y'),
+        )
+    else:
+        # As last resort use only the DDMEndpoint name, but this is error
+        # prone as old dumps may interfere with the checks.
+        sd_prefix = 'ddmendpoint_{0}_unknown_date'.format(
+            rse,
+        )
+        logger.warning(
+            'Using basic and error prune naming for RSE dump as no date '
+            'information was provided, %s dump will be named %s',
+            rse,
+            sd_prefix,
+        )
+
+    prefix_components = path_parsing_components(ddmendpoint_url(rse))
+    rse_dump_path_sorted = gnu_sort(
+        parse_and_filter_file(
+            rse_dump_path,
+            cache_dir=cache_dir,
+            parser=lambda line: strip_storage_dump(line, prefix_components),
+            prefix=sd_prefix,
+        ),
+        cache_dir=cache_dir,
+        prefix=sd_prefix,
+    )
+
+    logger.debug("RSE dump sorted")
+
+    with open(rucio_dump_before_path_sorted) as prevf:
+        with open(rucio_dump_after_path_sorted) as nextf:
+            with open(rse_dump_path_sorted) as sdump:
+                for path, where, status in compare3(prevf, sdump, nextf):
+                    prevstatus, nextstatus = status
+                    if where[0] and not where[1] and where[2]:
+                        if prevstatus == 'A' and nextstatus == 'A':
+                            yield ('MISSING', path)
+                    if not where[0] and where[1] and not where[2]:
+                        yield ('DARK', path)
 
 
 def prepare_rse_dump(
@@ -318,88 +374,6 @@ def strip_storage_dump(line: str, prefix_components: list[str]) -> str:
     if relative[0] == 'rucio':
         relative = relative[1:]
     return '/'.join(relative)
-
-
-def slow_reliable_algorithm(
-    rse: str,
-    rse_dump_path: str,
-    rucio_dump_before_path: str,
-    rucio_dump_after_path: str,
-    date: datetime,
-    cache_dir: str
-) -> Iterator[tuple[str, str]]:
-
-    logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
-    logger.debug("Consistency check - slow, reliable")
-
-    rucio_dump_before_path_sorted = gnu_sort(
-        parse_and_filter_file(rucio_dump_before_path, cache_dir=cache_dir, parser=parser),
-        cache_dir=cache_dir,
-        delimiter=',',
-        fieldspec='1',
-    )
-
-    logger.debug("Rucio dump before sorted")
-
-    rucio_dump_after_path_sorted = gnu_sort(
-        parse_and_filter_file(rucio_dump_after_path, cache_dir=cache_dir, parser=parser),
-        cache_dir,
-        delimiter=',',
-        fieldspec='1',
-    )
-
-    logger.debug("Rucio dump after sorted")
-
-    standard_name_re = r'(ddmendpoint_{0}_\d{{2}}-\d{{2}}-\d{{4}}_[0-9a-f]{{40}})$'.format(rse)
-    standard_name_match = re.search(standard_name_re, rse_dump_path)
-    if standard_name_match is not None:
-        # If the original filename was generated using the expected format,
-        # just use the name as prefix for the parsed file.
-        sd_prefix = standard_name_match.group(0)
-    elif date is not None:
-        # Otherwise try to use the date information and DDMEndpoint name to
-        # have a meaningful filename.
-        sd_prefix = 'ddmendpoint_{0}_{1}'.format(
-            rse,
-            date.strftime('%d-%m-%Y'),
-        )
-    else:
-        # As last resort use only the DDMEndpoint name, but this is error
-        # prone as old dumps may interfere with the checks.
-        sd_prefix = 'ddmendpoint_{0}_unknown_date'.format(
-            rse,
-        )
-        logger.warning(
-            'Using basic and error prune naming for RSE dump as no date '
-            'information was provided, %s dump will be named %s',
-            rse,
-            sd_prefix,
-        )
-
-    prefix_components = path_parsing_components(ddmendpoint_url(rse))
-    rse_dump_path_sorted = gnu_sort(
-        parse_and_filter_file(
-            rse_dump_path,
-            cache_dir=cache_dir,
-            parser=lambda line: strip_storage_dump(line, prefix_components),
-            prefix=sd_prefix,
-        ),
-        cache_dir=cache_dir,
-        prefix=sd_prefix,
-    )
-
-    logger.debug("RSE dump sorted")
-
-    with open(rucio_dump_before_path_sorted) as prevf:
-        with open(rucio_dump_after_path_sorted) as nextf:
-            with open(rse_dump_path_sorted) as sdump:
-                for path, where, status in compare3(prevf, sdump, nextf):
-                    prevstatus, nextstatus = status
-                    if where[0] and not where[1] and where[2]:
-                        if prevstatus == 'A' and nextstatus == 'A':
-                            yield ('MISSING', path)
-                    if not where[0] and where[1] and not where[2]:
-                        yield ('DARK', path)
 
 
 def compare3(

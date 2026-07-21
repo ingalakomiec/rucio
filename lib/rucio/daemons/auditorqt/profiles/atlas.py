@@ -23,6 +23,7 @@ import re
 from datetime import datetime, timedelta
 
 from rucio.common.constants import RseAttr
+from rucio.common.dumper import temp_file
 from rucio.core.rse import get_rse_id, list_rse_attributes
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
@@ -105,7 +106,20 @@ def atlas_auditor(
         file_results.close()
 
     if algorithm == "reliable":
-        consistency_check_slow_reliable(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, results_dir, rse, date, cache_dir)
+        results = consistency_check_slow_reliable(
+            rucio_dump_before_path_cache,
+            rse_dump_path_cache,
+            rucio_dump_after_path_cache,
+            results_dir,
+            rse,
+            date,
+            cache_dir=cache_dir,
+        )
+
+        with temp_file(results_dir, final_name=result_file_name) as (output, _):
+            for result in results:
+                status, path = result
+                output.write(f"{status},{path}\n")
 
     if not keep_dumps:
         remove_cached_dumps(cached_dumps)
