@@ -115,9 +115,7 @@ def generic_auditor(
             rucio_dump_before_path_cache,
             rse_dump_path_cache,
             rucio_dump_after_path_cache,
-            results_dir,
             rse,
-            date,
             cache_dir=cache_dir,
         )
 
