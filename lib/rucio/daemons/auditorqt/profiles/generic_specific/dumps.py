@@ -18,6 +18,7 @@ import logging
 
 from rucio.common.dumper import smart_open
 
+
 def parse_rucio_dump(line: str) -> tuple[str, str]:
     '''
     Parse one line from Rucio replica dump.
@@ -39,6 +40,7 @@ def prepare_path_and_status_to_sort(line: str) -> str:
     path, status = parse_rucio_dump(line)
 
     return ','.join((path.strip(), status))
+
 
 def prepare_rucio_dump(
     dump_path: str
