@@ -17,11 +17,10 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import TYPE_CHECKING
 
-from rucio.common.dumper import ddmendpoint_url, smart_open, temp_file
-from rucio.daemons.auditorqt.dumps import compare3, gnu_sort, path_parsing_components, path_parsing_remove_prefix
+from rucio.common.dumper import ddmendpoint_url, smart_open
+from rucio.daemons.auditorqt.dumps import compare3, gnu_sort, parse_and_filter_file, parse_rse_dump, path_parsing_components, prepare_rse_dump
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -35,13 +34,14 @@ if TYPE_CHECKING:
 def consistency_check_fast(
     rucio_dump_before_path: str,
     rse_dump_path: str,
-    rucio_dump_after_path: str
+    rucio_dump_after_path: str,
+    parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_fast')
     logger.debug("Consistency check - fast")
 
-    rucio_dump_before = prepare_rucio_dump(rucio_dump_before_path)
+    rucio_dump_before = parser(rucio_dump_before_path)
 
     out = dict()
 
@@ -67,7 +67,7 @@ def consistency_check_fast(
 
     del rse_dump
 
-    rucio_dump_after = prepare_rucio_dump(rucio_dump_after_path)
+    rucio_dump_after = parser(rucio_dump_after_path)
 
     for k in rucio_dump_after[0]:
         if k in out:
@@ -97,7 +97,8 @@ def consistency_check_fast(
 def consistency_check_faster(
     rucio_dump_before_path: str,
     rse_dump_path: str,
-    rucio_dump_after_path: str
+    rucio_dump_after_path: str,
+    parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_faster')
@@ -112,7 +113,7 @@ def consistency_check_faster(
 
     with file_rucio_dump_before:
         for line in file_rucio_dump_before:
-            key, status = parse_rucio_dump(line)
+            key, status = parser(line)
             out[key] = 16
             if status == 'A':
                 out[key] += 2
@@ -138,7 +139,7 @@ def consistency_check_faster(
 
     with file_rucio_dump_after:
         for line in file_rucio_dump_after:
-            key, status = parse_rucio_dump(line)
+            key, status = parser(line)
 
             if key in out:
                 out[key] += 4
@@ -166,14 +167,15 @@ def consistency_check_slow_reliable(
     rse_dump_path: str,
     rucio_dump_after_path: str,
     rse: str,
-    cache_dir: str
+    cache_dir: str,
+    parser: 'Callable' = lambda s: s
 ) -> Iterator[tuple[str, str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
     logger.debug("Consistency check - slow, reliable")
 
     rucio_dump_before_path_sorted = gnu_sort(
-        parse_and_filter_file(rucio_dump_before_path, cache_dir=cache_dir, parser=prepare_path_and_status_to_sort),
+        parse_and_filter_file(rucio_dump_before_path, cache_dir=cache_dir, parser=parser),
         cache_dir=cache_dir,
         delimiter=',',
         fieldspec='1',
@@ -182,7 +184,7 @@ def consistency_check_slow_reliable(
     logger.debug("Rucio dump before sorted")
 
     rucio_dump_after_path_sorted = gnu_sort(
-        parse_and_filter_file(rucio_dump_after_path, cache_dir=cache_dir, parser=prepare_path_and_status_to_sort),
+        parse_and_filter_file(rucio_dump_after_path, cache_dir=cache_dir, parser=parser),
         cache_dir,
         delimiter=',',
         fieldspec='1',
@@ -213,137 +215,3 @@ def consistency_check_slow_reliable(
                             yield ('MISSING', path)
                     if not where[0] and where[1] and not where[2]:
                         yield ('DARK', path)
-
-
-def prepare_rse_dump(
-    dump_path: str
-) -> list[str]:
-
-    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rse_dump')
-    logger.debug("Preparing RSE dump")
-
-    file_rse_dump = smart_open(dump_path)
-
-    if file_rse_dump is None:
-        raise RuntimeError(f"Cannot open {dump_path}")
-
-    rse_dump = [line.strip() for line in file_rse_dump]
-    file_rse_dump.close()
-
-    return rse_dump
-
-
-def prepare_rucio_dump(
-    dump_path: str
-) -> tuple[list[str], list[str]]:
-
-    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
-    logger.debug("Preparing Rucio dump")
-
-    paths = []
-    statuses = []
-
-    file_rucio_dump = smart_open(dump_path)
-
-    if file_rucio_dump is None:
-        raise RuntimeError(f"Cannot open {dump_path}")
-
-    with file_rucio_dump:
-        for line in file_rucio_dump:
-            path, status = parse_rucio_dump(line)
-            paths.append(path)
-            statuses.append(status)
-
-    return paths, statuses
-
-
-def parse_rucio_dump(line: str) -> tuple[str, str]:
-    '''
-    Parse one line from Rucio replica dump.
-
-    :param line: String with one line of a dump.
-    :returns: (path, status)
-    '''
-
-    parts = line.strip().split()
-
-    path = parts[7]
-    status = parts[10]
-
-    return path, status
-
-
-def prepare_path_and_status_to_sort(line: str) -> str:
-
-    path, status = parse_rucio_dump(line)
-
-    return ','.join((path.strip(), status))
-
-
-def parse_and_filter_file(
-        filepath: str,
-        cache_dir: str,
-        parser: 'Callable' = lambda s: s,
-        filter_: 'Callable' = lambda s: s,
-        postfix: str = 'parsed'
-) -> str:
-    '''
-    Opens `filepath` as a read-only file, and for each line of the file
-    for which the `filter_` function returns True, it writes a version
-    parsed with the `parser` function.
-
-    The name of the output file is generated appending '_' + `postfix` to
-    the filename in `filepath`. If `prefix` is given it is used instead
-    of `filepath`.
-
-    The output file (and temporary files while processing are stored in
-    `cache_dir`.
-
-    Default values for the arguments:
-        - `parser`: returns the same string.
-        - `filter_`: returns True for any argument.
-        - `prefix`: None (the name of the input file is used as prefix).
-        - `postfix`: 'parsed'.
-        - `cache_dir`: DUMPS_CACHE_DIR.
-
-    The output file is created with a random name and renamed atomically
-    when it is complete.
-
-    '\n' is appended to each line, therefore if the input is 'a\nb\n' and `parser`
-    is not especified the output will be 'a\n\nb\n\n'
-    '''
-
-    prefix = os.path.basename(filepath)
-    output_name = '_'.join((prefix, postfix))
-    output_path = os.path.join(cache_dir, output_name)
-
-    if os.path.exists(output_path):
-        return output_path
-
-    with temp_file(cache_dir, final_name=output_name) as (output, _):
-        input_ = smart_open(filepath)
-        if input_ is not None:
-            for line in input_:
-                if filter_(line):
-                    output.write(parser(line) + '\n')
-
-            input_.close()
-
-    return output_path
-
-
-def parse_rse_dump(line: str, prefix_components: list[str]) -> str:
-    '''
-    Parser to have consistent paths in storage dumps.
-
-    :param line: String with one line of a dump.
-    :returns: Path formatted as in the Rucio Replica Dumps.
-    '''
-
-    relative = path_parsing_remove_prefix(
-        prefix_components,
-        path_parsing_components(line),
-    )
-    if relative[0] == 'rucio':
-        relative = relative[1:]
-    return '/'.join(relative)
