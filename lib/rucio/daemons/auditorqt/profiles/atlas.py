@@ -98,10 +98,10 @@ def atlas_auditor(
         file_results = open(results_path, 'w')
 
         for k in range(len(dark_files)):
-            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1))
+            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1) + '\n')
 
         for k in range(len(missing_files)):
-            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1))
+            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1) + '\n')
 
         file_results.close()
 
@@ -115,9 +115,10 @@ def atlas_auditor(
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
+
             for result in results:
                 status, path = result
-                output.write(f"{status},{path}\n")
+                output.write(status + (path).replace("/", ",", 1) + '\n')
 
     if not keep_dumps:
         remove_cached_dumps(cached_dumps)
