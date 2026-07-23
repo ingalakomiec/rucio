@@ -68,6 +68,11 @@ def generic_auditor(
 
     days = timedelta(delta)
 
+#   paths to rse and rucio test dumps
+#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/dump_20260722'
+#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2026-07-19'
+#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2026-07-25'
+
 #   paths to rse and rucio dumps
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
@@ -103,10 +108,10 @@ def generic_auditor(
         file_results = open(results_path, 'w')
 
         for k in range(len(dark_files)):
-            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1))
+            file_results.write('DARK' + (dark_files[k]).replace("/", ",", 1) + '\n')
 
         for k in range(len(missing_files)):
-            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1))
+            file_results.write('MISSING' + (missing_files[k]).replace("/", ",", 1) + '\n')
 
         file_results.close()
 
@@ -122,7 +127,7 @@ def generic_auditor(
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
             for result in results:
                 status, path = result
-                output.write(f"{status},{path}\n")
+                output.write(status + (path).replace("/", ",", 1) + '\n')
 
     if not keep_dumps:
         remove_cached_dumps(cached_dumps)
