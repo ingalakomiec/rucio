@@ -30,7 +30,7 @@ import requests
 from magic import Magic
 
 from rucio.common.constants import RseAttr
-from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, temp_file
+from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, smart_open, temp_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
 
@@ -313,3 +313,50 @@ def protocol(url: str) -> str:
         raise RuntimeError(f"Protocol {proto} not supported")
 
     return proto
+
+
+def parse_rucio_dump(line: str) -> tuple[str, str]:
+    '''
+    Parse one line from Rucio replica dump.
+
+    :param line: String with one line of a dump.
+    :returns: (path, status)
+    '''
+
+    parts = line.strip().split()
+
+    path = parts[7]
+    status = parts[10]
+
+    return path, status
+
+
+def prepare_path_and_status_to_sort(line: str) -> str:
+
+    path, status = parse_rucio_dump(line)
+
+    return ','.join((path.strip(), status))
+
+
+def prepare_rucio_dump(
+    dump_path: str
+) -> tuple[list[str], list[str]]:
+
+    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
+    logger.debug("Preparing Rucio dump")
+
+    paths = []
+    statuses = []
+
+    file_rucio_dump = smart_open(dump_path)
+
+    if file_rucio_dump is None:
+        raise RuntimeError(f"Cannot open {dump_path}")
+
+    with file_rucio_dump:
+        for line in file_rucio_dump:
+            path, status = parse_rucio_dump(line)
+            paths.append(path)
+            statuses.append(status)
+
+    return paths, statuses
