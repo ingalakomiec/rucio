@@ -69,14 +69,14 @@ def generic_auditor(
     days = timedelta(delta)
 
 #   paths to rse and rucio test dumps
-#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/dump_20260722'
-#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2026-07-19'
-#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2026-07-25'
+    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/dump_20260722'
+    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2026-07-19'
+    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2026-07-25'
 
 #   paths to rse and rucio dumps
-    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
-    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
-    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
+#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
+#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
+#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
 
 # big dumps
 #    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK.dump_20250805'
