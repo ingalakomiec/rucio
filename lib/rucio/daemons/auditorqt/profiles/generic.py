@@ -27,6 +27,7 @@ from rucio.common.dumper import temp_file
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.output import bz2_compress_file
+from rucio.daemons.auditorqt.profiles.generic_specific.dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
 
 
 def generic_auditor(
@@ -99,10 +100,10 @@ def generic_auditor(
         return results_path
 
     if algorithm == "fast":
-        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, prepare_rucio_dump)
 
     if algorithm == "faster":
-        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache)
+        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump)
 
     if algorithm in ("fast", "faster"):
         file_results = open(results_path, 'w')
@@ -122,6 +123,7 @@ def generic_auditor(
             rucio_dump_after_path_cache,
             rse,
             cache_dir=cache_dir,
+            parser=prepare_path_and_status_to_sort
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
