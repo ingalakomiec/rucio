@@ -57,7 +57,6 @@ def atlas_auditor(
     'algorithm' - which algorithm to use to compare dumps;
     default: reliable
 
-
     'cache_dir' -  dierectory where the dumps are cached
 
     'results_dir' - the directory where the results of the consistency check will be saved
