@@ -29,6 +29,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+# PREPARE ########
+
+# prepare
+# used in consistencycheck in ALGORITHM 3
 def gnu_sort(
         file_path: str,
         cache_dir: str,
@@ -81,76 +85,8 @@ def gnu_sort(
     return sorted_path
 
 
-def remove_cached_dumps(paths: list[str]) -> bool:
-
-    logging.getLogger('auditor: output.remove_cached_dump')
-
-    for path in paths:
-        # remove all dumps, also sorted and parsed
-        remove = glob.glob(f"{path}*")
-        for fil in remove:
-            os.remove(fil)
-    return True
-
-
-def path_parsing_remove_prefix(prefix: list[str], path: list[str]) -> list[str]:
-    """
-    Remove the specified prefix from the given path.
-
-    :param prefix: The prefix to be removed from the path.
-    :param path: The path from which the prefix should be removed.
-
-    :return: The path with the prefix removed.
-            If the prefix is not found at the start of the path, the original path is returned.
-            If the path is a subset of the prefix, an empty list is returned.
-    """
-
-    iprefix = iter(prefix)
-    ipath = iter(path)
-    try:
-        cprefix = next(iprefix)
-        cpath = next(ipath)
-    except StopIteration:
-        # Either the path or the prefix is empty
-        return path
-    while cprefix != cpath:
-        try:
-            cprefix = next(iprefix)
-        except StopIteration:
-            # No parts of the prefix are part of the path
-            return path
-
-    while cprefix == cpath:
-        cprefix = next(iprefix, None)
-        try:
-            cpath = next(ipath)
-        except StopIteration:
-            # The path is a subset of the prefix
-            return []
-
-    if cprefix is not None:
-        # If the prefix is not depleted maybe it is only a coincidence
-        # in one of the components of the paths: return the path as is.
-        return path
-
-    rest = list(ipath)
-    rest.insert(0, cpath)
-    return rest
-
-
-def path_parsing_components(path: str) -> list[str]:
-    """
-    Extracts and returns the non-empty components of a given path.
-
-    :param path: input path string to be parsed.
-
-    :return: list of non-empty components of the path.
-    """
-
-    components = path.strip().strip().split()
-    return [component for component in components if component != '']
-
-
+# prepare
+# used in consistencycheck in ALGORITHM 3
 def prepare_rse_dump(
     dump_path: str
 ) -> list[str]:
@@ -169,6 +105,8 @@ def prepare_rse_dump(
     return rse_dump
 
 
+# prepare
+# used in consistencycheck in ALGORITHM 3
 def parse_and_filter_file(
         filepath: str,
         cache_dir: str,
@@ -221,6 +159,8 @@ def parse_and_filter_file(
     return output_path
 
 
+# prepare
+# used in consistencycheck in ALGORITHM 3
 def parse_rse_dump(line: str, prefix_components: list[str]) -> str:
     '''
     Parser to have consistent paths in storage dumps.
@@ -236,3 +176,81 @@ def parse_rse_dump(line: str, prefix_components: list[str]) -> str:
     if relative[0] == 'rucio':
         relative = relative[1:]
     return '/'.join(relative)
+
+
+# prepare
+# used in parse_rse_dump here, parse_rse_dump used in ALGORITHM 3
+def path_parsing_remove_prefix(prefix: list[str], path: list[str]) -> list[str]:
+    """
+    Remove the specified prefix from the given path.
+
+    :param prefix: The prefix to be removed from the path.
+    :param path: The path from which the prefix should be removed.
+
+    :return: The path with the prefix removed.
+            If the prefix is not found at the start of the path, the original path is returned.
+            If the path is a subset of the prefix, an empty list is returned.
+    """
+
+    iprefix = iter(prefix)
+    ipath = iter(path)
+    try:
+        cprefix = next(iprefix)
+        cpath = next(ipath)
+    except StopIteration:
+        # Either the path or the prefix is empty
+        return path
+    while cprefix != cpath:
+        try:
+            cprefix = next(iprefix)
+        except StopIteration:
+            # No parts of the prefix are part of the path
+            return path
+
+    while cprefix == cpath:
+        cprefix = next(iprefix, None)
+        try:
+            cpath = next(ipath)
+        except StopIteration:
+            # The path is a subset of the prefix
+            return []
+
+    if cprefix is not None:
+        # If the prefix is not depleted maybe it is only a coincidence
+        # in one of the components of the paths: return the path as is.
+        return path
+
+    rest = list(ipath)
+    rest.insert(0, cpath)
+    return rest
+
+
+# prepare
+# used in parse_rse_dump here, parse_rse_dump used in ALGORITHM 3
+def path_parsing_components(path: str) -> list[str]:
+    """
+    Extracts and returns the non-empty components of a given path.
+
+    :param path: input path string to be parsed.
+
+    :return: list of non-empty components of the path.
+    """
+
+    components = path.strip().strip().split()
+    return [component for component in components if component != '']
+
+
+# OUTPUT #########
+
+# output
+# used in profiles/atlas and profiles/generic
+def remove_cached_dumps(paths: list[str]) -> bool:
+
+    logging.getLogger('auditor: output.remove_cached_dump')
+
+    for path in paths:
+        # remove all dumps, also sorted and parsed
+        remove = glob.glob(f"{path}*")
+        for fil in remove:
+            os.remove(fil)
+    return True
