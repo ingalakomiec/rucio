@@ -1,3 +1,4 @@
+# GNU nano 7.2                                  ../algorithm3/parse_dumps.py
 # Copyright European Organization for Nuclear Research (CERN) since 2012
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""action on RSE and Rucio dumps: fetching, removing cached dumps"""
+"""parse dumps for the consistency check"""
 
 import logging
 
-from rucio.common.dumper import smart_open
+# RUCIO DUMP PARSING #################
 
 
 def parse_rucio_dump(line: str) -> tuple[str, str]:
-    '''
+
+    """
     Parse one line from Rucio replica dump.
 
     :param line: String with one line of a dump.
     :returns: (path, status)
-    '''
+    """
+
+    logger = logging.getLogger('auditorqt.consistencycheck.parse_dumps.parse_rucio_dump')
+    logger.debug("Parsing Rucio dump line")
 
     parts = line.strip().split()
 
@@ -33,34 +38,3 @@ def parse_rucio_dump(line: str) -> tuple[str, str]:
     status = parts[10]
 
     return path, status
-
-
-def prepare_path_and_status_to_sort(line: str) -> str:
-
-    path, status = parse_rucio_dump(line)
-
-    return ','.join((path.strip(), status))
-
-
-def prepare_rucio_dump(
-    dump_path: str
-) -> tuple[list[str], list[str]]:
-
-    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
-    logger.debug("Preparing Rucio dump")
-
-    paths = []
-    statuses = []
-
-    file_rucio_dump = smart_open(dump_path)
-
-    if file_rucio_dump is None:
-        raise RuntimeError(f"Cannot open {dump_path}")
-
-    with file_rucio_dump:
-        for line in file_rucio_dump:
-            path, status = parse_rucio_dump(line)
-            paths.append(path)
-            statuses.append(status)
-
-    return paths, statuses
