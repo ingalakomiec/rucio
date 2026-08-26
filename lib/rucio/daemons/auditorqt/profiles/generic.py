@@ -95,8 +95,6 @@ def generic_auditor(
 
     if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
         logger.warning(f"Consistency check for {rse}, dump dated {date_rse:%d-%m-%Y}, already done. Skipping consistency check.")
-        if not keep_dumps:
-            remove_cached_dumps(cached_dumps)
         return results_path
 
     if algorithm == "fast":
