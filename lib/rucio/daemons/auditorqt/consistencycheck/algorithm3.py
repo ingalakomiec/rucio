@@ -19,8 +19,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
     from _typeshed import SupportsNext
-    from collection.abc import Iterable, Iterator
 
 
 def compare3(
