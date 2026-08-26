@@ -15,6 +15,8 @@
 """perform actions on output of the auditor consistency check"""
 
 import bz2
+import glob
+import logging
 import os
 
 
@@ -47,3 +49,16 @@ def bz2_compress_file(
             compressed.write(chunk.encode())
     os.remove(source_path)
     return final_path
+
+
+# used in profiles/atlas and profiles/generic
+def remove_cached_dumps(paths: list[str]) -> bool:
+
+    logging.getLogger('auditor: output.remove_cached_dump')
+
+    for path in paths:
+        # remove all dumps, also sorted and parsed
+        remove = glob.glob(f"{path}*")
+        for fil in remove:
+            os.remove(fil)
+    return True

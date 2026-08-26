@@ -16,20 +16,18 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
-import re
 from datetime import datetime, timedelta
 
-from rucio.common.constants import RseAttr
 from rucio.common.dumper import temp_file
-from rucio.core.rse import get_rse_id, list_rse_attributes
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
-from rucio.daemons.auditorqt.dumps import remove_cached_dumps
-from rucio.daemons.auditorqt.output import bz2_compress_file
-from rucio.daemons.auditorqt.profiles.atlas_specific.dumps import download_rucio_dump, fetch_no_object_store, fetch_object_store, generate_url, parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
-from rucio.daemons.auditorqt.profiles.atlas_specific.output import process_output
+from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
+from rucio.daemons.auditorqt.parse_dumps import parse_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas.fetch_rse_dump import fetch_rse_dump
+from rucio.daemons.auditorqt.profiles.atlas.fetch_rucio_dump import fetch_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas.output import declare_dark_and_missing_replicas
+from rucio.daemons.auditorqt.profiles.atlas.parse_dumps import parse_rse_dump
 
 
 def atlas_auditor(
@@ -71,10 +69,11 @@ def atlas_auditor(
 
     days = timedelta(delta)
 
+    # fetching begin
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse, cache_dir, date)
-
     rucio_dump_before_path_cache = fetch_rucio_dump(rse, date_rse - days, cache_dir)
     rucio_dump_after_path_cache = fetch_rucio_dump(rse, date_rse + days, cache_dir)
+    # fetching end
 
     cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 
@@ -83,15 +82,25 @@ def atlas_auditor(
 
     if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
         logger.warning(f"Consistency check for {rse}, dump dated {date_rse:%d-%m-%Y}, already done. Skipping consistency check.")
-        if not keep_dumps:
-            remove_cached_dumps(cached_dumps)
         return results_path
 
     if algorithm == "fast":
-        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, prepare_rucio_dump)
+        missing_files, dark_files = consistency_check_fast(
+            rucio_dump_before_path_cache,
+            rse_dump_path_cache,
+            rucio_dump_after_path_cache,
+            rse,
+            parse_rucio_dump,
+            parse_rse_dump)
 
     if algorithm == "faster":
-        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump)
+        missing_files, dark_files = consistency_check_faster(
+            rucio_dump_before_path_cache,
+            rse_dump_path_cache,
+            rucio_dump_after_path_cache,
+            rse,
+            parse_rucio_dump,
+            parse_rse_dump)
 
     if algorithm in ("fast", "faster"):
         file_results = open(results_path, 'w')
@@ -111,7 +120,8 @@ def atlas_auditor(
             rucio_dump_after_path_cache,
             rse,
             cache_dir=cache_dir,
-            parser=prepare_path_and_status_to_sort
+            rucio_dump_parser=parse_rucio_dump,
+            rse_dump_parser=parse_rse_dump
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
@@ -126,71 +136,10 @@ def atlas_auditor(
     if no_declaration:
         logger.warning("No action on output performed")
     else:
-        process_output(rse, results_path)
+        declare_dark_and_missing_replicas(rse, results_path)
 
     if compress_results:
         results_path = bz2_compress_file(results_path)
         logger.debug(f"Compressed {results_path}")
 
     return results_path
-
-
-def fetch_rse_dump(
-    rse: str,
-    cache_dir: str,
-    date: datetime | None = None,
-) -> tuple[str, datetime]:
-
-    logging.getLogger('auditor.fetch_rse_dump')
-
-    base_url = generate_url(rse)
-
-    rse_id = get_rse_id(rse)
-    rse_attr = list_rse_attributes(rse_id)
-
-    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
-        path, date = fetch_object_store(rse, base_url, cache_dir, date)
-
-    else:
-        path, date = fetch_no_object_store(rse, base_url, cache_dir, date)
-
-    return (path, date)
-
-
-def fetch_rucio_dump(
-    rse: str,
-    date: "datetime",
-    cache_dir: str
-) -> str:
-
-    logger = logging.getLogger('auditor.fetch_rucio_dump')
-
-    url = get_rucio_dump_url(date, rse)
-
-    # two lines below just for tests
-    # url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
-    url = "https://learnpython.com/blog/python-pillow-module/1.jpg"
-
-    # hash added to create a unique filename
-    hash = hashlib.sha1(url.encode()).hexdigest()
-    filename = f"{rse}_{date:%Y-%m-%d}_{hash}"
-    filename = re.sub(r'\W', '-', filename)
-    path = f"{cache_dir}/{filename}"
-
-    if not os.path.exists(path):
-        logging.debug(f"Trying to download: {url} for {rse}")
-        download_rucio_dump(url, cache_dir, filename)
-    else:
-        logger.debug(f"Taking Rucio Replica Dump {path} for {rse} from cache")
-
-    return path
-
-
-def get_rucio_dump_url(
-    date: datetime,
-    rse: str
-) -> str:
-
-    url = f"https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{date:%Y-%m-%d}/replicas_per_rse/{rse}.replicas_per_rse.{date:%Y-%m-%d}.csv.bz2"
-
-    return url
