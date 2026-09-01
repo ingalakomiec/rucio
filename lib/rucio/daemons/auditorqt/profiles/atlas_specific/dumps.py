@@ -55,7 +55,9 @@ class _LinkCollector(HTMLParser):
             )
 
 
-def gfal_links(base_url: str) -> list[str]:
+# fetch
+# used here in protocol_funcs
+def gfal_get_list_of_urls(base_url: str) -> list[str]:
     '''
     Returns a list of the urls contained in `base_url`.
     '''
@@ -65,7 +67,11 @@ def gfal_links(base_url: str) -> list[str]:
     return dumps
 
 
-def http_links(base_url: str) -> list[str]:
+# FETCH #########################
+
+# fetch
+# used here in protocol_funcs
+def http_get_list_of_urls(base_url: str) -> list[str]:
     '''
     Returns a list of the urls contained in `base_url`.
     '''
@@ -82,6 +88,8 @@ def http_links(base_url: str) -> list[str]:
     return links
 
 
+# fetch
+# used here in protocol_funcs
 def gfal_download_to_file_with_decoding(
     url: str,
     file_: IO
@@ -132,26 +140,30 @@ def gfal_download_to_file_with_decoding(
     return True
 
 
+# fetch
+# used here
 protocol_funcs = {
     'davs': {
-        'links': gfal_links,
+        'links': gfal_get_list_of_urls,
         'download': gfal_download_to_file_with_decoding,
     },
     'root': {
-        'links': gfal_links,
+        'links': gfal_get_list_of_urls,
         'download': gfal_download_to_file_with_decoding,
     },
     'http': {
-        'links': http_links,
+        'links': http_get_list_of_urls,
         'download': http_download_to_file,
     },
     'https': {
-        'links': http_links,
+        'links': http_get_list_of_urls,
         'download': http_download_to_file,
     },
 }
 
 
+# fetch
+# used just here to choose http or gfal2 downloading function
 def download(url: str, filename: IO) -> None:
     """
     Given the URL 'url' downloads its contents on 'filename'
@@ -160,6 +172,8 @@ def download(url: str, filename: IO) -> None:
     protocol_funcs[protocol(url)]['download'](url, filename)
 
 
+# fetch
+# used in profiles/atlas in fetch_rucio_dump
 def download_rucio_dump(
     url: str,
     cache_dir: str,
@@ -172,6 +186,8 @@ def download_rucio_dump(
     return True
 
 
+# fetch
+# used in profiles/atlas in fetch_rse_dump
 def fetch_object_store(
     rse: str,
     base_url: str,
@@ -215,6 +231,8 @@ def fetch_object_store(
     return path, date
 
 
+# fetch
+# used in profiles/atlas in fetch_rse_dump
 def fetch_no_object_store(
     rse: str,
     base_url: str,
@@ -245,6 +263,9 @@ def fetch_no_object_store(
     return path, date
 
 
+# fetch
+# used here in fetch_object_store and in fetch_no_object_store;
+# creates a unique filename of a fetched rse dump
 def make_rse_dump_filename(
     rse: str,
     date: datetime,
@@ -258,6 +279,8 @@ def make_rse_dump_filename(
     return filename
 
 
+# fetch
+# used in profiles/atlas in fetch_rse_dump
 def generate_url(
     rse: str
 ) -> str:
@@ -267,11 +290,15 @@ def generate_url(
     return base_url
 
 
+# fetch
+# used here in fetch_no_object_store
 def get_all_dumps(base_url: str) -> list[str]:
 
     return protocol_funcs[protocol(base_url)]['links'](base_url)
 
 
+# fetch
+# used here in fetch_no_object_store
 def get_newest_dump(
         base_url: str,
         links: "Iterable[str]"
@@ -304,6 +331,8 @@ def get_newest_dump(
     return max(times, key=operator.itemgetter(1))
 
 
+# fetch
+# used here in download, get_all_dumps
 def protocol(url: str) -> str:
     '''
     Given the URL `url` returns a string with the protocol part.
@@ -315,6 +344,10 @@ def protocol(url: str) -> str:
     return proto
 
 
+# PREPARE #######################################
+
+# prepare
+# used as parser in concsistencycheck in ALGORITHM 2
 def parse_rucio_dump(line: str) -> tuple[str, str]:
     '''
     Parse one line from Rucio replica dump.
@@ -331,6 +364,8 @@ def parse_rucio_dump(line: str) -> tuple[str, str]:
     return path, status
 
 
+# prepare
+# used as parser in consistencycheck in ALGORITHM 3
 def prepare_path_and_status_to_sort(line: str) -> str:
 
     path, status = parse_rucio_dump(line)
@@ -338,6 +373,8 @@ def prepare_path_and_status_to_sort(line: str) -> str:
     return ','.join((path.strip(), status))
 
 
+# prepare
+# used as parser in consistencycheck in ALGORITHM 1
 def prepare_rucio_dump(
     dump_path: str
 ) -> tuple[list[str], list[str]]:
