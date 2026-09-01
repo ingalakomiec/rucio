@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Generic auditor profiles."""
+"""ATLAS-specific auditor profile."""
 
 from __future__ import annotations
 
@@ -20,17 +20,19 @@ import hashlib
 import logging
 import os
 import re
-import shutil
 from datetime import datetime, timedelta
 
+from rucio.common.constants import RseAttr
 from rucio.common.dumper import temp_file
+from rucio.core.rse import get_rse_id, list_rse_attributes
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.output import bz2_compress_file
-from rucio.daemons.auditorqt.profiles.generic_specific.dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas.dumps import download_rucio_dump, fetch_no_object_store, fetch_object_store, generate_url, parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas.output import process_output
 
 
-def generic_auditor(
+def atlas_auditor(
         rse: str,
         keep_dumps: bool,
         delta: int,
@@ -43,54 +45,41 @@ def generic_auditor(
 ) -> str | None:
 
     """
-    `rse` is the RSE name
+    'rse'- the RSE name
 
-    'keep_dumps' keep RSE and Rucio dumps on cache or not
+    'keep_dumps'-  keep RSE and Rucio dumps on cache or not
 
-    'delta' How many days older/newer than the RSE dump must the Rucio replica dumps be
+    'delta' - how many days older/newer than the RSE dump must the Rucio replica dumps be
 
-    `date` is a datetime instance with the date of the desired dump or None
-    to download the latest available dump
+    'date' - a datetime instance with the date of the desired dump;
+    default: None; the latest RSE dump will be taken
 
     'algorithm' - which algorithm to use to compare dumps;
     default: reliable
 
-    'cache_dir' dierectory where the dumps are cached
+    'cache_dir' -  dierectory where the dumps are cached
 
-    `results_dir` is the directory where the results of the consistency check will be saved
+    'results_dir' - the directory where the results of the consistency check will be saved
 
     Return value: path to results
     """
 
-    logger = logging.getLogger('generic_auditor')
+    logger = logging.getLogger('atlas_auditor')
 
     if date is None:
         date = datetime.now()
 
     days = timedelta(delta)
-# fetching begin
-#   paths to rse and rucio test dumps
-    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/dump_20260722'
-    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2026-07-19'
-    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2026-07-25'
 
-#   paths to rse and rucio dumps
-#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/dump_20250127.bz2'
-#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2025-01-24.bz2'
-#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2025-01-30.bz2'
+    # fetching begin
+    rse_dump_path_cache, date_rse = fetch_rse_dump(rse, cache_dir, date)
+    rucio_dump_before_path_cache = fetch_rucio_dump(rse, date_rse - days, cache_dir)
+    rucio_dump_after_path_cache = fetch_rucio_dump(rse, date_rse + days, cache_dir)
+    # fetching end
 
-# big dumps
-#    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK.dump_20250805'
-#    rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-02.bz2'
-#    rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/real_dumps/big_dumps/BNL-OSG2_DATADISK_2025-08-08.bz2'
-
-    rse_dump_path_cache, date_rse = fetch_rse_dump(rse_dump_path, rse, cache_dir, date)
-    rucio_dump_before_path_cache = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - days, cache_dir)
-    rucio_dump_after_path_cache = fetch_rucio_dump(rucio_dump_after_path, rse, date_rse + days, cache_dir)
-# fetching end
     cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 
-    result_file_name = f"result.{rse}_{date:%Y%m%d}"
+    result_file_name = f"result.{rse}_{date_rse:%Y%m%d}"
     results_path = f"{results_dir}/{result_file_name}"
 
     if os.path.exists(f"{results_path}") or os.path.exists(f"{results_path}.bz2"):
@@ -125,12 +114,18 @@ def generic_auditor(
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
+
             for result in results:
                 status, path = result
                 output.write(status + (path).replace("/", ",", 1) + '\n')
 
     if not keep_dumps:
         remove_cached_dumps(cached_dumps)
+
+    if no_declaration:
+        logger.warning("No action on output performed")
+    else:
+        process_output(rse, results_path)
 
     if compress_results:
         results_path = bz2_compress_file(results_path)
@@ -139,37 +134,35 @@ def generic_auditor(
     return results_path
 
 
+# FETCH ####################################
+
 # fetch
 # used here
 def fetch_rse_dump(
-    source_path: str,
     rse: str,
     cache_dir: str,
     date: datetime | None = None,
-    ) -> tuple[str, datetime]:
+) -> tuple[str, datetime]:
 
-    logger = logging.getLogger('auditor.fetch_rse_dump')
+    logging.getLogger('auditor.fetch_rse_dump')
 
-    if date is None:
-        date = datetime.now()
+    base_url = generate_url(rse)
 
-    # hash added to get a distinct file name
-    hash = hashlib.sha1(source_path.encode()).hexdigest()
-    filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
-    filename = re.sub(r'\W', '-', filename)
-    final_path = f"{cache_dir}/{filename}"
+    rse_id = get_rse_id(rse)
+    rse_attr = list_rse_attributes(rse_id)
 
-    shutil.copyfile(source_path, final_path)
+    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
+        path, date = fetch_object_store(rse, base_url, cache_dir, date)
 
-    logger.debug(f"RSE dump taken from: {source_path} and cached in: {final_path}")
+    else:
+        path, date = fetch_no_object_store(rse, base_url, cache_dir, date)
 
-    return (final_path, date)
+    return (path, date)
 
 
 # fetch
 # used here
 def fetch_rucio_dump(
-    source_path: str,
     rse: str,
     date: "datetime",
     cache_dir: str
@@ -177,14 +170,34 @@ def fetch_rucio_dump(
 
     logger = logging.getLogger('auditor.fetch_rucio_dump')
 
-    # hash added to get a distinct file name
-    hash = hashlib.sha1(source_path.encode()).hexdigest()
-    filename = f"{rse}_{date:%d-%m-%Y}_{hash}"
+    url = get_rucio_dump_url(date, rse)
+
+    # two lines below just for tests
+    # url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
+    url = "https://learnpython.com/blog/python-pillow-module/1.jpg"
+
+    # hash added to create a unique filename
+    hash = hashlib.sha1(url.encode()).hexdigest()
+    filename = f"{rse}_{date:%Y-%m-%d}_{hash}"
     filename = re.sub(r'\W', '-', filename)
-    final_path = f"{cache_dir}/{filename}"
+    path = f"{cache_dir}/{filename}"
 
-    shutil.copyfile(source_path, final_path)
+    if not os.path.exists(path):
+        logging.debug(f"Trying to download: {url} for {rse}")
+        download_rucio_dump(url, cache_dir, filename)
+    else:
+        logger.debug(f"Taking Rucio Replica Dump {path} for {rse} from cache")
 
-    logger.debug(f"Rucio dump before taken from: {source_path} and cached in: {final_path}")
+    return path
 
-    return final_path
+
+# fetch
+# used here in fetch_rucio_dump
+def get_rucio_dump_url(
+    date: datetime,
+    rse: str
+) -> str:
+
+    url = f"https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{date:%Y-%m-%d}/replicas_per_rse/{rse}.replicas_per_rse.{date:%Y-%m-%d}.csv.bz2"
+
+    return url
