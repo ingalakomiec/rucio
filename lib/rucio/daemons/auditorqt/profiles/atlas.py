@@ -71,10 +71,11 @@ def atlas_auditor(
 
     days = timedelta(delta)
 
+    # fetching begin
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse, cache_dir, date)
-
     rucio_dump_before_path_cache = fetch_rucio_dump(rse, date_rse - days, cache_dir)
     rucio_dump_after_path_cache = fetch_rucio_dump(rse, date_rse + days, cache_dir)
+    # fetching end
 
     cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 
@@ -133,6 +134,10 @@ def atlas_auditor(
     return results_path
 
 
+# FETCH ####################################
+
+# fetch
+# used here
 def fetch_rse_dump(
     rse: str,
     cache_dir: str,
@@ -155,6 +160,8 @@ def fetch_rse_dump(
     return (path, date)
 
 
+# fetch
+# used here
 def fetch_rucio_dump(
     rse: str,
     date: "datetime",
@@ -184,6 +191,8 @@ def fetch_rucio_dump(
     return path
 
 
+# fetch
+# used here in fetch_rucio_dump
 def get_rucio_dump_url(
     date: datetime,
     rse: str
