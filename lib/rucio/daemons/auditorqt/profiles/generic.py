@@ -68,7 +68,7 @@ def generic_auditor(
         date = datetime.now()
 
     days = timedelta(delta)
-
+# fetching begin
 #   paths to rse and rucio test dumps
     rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/dump_20260722'
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2026-07-19'
@@ -87,7 +87,7 @@ def generic_auditor(
     rse_dump_path_cache, date_rse = fetch_rse_dump(rse_dump_path, rse, cache_dir, date)
     rucio_dump_before_path_cache = fetch_rucio_dump(rucio_dump_before_path, rse, date_rse - days, cache_dir)
     rucio_dump_after_path_cache = fetch_rucio_dump(rucio_dump_after_path, rse, date_rse + days, cache_dir)
-
+# fetching end
     cached_dumps = [rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache]
 
     result_file_name = f"result.{rse}_{date:%Y%m%d}"
@@ -139,6 +139,8 @@ def generic_auditor(
     return results_path
 
 
+# fetch
+# used here
 def fetch_rse_dump(
     source_path: str,
     rse: str,
@@ -164,6 +166,8 @@ def fetch_rse_dump(
     return (final_path, date)
 
 
+# fetch
+# used here
 def fetch_rucio_dump(
     source_path: str,
     rse: str,
