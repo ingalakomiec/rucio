@@ -14,8 +14,8 @@
 
 """Auditor profile definitions."""
 
-from .atlas import atlas_auditor
-from .generic import generic_auditor
+from .atlas.auditor import atlas_auditor
+from .generic.auditor import generic_auditor
 
 PROFILE_MAP = {
     'atlas': atlas_auditor,
