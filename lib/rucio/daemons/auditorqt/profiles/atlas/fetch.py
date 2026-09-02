@@ -21,11 +21,11 @@ import logging
 import operator
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from html.parser import HTMLParser
 from typing import IO, TYPE_CHECKING
 
-import gfal2 # pyright: ignore[reportMissingImports]
+import gfal2  # pyright: ignore[reportMissingImports]
 import requests
 from magic import Magic
 
@@ -37,9 +37,10 @@ from rucio.core.rse import get_rse_id, list_rse_attributes
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-CHUNK_SIZE = 4194304 # 4MiB
+CHUNK_SIZE = 4194304  # 4MiB
 
 # fetch rse dump - begin
+
 
 class _LinkCollector(HTMLParser):
     def __init__(self) -> None:
@@ -56,6 +57,7 @@ class _LinkCollector(HTMLParser):
             )
 
 # fetch rse dump - begin
+
 
 def fetch_rse_dump(
     rse: str,
@@ -78,6 +80,7 @@ def fetch_rse_dump(
 
     return (path, date)
 
+
 # used here in fetch_rse_dump
 def generate_url(
     rse: str
@@ -86,6 +89,7 @@ def generate_url(
     base_url = f"{ddmendpoint_url(rse)}/dumps"
 
     return base_url
+
 
 # used here in fetch_no_object_store
 def get_newest_dump(
@@ -119,10 +123,12 @@ def get_newest_dump(
 
     return max(times, key=operator.itemgetter(1))
 
+
 # used here in fetch_no_object_store
 def get_all_dumps(base_url: str) -> list[str]:
 
     return protocol_funcs[protocol(base_url)]['links'](base_url)
+
 
 # used in profiles/atlas in fetch_rse_dump
 def fetch_object_store(
@@ -212,6 +218,7 @@ def make_rse_dump_filename(
 
     return filename
 
+
 # used here to choose http or gfal2 downloading function
 def download(url: str, filename: IO) -> None:
     """
@@ -219,6 +226,7 @@ def download(url: str, filename: IO) -> None:
     """
 
     protocol_funcs[protocol(url)]['download'](url, filename)
+
 
 # used here in protocol_funcs
 def gfal_get_list_of_urls(base_url: str) -> list[str]:
@@ -229,6 +237,7 @@ def gfal_get_list_of_urls(base_url: str) -> list[str]:
     dumps = [f"{base_url}/{file}" for file in ctxt.listdir(str(base_url))]
 
     return dumps
+
 
 # used here in protocol_funcs
 def http_get_list_of_urls(base_url: str) -> list[str]:
@@ -246,6 +255,7 @@ def http_get_list_of_urls(base_url: str) -> list[str]:
         else:
             links.append(link)
     return links
+
 
 # used here in protocol_funcs
 def gfal_download_to_file_with_decoding(
@@ -297,6 +307,7 @@ def gfal_download_to_file_with_decoding(
 
     return True
 
+
 # used here in download, get_all_dumps
 def protocol(url: str) -> str:
     '''
@@ -307,6 +318,7 @@ def protocol(url: str) -> str:
         raise RuntimeError(f"Protocol {proto} not supported")
 
     return proto
+
 
 # used here
 protocol_funcs = {
