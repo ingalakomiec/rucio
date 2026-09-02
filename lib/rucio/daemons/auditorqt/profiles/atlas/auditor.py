@@ -22,13 +22,12 @@ import os
 import re
 from datetime import datetime, timedelta
 
-from rucio.common.constants import RseAttr
 from rucio.common.dumper import temp_file
-from rucio.core.rse import get_rse_id, list_rse_attributes
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.output import bz2_compress_file
-from rucio.daemons.auditorqt.profiles.atlas.dumps import download_rucio_dump, fetch_no_object_store, fetch_object_store, generate_url, parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas.dumps import download_rucio_dump, parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas.fetch import fetch_rse_dump
 from rucio.daemons.auditorqt.profiles.atlas.output import process_output
 
 
@@ -138,6 +137,7 @@ def atlas_auditor(
 
 # fetch
 # used here
+"""
 def fetch_rse_dump(
     rse: str,
     cache_dir: str,
@@ -158,6 +158,7 @@ def fetch_rse_dump(
         path, date = fetch_no_object_store(rse, base_url, cache_dir, date)
 
     return (path, date)
+"""
 
 
 # fetch
