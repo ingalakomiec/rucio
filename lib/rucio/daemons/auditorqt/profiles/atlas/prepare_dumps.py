@@ -12,38 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""action on RSE and Rucio dumps: fetching, removing cached dumps"""
+"""preparation of RSE and Rucio dumps for the consistency check"""
 
 from __future__ import annotations
 
 import logging
 
-from rucio.common.dumper import http_download_to_file, smart_open, temp_file
+from rucio.common.dumper import smart_open
 
-CHUNK_SIZE = 4194304  # 4MiB
-
-
-# FETCH #########################
-
-# fetch
-# used in profiles/atlas in fetch_rucio_dump
-def download_rucio_dump(
-    url: str,
-    cache_dir: str,
-    filename: str
-) -> bool:
-
-    with temp_file(cache_dir, final_name=filename) as (f, _):
-        http_download_to_file(url, f)
-
-    return True
-
-
-# PREPARE #######################################
 
 # prepare
 # used as parser in concsistencycheck in ALGORITHM 2
 def parse_rucio_dump(line: str) -> tuple[str, str]:
+
     '''
     Parse one line from Rucio replica dump.
 
