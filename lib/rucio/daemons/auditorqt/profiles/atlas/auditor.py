@@ -16,19 +16,18 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
-import re
 from datetime import datetime, timedelta
 
 from rucio.common.dumper import temp_file
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.dumps import remove_cached_dumps
 from rucio.daemons.auditorqt.output import bz2_compress_file
-from rucio.daemons.auditorqt.profiles.atlas.dumps import download_rucio_dump, parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
-from rucio.daemons.auditorqt.profiles.atlas.fetch import fetch_rse_dump
+from rucio.daemons.auditorqt.profiles.atlas.fetch_rse_dump import fetch_rse_dump
+from rucio.daemons.auditorqt.profiles.atlas.fetch_rucio_dump import fetch_rucio_dump
 from rucio.daemons.auditorqt.profiles.atlas.output import process_output
+from rucio.daemons.auditorqt.profiles.atlas.prepare_dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
 
 
 def atlas_auditor(
@@ -131,74 +130,3 @@ def atlas_auditor(
         logger.debug(f"Compressed {results_path}")
 
     return results_path
-
-
-# FETCH ####################################
-
-# fetch
-# used here
-"""
-def fetch_rse_dump(
-    rse: str,
-    cache_dir: str,
-    date: datetime | None = None,
-) -> tuple[str, datetime]:
-
-    logging.getLogger('auditor.fetch_rse_dump')
-
-    base_url = generate_url(rse)
-
-    rse_id = get_rse_id(rse)
-    rse_attr = list_rse_attributes(rse_id)
-
-    if RseAttr.IS_OBJECT_STORE in rse_attr and rse_attr[RseAttr.IS_OBJECT_STORE] is not False:
-        path, date = fetch_object_store(rse, base_url, cache_dir, date)
-
-    else:
-        path, date = fetch_no_object_store(rse, base_url, cache_dir, date)
-
-    return (path, date)
-"""
-
-
-# fetch
-# used here
-def fetch_rucio_dump(
-    rse: str,
-    date: "datetime",
-    cache_dir: str
-) -> str:
-
-    logger = logging.getLogger('auditor.fetch_rucio_dump')
-
-    url = get_rucio_dump_url(date, rse)
-
-    # two lines below just for tests
-    # url = 'https://eosatlas.cern.ch//eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/2025-05-04/replicas_per_rse/GOEGRID_TESTDATADISK.replicas_per_rse.2025-05-04.csv.bz2'
-    url = "https://learnpython.com/blog/python-pillow-module/1.jpg"
-
-    # hash added to create a unique filename
-    hash = hashlib.sha1(url.encode()).hexdigest()
-    filename = f"{rse}_{date:%Y-%m-%d}_{hash}"
-    filename = re.sub(r'\W', '-', filename)
-    path = f"{cache_dir}/{filename}"
-
-    if not os.path.exists(path):
-        logging.debug(f"Trying to download: {url} for {rse}")
-        download_rucio_dump(url, cache_dir, filename)
-    else:
-        logger.debug(f"Taking Rucio Replica Dump {path} for {rse} from cache")
-
-    return path
-
-
-# fetch
-# used here in fetch_rucio_dump
-def get_rucio_dump_url(
-    date: datetime,
-    rse: str
-) -> str:
-
-    url = f"https://eosatlas.cern.ch/eos/atlas/atlascerngroupdisk/data-adc/rucio-analytix/reports/{date:%Y-%m-%d}/replicas_per_rse/{rse}.replicas_per_rse.{date:%Y-%m-%d}.csv.bz2"
-
-    return url
