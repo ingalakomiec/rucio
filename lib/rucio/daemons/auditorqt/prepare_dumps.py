@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""perform actions on dumps needed before and after the auditor consistency check"""
+"""prepare dumps for the consistency check"""
 
 from __future__ import annotations
 
-import glob
 import logging
 import os
 import subprocess  # noqa: S404 -- subprocess used for external commands
@@ -29,9 +28,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-# PREPARE ########
-
-# prepare
 # used in consistencycheck in ALGORITHM 3
 def gnu_sort(
         file_path: str,
@@ -85,7 +81,6 @@ def gnu_sort(
     return sorted_path
 
 
-# prepare
 # used in consistencycheck in ALGORITHM 3
 def prepare_rse_dump(
     dump_path: str
@@ -105,7 +100,6 @@ def prepare_rse_dump(
     return rse_dump
 
 
-# prepare
 # used in consistencycheck in ALGORITHM 3
 def parse_and_filter_file(
         filepath: str,
@@ -159,7 +153,6 @@ def parse_and_filter_file(
     return output_path
 
 
-# prepare
 # used in consistencycheck in ALGORITHM 3
 def parse_rse_dump(line: str, prefix_components: list[str]) -> str:
     '''
@@ -178,7 +171,6 @@ def parse_rse_dump(line: str, prefix_components: list[str]) -> str:
     return '/'.join(relative)
 
 
-# prepare
 # used in parse_rse_dump here, parse_rse_dump used in ALGORITHM 3
 def path_parsing_remove_prefix(prefix: list[str], path: list[str]) -> list[str]:
     """
@@ -225,7 +217,6 @@ def path_parsing_remove_prefix(prefix: list[str], path: list[str]) -> list[str]:
     return rest
 
 
-# prepare
 # used in parse_rse_dump here, parse_rse_dump used in ALGORITHM 3
 def path_parsing_components(path: str) -> list[str]:
     """
@@ -238,19 +229,3 @@ def path_parsing_components(path: str) -> list[str]:
 
     components = path.strip().strip().split()
     return [component for component in components if component != '']
-
-
-# OUTPUT #########
-
-# output
-# used in profiles/atlas and profiles/generic
-def remove_cached_dumps(paths: list[str]) -> bool:
-
-    logging.getLogger('auditor: output.remove_cached_dump')
-
-    for path in paths:
-        # remove all dumps, also sorted and parsed
-        remove = glob.glob(f"{path}*")
-        for fil in remove:
-            os.remove(fil)
-    return True
