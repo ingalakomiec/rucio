@@ -21,7 +21,6 @@ import logging
 from rucio.common.dumper import smart_open
 
 
-# prepare
 # used as parser in concsistencycheck in ALGORITHM 2
 def parse_rucio_dump(line: str) -> tuple[str, str]:
 
@@ -40,7 +39,6 @@ def parse_rucio_dump(line: str) -> tuple[str, str]:
     return path, status
 
 
-# prepare
 # used as parser in consistencycheck in ALGORITHM 3
 def prepare_path_and_status_to_sort(line: str) -> str:
 
@@ -49,7 +47,6 @@ def prepare_path_and_status_to_sort(line: str) -> str:
     return ','.join((path.strip(), status))
 
 
-# prepare
 # used as parser in consistencycheck in ALGORITHM 1
 def prepare_rucio_dump(
     dump_path: str
