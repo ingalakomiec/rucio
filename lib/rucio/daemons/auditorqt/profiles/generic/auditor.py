@@ -16,18 +16,16 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
-import re
-import shutil
 from datetime import datetime, timedelta
 
 from rucio.common.dumper import temp_file
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
-from rucio.daemons.auditorqt.dumps import remove_cached_dumps
-from rucio.daemons.auditorqt.output import bz2_compress_file
-from rucio.daemons.auditorqt.profiles.generic.dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
+from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
+from rucio.daemons.auditorqt.profiles.generic.fetch_rse_dump import fetch_rse_dump
+from rucio.daemons.auditorqt.profiles.generic.fetch_rucio_dump import fetch_rucio_dump
+from rucio.daemons.auditorqt.profiles.generic.prepare_dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
 
 
 def generic_auditor(
@@ -137,54 +135,3 @@ def generic_auditor(
         logger.debug(f"Compressed {results_path}")
 
     return results_path
-
-
-# fetch
-# used here
-def fetch_rse_dump(
-    source_path: str,
-    rse: str,
-    cache_dir: str,
-    date: datetime | None = None,
-    ) -> tuple[str, datetime]:
-
-    logger = logging.getLogger('auditor.fetch_rse_dump')
-
-    if date is None:
-        date = datetime.now()
-
-    # hash added to get a distinct file name
-    hash = hashlib.sha1(source_path.encode()).hexdigest()
-    filename = f"ddmendpoint_{rse}_{date:%d-%m-%Y}_{hash}"
-    filename = re.sub(r'\W', '-', filename)
-    final_path = f"{cache_dir}/{filename}"
-
-    shutil.copyfile(source_path, final_path)
-
-    logger.debug(f"RSE dump taken from: {source_path} and cached in: {final_path}")
-
-    return (final_path, date)
-
-
-# fetch
-# used here
-def fetch_rucio_dump(
-    source_path: str,
-    rse: str,
-    date: "datetime",
-    cache_dir: str
-) -> str:
-
-    logger = logging.getLogger('auditor.fetch_rucio_dump')
-
-    # hash added to get a distinct file name
-    hash = hashlib.sha1(source_path.encode()).hexdigest()
-    filename = f"{rse}_{date:%d-%m-%Y}_{hash}"
-    filename = re.sub(r'\W', '-', filename)
-    final_path = f"{cache_dir}/{filename}"
-
-    shutil.copyfile(source_path, final_path)
-
-    logger.debug(f"Rucio dump before taken from: {source_path} and cached in: {final_path}")
-
-    return final_path
