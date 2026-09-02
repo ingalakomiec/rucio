@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""ATLAS-specific dump fetching"""
+"""ATLAS-specific rse dump fetching"""
 
 from __future__ import annotations
 
@@ -38,8 +38,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 CHUNK_SIZE = 4194304  # 4MiB
-
-# fetch rse dump - begin
 
 
 class _LinkCollector(HTMLParser):
@@ -339,6 +337,3 @@ protocol_funcs = {
         'download': http_download_to_file,
     },
 }
-
-
-# fetch rse dump - end
