@@ -14,9 +14,7 @@
 
 """perform actions on output of the auditor consistency check"""
 
-import bz2
 import logging
-import os
 from typing import Optional
 
 from rucio.common import config
@@ -28,11 +26,10 @@ from rucio.core.rse import get_rse_id, get_rse_usage
 from rucio.db.sqla.constants import BadFilesStatus
 
 
-def process_output(
+def declare_dark_and_missing_replicas(
     rse: str,
     results_path: str,
-    sanity_check: bool = True,
-    compress: bool = True
+    sanity_check: bool = True
 ) -> None:
 
     """Perform post-consistency-check actions.
@@ -111,41 +108,6 @@ def process_output(
                               issuer=InternalAccount('root'), status=BadFilesStatus.SUSPICIOUS)
 
     logger.debug(f"Processed {len(missing_replicas)} MISSING files from {results_path}")
-
-    if compress:
-        final_path = bz2_compress_file(results_path)
-        logger.debug(f"Compressed {final_path}")
-
-
-def bz2_compress_file(
-        source_path: str,
-        chunk_size: int = 65000
-) -> str:
-
-    """Compress a file with bzip2.
-
-    The destination is the path passed through ``source`` extended with
-    '.bz2'.  The original file is deleted.
-
-    Errors are deliberately not handled gracefully.  Any exceptions
-    should be propagated to the caller.
-
-    ``source_path``: absolute path to the file to compress.
-
-    ``chunk_size``: size (in bytes) of the chunks by which to read the file.
-
-    Returns the destination path.
-    """
-
-    final_path = f"{source_path}.bz2"
-    with open(source_path) as plain, bz2.BZ2File(final_path, 'w') as compressed:
-        while True:
-            chunk = plain.read(chunk_size)
-            if not chunk:
-                break
-            compressed.write(chunk.encode())
-    os.remove(source_path)
-    return final_path
 
 
 def guess_replica_info(
