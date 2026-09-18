@@ -25,7 +25,7 @@ from rucio.daemons.auditorqt.consistencycheck.consistency_check import consisten
 from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
 from rucio.daemons.auditorqt.profiles.generic.fetch_rse_dump import fetch_rse_dump
 from rucio.daemons.auditorqt.profiles.generic.fetch_rucio_dump import fetch_rucio_dump
-from rucio.daemons.auditorqt.profiles.generic.prepare_dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
+from rucio.daemons.auditorqt.profiles.generic.parse_dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
 
 
 def generic_auditor(
