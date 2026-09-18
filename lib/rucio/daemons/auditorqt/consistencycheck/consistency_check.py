@@ -20,8 +20,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from rucio.common.dumper import ddmendpoint_url, smart_open
+from rucio.daemons.auditorqt.consistencycheck.algorithm1.parse_dumps import prepare_rse_dump
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.compare import compare3
-from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import gnu_sort, parse_and_filter_file, parse_rse_dump, path_parsing_components, prepare_rse_dump
+from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import gnu_sort, parse_and_filter_file, parse_rse_dump, path_parsing_components
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
