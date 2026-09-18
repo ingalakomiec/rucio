@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""prepare dumps for the consistency check"""
+"""parse dumps for the consistency check"""
 
 from __future__ import annotations
 
-import logging
 import os
 import subprocess  # noqa: S404 -- subprocess used for external commands
 import tempfile
@@ -79,25 +78,6 @@ def gnu_sort(
     os.unlink(tfile.name)
 
     return sorted_path
-
-
-# used in consistencycheck in ALGORITHM 3
-def prepare_rse_dump(
-    dump_path: str
-) -> list[str]:
-
-    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rse_dump')
-    logger.debug("Preparing RSE dump")
-
-    file_rse_dump = smart_open(dump_path)
-
-    if file_rse_dump is None:
-        raise RuntimeError(f"Cannot open {dump_path}")
-
-    rse_dump = [line.strip() for line in file_rse_dump]
-    file_rse_dump.close()
-
-    return rse_dump
 
 
 # used in consistencycheck in ALGORITHM 3
