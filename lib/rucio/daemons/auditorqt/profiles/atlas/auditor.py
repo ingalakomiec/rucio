@@ -25,7 +25,7 @@ from rucio.daemons.auditorqt.consistencycheck.consistency_check import consisten
 from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
 from rucio.daemons.auditorqt.profiles.atlas.fetch_rse_dump import fetch_rse_dump
 from rucio.daemons.auditorqt.profiles.atlas.fetch_rucio_dump import fetch_rucio_dump
-from rucio.daemons.auditorqt.profiles.atlas.output import process_output
+from rucio.daemons.auditorqt.profiles.atlas.output import declare_dark_and_missing_replicas
 from rucio.daemons.auditorqt.profiles.atlas.parse_dumps import parse_rucio_dump, prepare_path_and_status_to_sort, prepare_rucio_dump
 
 
@@ -122,7 +122,7 @@ def atlas_auditor(
     if no_declaration:
         logger.warning("No action on output performed")
     else:
-        process_output(rse, results_path)
+        declare_dark_and_missing_replicas(rse, results_path)
 
     if compress_results:
         results_path = bz2_compress_file(results_path)
