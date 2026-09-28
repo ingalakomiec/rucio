@@ -135,7 +135,7 @@ def parse_and_filter_file(
 
 
 # used in consistencycheck in ALGORITHM 3
-def parse_rse_dump(line: str, prefix_components: list[str]) -> str:
+def parse_rse_dump_alg3(line: str, prefix_components: list[str]) -> str:
     '''
     Parser to have consistent paths in storage dumps.
 
