@@ -18,6 +18,31 @@
 import logging
 
 from rucio.common.dumper import smart_open
+from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rucio_dump
+
+
+def parse_rucio_dump_alg1(
+    dump_path: str
+) -> tuple[list[str], list[str]]:
+
+    logger = logging.getLogger('auditorqt.consistencycheck.prepare_rucio_dump')
+    logger.debug("Preparing Rucio dump")
+
+    paths = []
+    statuses = []
+
+    file_rucio_dump = smart_open(dump_path)
+
+    if file_rucio_dump is None:
+        raise RuntimeError(f"Cannot open {dump_path}")
+
+    with file_rucio_dump:
+        for line in file_rucio_dump:
+            path, status = parse_rucio_dump(line)
+            paths.append(path)
+            statuses.append(status)
+
+    return paths, statuses
 
 
 # used in consistencycheck in ALGORITHM 1
