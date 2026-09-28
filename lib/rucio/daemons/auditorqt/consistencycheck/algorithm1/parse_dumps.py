@@ -46,7 +46,7 @@ def parse_rucio_dump_alg1(
 
 
 # used in consistencycheck in ALGORITHM 1
-def prepare_rse_dump(
+def parse_rse_dump_alg1(
     dump_path: str
 ) -> list[str]:
 

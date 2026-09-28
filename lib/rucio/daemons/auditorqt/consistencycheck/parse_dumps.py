@@ -16,6 +16,7 @@
 """parse dumps for the consistency check algorithm1"""
 
 # used as parser in concsistencycheck in ALGORITHM 2, used in ALG 1 and 3
+# ATLAS specific
 
 
 def parse_rucio_dump(line: str) -> tuple[str, str]:
