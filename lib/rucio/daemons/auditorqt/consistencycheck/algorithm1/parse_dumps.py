@@ -18,7 +18,7 @@
 import logging
 
 from rucio.common.dumper import smart_open
-from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rucio_dump
+
 
 # used in consistencycheck in ALGORITHM 1
 def parse_rse_dump_alg1(
