@@ -21,7 +21,6 @@ import os
 from datetime import datetime, timedelta
 
 from rucio.common.dumper import temp_file
-from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import prepare_path_and_status_to_sort
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rucio_dump
 from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
@@ -120,7 +119,7 @@ def generic_auditor(
             rucio_dump_after_path_cache,
             rse,
             cache_dir=cache_dir,
-            parser=prepare_path_and_status_to_sort
+            parser=parse_rucio_dump
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
