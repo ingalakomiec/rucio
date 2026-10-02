@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 #    not suitable for big (>4GB) dumps
 #    paths and statuses are keps in memory
 
+
 def consistency_check_fast(
     rucio_dump_before_path: str,
     rse_dump_path: str,
@@ -170,7 +171,7 @@ def consistency_check_faster(
     if file_rucio_dump_after is None:
         raise RuntimeError(f"Cannot open {rucio_dump_after_path}")
 
-    # read and parse the dump line by line 
+    # read and parse the dump line by line
     with file_rucio_dump_after:
         for line in file_rucio_dump_after:
             key, status = parser(line)
