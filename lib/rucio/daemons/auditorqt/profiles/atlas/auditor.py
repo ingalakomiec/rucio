@@ -21,7 +21,6 @@ import os
 from datetime import datetime, timedelta
 
 from rucio.common.dumper import temp_file
-from rucio.daemons.auditorqt.consistencycheck.algorithm1.parse_dumps import parse_rucio_dump_alg1
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import prepare_path_and_status_to_sort
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rucio_dump
@@ -86,7 +85,7 @@ def atlas_auditor(
         return results_path
 
     if algorithm == "fast":
-        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump_alg1)
+        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump)
 
     if algorithm == "faster":
         missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump)
