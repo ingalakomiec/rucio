@@ -209,9 +209,12 @@ def consistency_check_slow_reliable(
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
     logger.debug("Consistency check - slow, reliable")
 
-    # parser = consistencycheck.algorithm3.parse_dumps.prepare_path_and_status_to_sort
     rucio_dump_before_path_sorted = gnu_sort(
-        parse_and_filter_file(rucio_dump_before_path, cache_dir=cache_dir, parser=parser),
+        parse_and_filter_file(
+            rucio_dump_before_path,
+            cache_dir=cache_dir,
+            parser=lambda line: ','.join(parser(line)),
+        ),
         cache_dir=cache_dir,
         delimiter=',',
         fieldspec='1',
@@ -220,7 +223,11 @@ def consistency_check_slow_reliable(
     logger.debug("Rucio dump before sorted")
 
     rucio_dump_after_path_sorted = gnu_sort(
-        parse_and_filter_file(rucio_dump_after_path, cache_dir=cache_dir, parser=parser),
+        parse_and_filter_file(
+            rucio_dump_after_path,
+            cache_dir=cache_dir,
+            parser=lambda line: ','.join(parser(line)),
+        ),
         cache_dir,
         delimiter=',',
         fieldspec='1',

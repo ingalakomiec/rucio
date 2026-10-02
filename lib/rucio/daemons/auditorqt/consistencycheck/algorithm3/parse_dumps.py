@@ -22,7 +22,6 @@ import tempfile
 from typing import TYPE_CHECKING
 
 from rucio.common.dumper import smart_open, temp_file
-from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rucio_dump
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -210,11 +209,3 @@ def path_parsing_components(path: str) -> list[str]:
 
     components = path.strip().strip().split()
     return [component for component in components if component != '']
-
-
-# used as parser in consistencycheck in ALGORITHM 3
-def prepare_path_and_status_to_sort(line: str) -> str:
-
-    path, status = parse_rucio_dump(line)
-
-    return ','.join((path.strip(), status))
