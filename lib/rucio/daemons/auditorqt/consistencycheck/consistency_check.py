@@ -20,9 +20,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from rucio.common.dumper import ddmendpoint_url, smart_open
-from rucio.daemons.auditorqt.consistencycheck.algorithm1.parse_dumps import parse_rse_dump_alg1
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.compare import compare3
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import gnu_sort, parse_and_filter_file, parse_rse_dump_alg3, path_parsing_components
+from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rse_dump
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -38,7 +38,7 @@ def consistency_check_fast(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
-    parser: 'Callable' = lambda s: s
+    rucio_dump_parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_fast')
@@ -55,7 +55,7 @@ def consistency_check_fast(
     # read and parse the dump line by line, keeping paths and statuses in memory
     with file_rucio_dump_before:
         for line in file_rucio_dump_before:
-            path, status = parser(line)
+            path, status = rucio_dump_parser(line)
             paths.append(path)
             statuses.append(status)
 
@@ -73,7 +73,16 @@ def consistency_check_fast(
     del paths
     del statuses
 
-    rse_dump = parse_rse_dump_alg1(rse_dump_path)
+    file_rse_dump = smart_open(rse_dump_path)
+
+    if file_rse_dump is None:
+        raise RuntimeError(f"Cannot open {rse_dump_path}")
+
+    rse_dump = []
+
+    with file_rse_dump:
+        for line in file_rse_dump:
+            rse_dump.append(parse_rse_dump(line))
 
     i = 0
     for k in rse_dump:
@@ -95,7 +104,7 @@ def consistency_check_fast(
     # read and parse the dump line by line, keeping paths and statuses in memory
     with file_rucio_dump_after:
         for line in file_rucio_dump_after:
-            path, status = parser(line)
+            path, status = rucio_dump_parser(line)
             paths.append(path)
             statuses.append(status)
 
@@ -131,7 +140,7 @@ def consistency_check_faster(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
-    parser: 'Callable' = lambda s: s
+    rucio_dump_parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_faster')
@@ -147,7 +156,7 @@ def consistency_check_faster(
     # read and parse the dump line by line
     with file_rucio_dump_before:
         for line in file_rucio_dump_before:
-            key, status = parser(line)
+            key, status = rucio_dump_parser(line)
             out[key] = 16
             if status == 'A':
                 out[key] += 2
@@ -159,12 +168,12 @@ def consistency_check_faster(
 
     with file_rse_dump:
         for line in file_rse_dump:
-            line = line.strip()
+            key = parse_rse_dump(line)
 
-            if line in out:
-                out[line] += 8
+            if key in out:
+                out[key] += 8
             else:
-                out[line] = 8
+                out[key] = 8
 
     file_rucio_dump_after = smart_open(rucio_dump_after_path)
 
@@ -174,7 +183,7 @@ def consistency_check_faster(
     # read and parse the dump line by line
     with file_rucio_dump_after:
         for line in file_rucio_dump_after:
-            key, status = parser(line)
+            key, status = rucio_dump_parser(line)
 
             if key in out:
                 out[key] += 4
@@ -203,7 +212,7 @@ def consistency_check_slow_reliable(
     rucio_dump_after_path: str,
     rse: str,
     cache_dir: str,
-    parser: 'Callable' = lambda s: s
+    rucio_dump_parser: 'Callable' = lambda s: s
 ) -> Iterator[tuple[str, str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
@@ -213,7 +222,7 @@ def consistency_check_slow_reliable(
         parse_and_filter_file(
             rucio_dump_before_path,
             cache_dir=cache_dir,
-            parser=lambda line: ','.join(parser(line)),
+            parser=lambda line: ','.join(rucio_dump_parser(line)),
         ),
         cache_dir=cache_dir,
         delimiter=',',
@@ -226,7 +235,7 @@ def consistency_check_slow_reliable(
         parse_and_filter_file(
             rucio_dump_after_path,
             cache_dir=cache_dir,
-            parser=lambda line: ','.join(parser(line)),
+            parser=lambda line: ','.join(rucio_dump_parser(line)),
         ),
         cache_dir,
         delimiter=',',
