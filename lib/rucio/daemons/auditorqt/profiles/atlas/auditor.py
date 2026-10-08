@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 
 from rucio.common.dumper import temp_file
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
-from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rucio_dump
+from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rse_dump, parse_rucio_dump
 from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
 from rucio.daemons.auditorqt.profiles.atlas.fetch_rse_dump import fetch_rse_dump
 from rucio.daemons.auditorqt.profiles.atlas.fetch_rucio_dump import fetch_rucio_dump
@@ -84,10 +84,10 @@ def atlas_auditor(
         return results_path
 
     if algorithm == "fast":
-        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump)
+        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump, parse_rse_dump)
 
     if algorithm == "faster":
-        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump)
+        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump, parse_rse_dump)
 
     if algorithm in ("fast", "faster"):
         file_results = open(results_path, 'w')
