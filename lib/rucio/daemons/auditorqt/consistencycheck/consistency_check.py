@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING
 from rucio.common.dumper import ddmendpoint_url, smart_open
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.compare import compare3
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import gnu_sort, parse_and_filter_file, parse_rse_dump_alg3, path_parsing_components
-from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rse_dump
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -38,7 +37,8 @@ def consistency_check_fast(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
-    rucio_dump_parser: 'Callable' = lambda s: s
+    rucio_dump_parser: 'Callable' = lambda s: s,
+    rse_dump_parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_fast')
@@ -82,7 +82,7 @@ def consistency_check_fast(
 
     with file_rse_dump:
         for line in file_rse_dump:
-            rse_dump.append(parse_rse_dump(line))
+            rse_dump.append(rse_dump_parser(line))
 
     i = 0
     for k in rse_dump:
@@ -140,7 +140,8 @@ def consistency_check_faster(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
-    rucio_dump_parser: 'Callable' = lambda s: s
+    rucio_dump_parser: 'Callable' = lambda s: s,
+    rse_dump_parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_faster')
@@ -168,7 +169,7 @@ def consistency_check_faster(
 
     with file_rse_dump:
         for line in file_rse_dump:
-            key = parse_rse_dump(line)
+            key = rse_dump_parser(line)
 
             if key in out:
                 out[key] += 8
