@@ -18,15 +18,20 @@
 # used as parser in concsistencycheck in ALGORITHM 2, used in ALG 1 and 3
 # ATLAS specific
 
+import logging
+
 
 def parse_rucio_dump(line: str) -> tuple[str, str]:
 
-    '''
+    """
     Parse one line from Rucio replica dump.
 
     :param line: String with one line of a dump.
     :returns: (path, status)
-    '''
+    """
+
+    logger = logging.getLogger('auditorqt.consistencycheck.parse_dumps.parse_rucio_dump')
+    logger.debug("Parsing Rucio dump line")
 
     parts = line.strip().split()
 
@@ -34,3 +39,16 @@ def parse_rucio_dump(line: str) -> tuple[str, str]:
     status = parts[10]
 
     return path, status
+
+
+# used in consistencycheck in algorithm 1 and 2
+def parse_rse_dump(
+    line: str
+) -> str:
+    """
+    Parse one line from an RSE dump.
+    """
+    logger = logging.getLogger('auditorqt.consistencycheck.parse_dumps.parse_rse_dump')
+    logger.debug("Parsing RSE dump line")
+
+    return line.strip()

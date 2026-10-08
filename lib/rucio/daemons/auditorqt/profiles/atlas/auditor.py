@@ -107,7 +107,7 @@ def atlas_auditor(
             rucio_dump_after_path_cache,
             rse,
             cache_dir=cache_dir,
-            parser=parse_rucio_dump
+            rucio_dump_parser=parse_rucio_dump
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
