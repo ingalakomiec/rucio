@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 from rucio.common.dumper import ddmendpoint_url, smart_open
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.compare import compare3
-from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import gnu_sort, parse_and_filter_file, parse_rse_dump_alg3, path_parsing_components
+from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import gnu_sort, parse_and_filter_file, path_parsing_components
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -213,7 +213,8 @@ def consistency_check_slow_reliable(
     rucio_dump_after_path: str,
     rse: str,
     cache_dir: str,
-    rucio_dump_parser: 'Callable' = lambda s: s
+    rucio_dump_parser: 'Callable' = lambda s: s,
+    rse_dump_parser: 'Callable' = lambda s, p: s,
 ) -> Iterator[tuple[str, str]]:
 
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
@@ -251,7 +252,7 @@ def consistency_check_slow_reliable(
         parse_and_filter_file(
             rse_dump_path,
             cache_dir=cache_dir,
-            parser=lambda line: parse_rse_dump_alg3(line, prefix_components),
+            parser=lambda line: rse_dump_parser(line, prefix_components),
         ),
         cache_dir=cache_dir,
     )
