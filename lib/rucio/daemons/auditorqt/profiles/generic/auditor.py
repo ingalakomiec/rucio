@@ -21,12 +21,11 @@ import os
 from datetime import datetime, timedelta
 
 from rucio.common.dumper import temp_file
-from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import parse_rse_dump_alg3
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
-from rucio.daemons.auditorqt.consistencycheck.parse_dumps import parse_rse_dump, parse_rucio_dump
 from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
 from rucio.daemons.auditorqt.profiles.generic.fetch_rse_dump import fetch_rse_dump
 from rucio.daemons.auditorqt.profiles.generic.fetch_rucio_dump import fetch_rucio_dump
+from rucio.daemons.auditorqt.profiles.generic.parse_dumps import parse_rse_dump, parse_rse_dump_alg3, parse_rucio_dump
 
 
 def generic_auditor(
