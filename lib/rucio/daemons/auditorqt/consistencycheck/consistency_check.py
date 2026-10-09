@@ -21,7 +21,8 @@ from typing import TYPE_CHECKING
 
 from rucio.common.dumper import ddmendpoint_url, smart_open
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.compare import compare3
-from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import gnu_sort, parse_and_filter_file, path_parsing_components
+from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import parse_and_filter_file, path_parsing_components
+from rucio.daemons.auditorqt.consistencycheck.algorithm3.sort_dumps import gnu_sort
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -220,12 +221,14 @@ def consistency_check_slow_reliable(
     logger = logging.getLogger('auditorqt.consistencycheck.consistency_check_slow_reliable')
     logger.debug("Consistency check - slow, reliable")
 
+    rucio_dump_before_path_parsed = parse_and_filter_file(
+        rucio_dump_before_path,
+        cache_dir=cache_dir,
+        parser=lambda line: ','.join(rucio_dump_parser(line)),
+    )
+
     rucio_dump_before_path_sorted = gnu_sort(
-        parse_and_filter_file(
-            rucio_dump_before_path,
-            cache_dir=cache_dir,
-            parser=lambda line: ','.join(rucio_dump_parser(line)),
-        ),
+        rucio_dump_before_path_parsed,
         cache_dir=cache_dir,
         delimiter=',',
         fieldspec='1',
@@ -233,13 +236,15 @@ def consistency_check_slow_reliable(
 
     logger.debug("Rucio dump before sorted")
 
+    rucio_dump_after_path_parsed = parse_and_filter_file(
+        rucio_dump_after_path,
+        cache_dir=cache_dir,
+        parser=lambda line: ','.join(rucio_dump_parser(line)),
+    )
+
     rucio_dump_after_path_sorted = gnu_sort(
-        parse_and_filter_file(
-            rucio_dump_after_path,
-            cache_dir=cache_dir,
-            parser=lambda line: ','.join(rucio_dump_parser(line)),
-        ),
-        cache_dir,
+        rucio_dump_after_path_parsed,
+        cache_dir=cache_dir,
         delimiter=',',
         fieldspec='1',
     )
@@ -248,12 +253,14 @@ def consistency_check_slow_reliable(
 
     prefix_components = path_parsing_components(ddmendpoint_url(rse))
 
+    rse_dump_path_parsed = parse_and_filter_file(
+        rse_dump_path,
+        cache_dir=cache_dir,
+        parser=lambda line: rse_dump_parser(line, prefix_components),
+    )
+
     rse_dump_path_sorted = gnu_sort(
-        parse_and_filter_file(
-            rse_dump_path,
-            cache_dir=cache_dir,
-            parser=lambda line: rse_dump_parser(line, prefix_components),
-        ),
+        rse_dump_path_parsed,
         cache_dir=cache_dir,
     )
 
