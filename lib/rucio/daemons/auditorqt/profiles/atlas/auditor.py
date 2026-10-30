@@ -23,10 +23,11 @@ from datetime import datetime, timedelta
 from rucio.common.dumper import temp_file
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
+from rucio.daemons.auditorqt.parse_dumps import parse_rucio_dump
 from rucio.daemons.auditorqt.profiles.atlas.fetch_rse_dump import fetch_rse_dump
 from rucio.daemons.auditorqt.profiles.atlas.fetch_rucio_dump import fetch_rucio_dump
 from rucio.daemons.auditorqt.profiles.atlas.output import declare_dark_and_missing_replicas
-from rucio.daemons.auditorqt.profiles.atlas.parse_dumps import parse_rse_dump, parse_rse_dump_alg3, parse_rucio_dump
+from rucio.daemons.auditorqt.profiles.atlas.parse_dumps import parse_rse_dump
 
 
 def atlas_auditor(
@@ -84,10 +85,22 @@ def atlas_auditor(
         return results_path
 
     if algorithm == "fast":
-        missing_files, dark_files = consistency_check_fast(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump, parse_rse_dump)
+        missing_files, dark_files = consistency_check_fast(
+            rucio_dump_before_path_cache,
+            rse_dump_path_cache,
+            rucio_dump_after_path_cache,
+            rse,
+            parse_rucio_dump,
+            parse_rse_dump)
 
     if algorithm == "faster":
-        missing_files, dark_files = consistency_check_faster(rucio_dump_before_path_cache, rse_dump_path_cache, rucio_dump_after_path_cache, parse_rucio_dump, parse_rse_dump)
+        missing_files, dark_files = consistency_check_faster(
+            rucio_dump_before_path_cache,
+            rse_dump_path_cache,
+            rucio_dump_after_path_cache,
+            rse,
+            parse_rucio_dump,
+            parse_rse_dump)
 
     if algorithm in ("fast", "faster"):
         file_results = open(results_path, 'w')
@@ -108,7 +121,7 @@ def atlas_auditor(
             rse,
             cache_dir=cache_dir,
             rucio_dump_parser=parse_rucio_dump,
-            rse_dump_parser=parse_rse_dump_alg3
+            rse_dump_parser=parse_rse_dump
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):

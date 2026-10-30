@@ -76,16 +76,3 @@ def parse_and_filter_file(
             input_.close()
 
     return output_path
-
-
-def path_parsing_components(path: str) -> list[str]:
-    """
-    Extracts and returns the non-empty components of a given path.
-
-    :param path: input path string to be parsed.
-
-    :return: list of non-empty components of the path.
-    """
-
-    components = path.strip().strip().split()
-    return [component for component in components if component != '']

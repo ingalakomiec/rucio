@@ -19,9 +19,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from rucio.common.dumper import ddmendpoint_url, smart_open
+from rucio.common.dumper import smart_open
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.compare import compare3
-from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import parse_and_filter_file, path_parsing_components
+from rucio.daemons.auditorqt.consistencycheck.algorithm3.parse_dumps import parse_and_filter_file
 from rucio.daemons.auditorqt.consistencycheck.algorithm3.sort_dumps import gnu_sort
 
 if TYPE_CHECKING:
@@ -38,6 +38,7 @@ def consistency_check_fast(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
+    rse: str,
     rucio_dump_parser: 'Callable' = lambda s: s,
     rse_dump_parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
@@ -83,7 +84,7 @@ def consistency_check_fast(
 
     with file_rse_dump:
         for line in file_rse_dump:
-            rse_dump.append(rse_dump_parser(line))
+            rse_dump.append(rse_dump_parser(line, rse))
 
     i = 0
     for k in rse_dump:
@@ -141,6 +142,7 @@ def consistency_check_faster(
     rucio_dump_before_path: str,
     rse_dump_path: str,
     rucio_dump_after_path: str,
+    rse: str,
     rucio_dump_parser: 'Callable' = lambda s: s,
     rse_dump_parser: 'Callable' = lambda s: s
 ) -> tuple[list[str], list[str]]:
@@ -170,7 +172,7 @@ def consistency_check_faster(
 
     with file_rse_dump:
         for line in file_rse_dump:
-            key = rse_dump_parser(line)
+            key = rse_dump_parser(line, rse)
 
             if key in out:
                 out[key] += 8
@@ -251,12 +253,10 @@ def consistency_check_slow_reliable(
 
     logger.debug("Rucio dump after sorted")
 
-    prefix_components = path_parsing_components(ddmendpoint_url(rse))
-
     rse_dump_path_parsed = parse_and_filter_file(
         rse_dump_path,
         cache_dir=cache_dir,
-        parser=lambda line: rse_dump_parser(line, prefix_components),
+        parser=lambda line: rse_dump_parser(line, rse),
     )
 
     rse_dump_path_sorted = gnu_sort(
