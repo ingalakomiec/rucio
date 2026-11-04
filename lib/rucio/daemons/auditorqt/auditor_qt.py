@@ -24,21 +24,19 @@ from __future__ import annotations
 import argparse
 import functools
 import logging
-import os
 import socket
 import threading
 import time
-from configparser import NoSectionError
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from rucio.client.rseclient import RSEClient
-from rucio.common.config import config_get, config_has_section
 from rucio.common.exception import RSENotFound, RucioException
 from rucio.common.logging import setup_logging
 from rucio.core.heartbeat import sanity_check
 from rucio.daemons.common import run_daemon
 
+from .config import get_auditor_cache_directory, get_auditor_results_directory
 from .consistencycheck import ALGORITHM_MAP
 from .profiles import PROFILE_MAP
 
@@ -142,14 +140,8 @@ def run_once(
     if not rses_names:
         raise RSENotFound("No RSE found to audit.")
 
-    if not config_has_section('auditor'):
-        raise NoSectionError("Auditor section required in config tu run te auditor daemon.")
-
-    cache_dir = config_get('auditor', 'cache')
-    results_dir = config_get('auditor', 'results')
-
-    os.makedirs(cache_dir, exist_ok=True)
-    os.makedirs(results_dir, exist_ok=True)
+    cache_dir = get_auditor_cache_directory()
+    results_dir = get_auditor_results_directory()
 
     try:
         profile_maker = PROFILE_MAP[profile]

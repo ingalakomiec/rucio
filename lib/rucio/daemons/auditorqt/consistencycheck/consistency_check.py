@@ -215,7 +215,6 @@ def consistency_check_slow_reliable(
     rse_dump_path: str,
     rucio_dump_after_path: str,
     rse: str,
-    cache_dir: str,
     rucio_dump_parser: 'Callable' = lambda s: s,
     rse_dump_parser: 'Callable' = lambda s, p: s,
 ) -> Iterator[tuple[str, str]]:
@@ -225,13 +224,11 @@ def consistency_check_slow_reliable(
 
     rucio_dump_before_path_parsed = parse_and_filter_file(
         rucio_dump_before_path,
-        cache_dir=cache_dir,
         parser=lambda line: ','.join(rucio_dump_parser(line)),
     )
 
     rucio_dump_before_path_sorted = gnu_sort(
         rucio_dump_before_path_parsed,
-        cache_dir=cache_dir,
         delimiter=',',
         fieldspec='1',
     )
@@ -240,13 +237,11 @@ def consistency_check_slow_reliable(
 
     rucio_dump_after_path_parsed = parse_and_filter_file(
         rucio_dump_after_path,
-        cache_dir=cache_dir,
         parser=lambda line: ','.join(rucio_dump_parser(line)),
     )
 
     rucio_dump_after_path_sorted = gnu_sort(
         rucio_dump_after_path_parsed,
-        cache_dir=cache_dir,
         delimiter=',',
         fieldspec='1',
     )
@@ -255,13 +250,11 @@ def consistency_check_slow_reliable(
 
     rse_dump_path_parsed = parse_and_filter_file(
         rse_dump_path,
-        cache_dir=cache_dir,
         parser=lambda line: rse_dump_parser(line, rse),
     )
 
     rse_dump_path_sorted = gnu_sort(
-        rse_dump_path_parsed,
-        cache_dir=cache_dir,
+        rse_dump_path_parsed
     )
 
     logger.debug("RSE dump sorted")
