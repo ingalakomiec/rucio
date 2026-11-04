@@ -19,8 +19,9 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-import shutil
 from typing import TYPE_CHECKING
+
+from rucio.daemons.auditorqt.utils import copy_and_decode_local_file
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -41,7 +42,7 @@ def fetch_rucio_dump(
     filename = re.sub(r'\W', '-', filename)
     final_path = f"{cache_dir}/{filename}"
 
-    shutil.copyfile(source_path, final_path)
+    copy_and_decode_local_file(source_path, final_path)
 
     logger.debug(f"Rucio dump before taken from: {source_path} and cached in: {final_path}")
 

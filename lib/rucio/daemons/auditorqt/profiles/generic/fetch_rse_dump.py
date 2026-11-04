@@ -19,8 +19,9 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-import shutil
 from datetime import datetime
+
+from rucio.daemons.auditorqt.utils import copy_and_decode_local_file
 
 
 def fetch_rse_dump(
@@ -41,7 +42,7 @@ def fetch_rse_dump(
     filename = re.sub(r'\W', '-', filename)
     final_path = f"{cache_dir}/{filename}"
 
-    shutil.copyfile(source_path, final_path)
+    copy_and_decode_local_file(source_path, final_path)
 
     logger.debug(f"RSE dump taken from: {source_path} and cached in: {final_path}")
 
