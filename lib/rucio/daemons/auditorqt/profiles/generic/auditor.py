@@ -131,7 +131,6 @@ def generic_auditor(
             rse_dump_path_cache,
             rucio_dump_after_path_cache,
             rse,
-            cache_dir=cache_dir,
             rucio_dump_parser=parse_rucio_dump,
             rse_dump_parser=parse_rse_dump
         )

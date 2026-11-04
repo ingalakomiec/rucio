@@ -20,10 +20,11 @@ import os
 import subprocess  # noqa: S404 -- subprocess used for external commands
 import tempfile
 
+from rucio.daemons.auditorqt.config import get_auditor_cache_directory
+
 
 def gnu_sort(
         file_path: str,
-        cache_dir: str,
         prefix: str | None = None,
         delimiter: str | None = None,
         fieldspec: str | None = None
@@ -51,6 +52,8 @@ def gnu_sort(
         cmd_line = 'LC_ALL=C sort {0} > {1}'
     else:
         cmd_line = 'LC_ALL=C sort -t {0} -k {1} {{0}} > {{1}}'.format(delimiter, fieldspec)
+
+    cache_dir = get_auditor_cache_directory()
 
     prefix = os.path.basename(file_path) if prefix is None else prefix
 
