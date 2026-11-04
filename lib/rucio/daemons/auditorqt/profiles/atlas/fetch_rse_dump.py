@@ -27,12 +27,12 @@ from typing import IO, TYPE_CHECKING
 
 import gfal2  # pyright: ignore[reportMissingImports]
 import requests
-from magic import Magic
 
 from rucio.common.constants import RseAttr
 from rucio.common.dumper import HTTPDownloadFailed, ddmendpoint_url, http_download_to_file, temp_file
 from rucio.core.credential import get_signed_url
 from rucio.core.rse import get_rse_id, list_rse_attributes
+from rucio.daemons.auditorqt.utils import decode_chunk
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -295,11 +295,9 @@ def gfal_download_to_file_with_decoding(
         gfal_file_bytes = ctx.open(url, 'r')
         chunk = gfal_file_bytes.read_bytes(CHUNK_SIZE)
         while chunk:
-            m = Magic(mime_encoding=True)
-            encoding = m.from_buffer(chunk)
-            chunk = chunk.decode(encoding)
-            file_.write(chunk)
-            chunk = gfal_file.read_bytes(CHUNK_SIZE)
+            decoded_chunk = decode_chunk(chunk)
+            file_.write(decoded_chunk)
+            chunk = gfal_file_bytes.read_bytes(CHUNK_SIZE)
 
         logger.debug(f"url: {url} encoded")
 
