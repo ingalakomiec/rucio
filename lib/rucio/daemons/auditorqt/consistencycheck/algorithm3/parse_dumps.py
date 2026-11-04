@@ -20,6 +20,7 @@ import os
 from typing import TYPE_CHECKING
 
 from rucio.common.dumper import smart_open, temp_file
+from rucio.daemons.auditorqt.config import get_auditor_cache_directory
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
 # used in consistencycheck in ALGORITHM 3
 def parse_and_filter_file(
         filepath: str,
-        cache_dir: str,
         parser: 'Callable' = lambda s: s,
         filter_: 'Callable' = lambda s: s,
         postfix: str = 'parsed'
@@ -58,6 +58,8 @@ def parse_and_filter_file(
     '\n' is appended to each line, therefore if the input is 'a\nb\n' and `parser`
     is not especified the output will be 'a\n\nb\n\n'
     '''
+
+    cache_dir = get_auditor_cache_directory()
 
     prefix = os.path.basename(filepath)
     output_name = '_'.join((prefix, postfix))
