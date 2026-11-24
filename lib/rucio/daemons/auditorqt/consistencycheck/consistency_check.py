@@ -172,6 +172,7 @@ def consistency_check_faster(
 
     with file_rse_dump:
         for line in file_rse_dump:
+            print("line ", line)
             key = rse_dump_parser(line, rse)
 
             if key in out:

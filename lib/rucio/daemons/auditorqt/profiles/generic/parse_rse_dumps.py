@@ -15,6 +15,7 @@
 
 """parse dumps for the consistency check"""
 
+import json
 
 from rucio.common.dumper import ddmendpoint_url
 
@@ -103,3 +104,33 @@ def path_parsing_components(path: str) -> list[str]:
 
     components = path.strip().strip().split()
     return [component for component in components if component != '']
+
+
+def parse_rse_dump_jsonl(
+    line: str,
+    rse: str
+    ) -> str:
+
+    """
+    Parse a single JSONL RSE dump record and return a path.
+
+    :param line: One line of a JSONL RSE dump.
+    :param rse: RSE name.
+    :returns: Replica path.
+    """
+
+    prefix_components = path_parsing_components(ddmendpoint_url(rse))
+
+    # JSONL dump specific
+    record = json.loads(line)
+    path = record["path"]
+
+    relative_path_components = path_parsing_remove_prefix(
+        prefix_components,
+        path_parsing_components(path)
+    )
+
+    if relative_path_components[0] == "rucio":
+        relative_path_components = relative_path_components[1:]
+
+    return "/".join(relative_path_components)

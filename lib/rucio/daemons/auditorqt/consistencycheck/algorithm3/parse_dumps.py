@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from rucio.common.dumper import smart_open, temp_file
+from rucio.common.dumper import temp_file
 from rucio.daemons.auditorqt.config import get_auditor_cache_directory
 
 if TYPE_CHECKING:
@@ -69,7 +69,10 @@ def parse_and_filter_file(
         return output_path
 
     with temp_file(cache_dir, final_name=output_name) as (output, _):
-        input_ = smart_open(filepath)
+        # for not jsonl
+        # input_ = smart_open(filepath)
+        # for jsonl
+        input_ = open(filepath)
         if input_ is not None:
             for line in input_:
                 if filter_(line):

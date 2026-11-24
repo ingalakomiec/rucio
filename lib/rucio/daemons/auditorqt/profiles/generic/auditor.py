@@ -23,10 +23,10 @@ from datetime import datetime, timedelta
 from rucio.common.dumper import temp_file
 from rucio.daemons.auditorqt.consistencycheck.consistency_check import consistency_check_fast, consistency_check_faster, consistency_check_slow_reliable
 from rucio.daemons.auditorqt.output import bz2_compress_file, remove_cached_dumps
-from rucio.daemons.auditorqt.parse_dumps import parse_rucio_dump
+from rucio.daemons.auditorqt.parse_rucio_dumps import parse_rucio_dump
 from rucio.daemons.auditorqt.profiles.generic.fetch_rse_dump import fetch_rse_dump
 from rucio.daemons.auditorqt.profiles.generic.fetch_rucio_dump import fetch_rucio_dump
-from rucio.daemons.auditorqt.profiles.generic.parse_dumps import parse_rse_dump
+from rucio.daemons.auditorqt.profiles.generic.parse_rse_dumps import parse_rse_dump, parse_rse_dump_jsonl
 
 
 def generic_auditor(
@@ -69,7 +69,7 @@ def generic_auditor(
     days = timedelta(delta)
 # fetching begin
 #   paths to rse and rucio test dumps
-    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/dump_20260722'
+    rse_dump_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/dump_20260722.jsonl'
     rucio_dump_before_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_before/rucio_before.DESY-ZN_DATADISK_2026-07-19'
     rucio_dump_after_path = '/opt/rucio/lib/rucio/daemons/auditorqt/tmp/test_dumps/rucio_dump_after/rucio_after.DESY-ZN_DATADISK_2026-07-25'
 
@@ -132,7 +132,7 @@ def generic_auditor(
             rucio_dump_after_path_cache,
             rse,
             rucio_dump_parser=parse_rucio_dump,
-            rse_dump_parser=parse_rse_dump
+            rse_dump_parser=parse_rse_dump_jsonl
         )
 
         with temp_file(results_dir, final_name=result_file_name) as (output, _):
